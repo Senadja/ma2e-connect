@@ -24,9 +24,9 @@ export const useReveal = <T extends HTMLElement = HTMLDivElement>() => {
 };
 
 /** Counter that animates up when in viewport. */
-export const useCounter = (target: number, duration = 1500) => {
+export const useCounter = <T extends HTMLElement = HTMLSpanElement>(target: number, duration = 1500) => {
   const [value, setValue] = useState(0);
-  const ref = useRef<HTMLSpanElement | null>(null);
+  const ref = useRef<T | null>(null);
   const started = useRef(false);
 
   useEffect(() => {

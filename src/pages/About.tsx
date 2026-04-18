@@ -5,7 +5,7 @@ import { MILESTONES, STATS, TEAM } from "@/data/site";
 import { Quote, ShieldCheck, Heart, Briefcase, Users, Award, TrendingUp, Coins } from "lucide-react";
 
 const StatItem = ({ stat, icon: Icon }: { stat: typeof STATS[number]; icon: any }) => {
-  const { ref, value } = useCounter(stat.value);
+  const { ref, value } = useCounter<HTMLDivElement>(stat.value);
   const isDecimal = stat.value % 1 !== 0;
   const display = isDecimal ? value.toFixed(1).replace(".", ",") : Math.round(value).toLocaleString("fr-FR");
   return (

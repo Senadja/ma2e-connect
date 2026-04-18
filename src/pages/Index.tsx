@@ -5,7 +5,7 @@ import { useReveal, useCounter } from "@/hooks/useReveal";
 import { STATS, MILESTONES, NEWS } from "@/data/site";
 
 const StatItem = ({ stat, icon: Icon }: { stat: typeof STATS[number]; icon: any }) => {
-  const { ref, value } = useCounter(stat.value);
+  const { ref, value } = useCounter<HTMLDivElement>(stat.value);
   const isDecimal = stat.value % 1 !== 0;
   const display = isDecimal
     ? value.toFixed(1).replace(".", ",")
