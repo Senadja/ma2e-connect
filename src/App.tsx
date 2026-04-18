@@ -10,6 +10,7 @@ import Savings from "./pages/Savings.tsx";
 import Credits from "./pages/Credits.tsx";
 import RealEstate from "./pages/RealEstate.tsx";
 import News from "./pages/News.tsx";
+import NewsDetail from "./pages/NewsDetail.tsx";
 import Contact from "./pages/Contact.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/produits/credits" element={<Credits />} />
           <Route path="/produits/immobilier" element={<RealEstate />} />
           <Route path="/actualites" element={<News />} />
+          <Route path="/actualites/:id" element={<NewsDetail />} />
           <Route path="/contact" element={<Contact />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
