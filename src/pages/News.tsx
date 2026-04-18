@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { PageHero } from "@/components/PageHero";
 import { NEWS } from "@/data/site";
@@ -39,20 +40,22 @@ const News = () => {
         <section className="pb-12">
           <div className="container">
             <article className="grid lg:grid-cols-2 gap-0 rounded-3xl overflow-hidden bg-card border border-border shadow-soft hover:shadow-elegant transition-smooth">
-              <div className="aspect-[16/10] lg:aspect-auto relative overflow-hidden bg-gradient-primary">
-                <img src="https://placehold.co/1200x800/1A6147/F5A623?text=MA2E&font=playfair" alt="" className="w-full h-full object-cover" />
-              </div>
+              <Link to={`/actualites/${featured.id}`} className="aspect-[16/10] lg:aspect-auto relative overflow-hidden bg-gradient-primary group">
+                <img src="https://placehold.co/1200x800/1A6147/F5A623?text=MA2E&font=playfair" alt="" className="w-full h-full object-cover group-hover:scale-105 transition-smooth" />
+              </Link>
               <div className="p-8 md:p-12 flex flex-col justify-center">
                 <div className="flex items-center gap-3 text-xs">
                   <span className="rounded-full bg-accent/20 text-accent-foreground px-3 py-1 font-semibold">À la une</span>
                   <span className="rounded-full bg-primary/10 text-primary px-3 py-1 font-semibold">{featured.category}</span>
                   <span className="text-muted-foreground">{featured.date}</span>
                 </div>
-                <h2 className="mt-4 font-display text-3xl md:text-4xl font-bold leading-tight">{featured.title}</h2>
+                <h2 className="mt-4 font-display text-3xl md:text-4xl font-bold leading-tight">
+                  <Link to={`/actualites/${featured.id}`} className="hover:text-primary transition-smooth">{featured.title}</Link>
+                </h2>
                 <p className="mt-4 text-muted-foreground">{featured.excerpt}</p>
-                <a href="#" className="mt-6 inline-flex items-center gap-2 text-primary font-semibold w-fit">
+                <Link to={`/actualites/${featured.id}`} className="mt-6 inline-flex items-center gap-2 text-primary font-semibold w-fit hover:gap-3 transition-all">
                   Lire l'article complet <ArrowRight className="h-4 w-4" />
-                </a>
+                </Link>
               </div>
             </article>
           </div>
@@ -65,19 +68,21 @@ const News = () => {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {rest.map((n) => (
               <article key={n.id} className="group rounded-2xl bg-card border border-border overflow-hidden hover:shadow-elegant hover:-translate-y-1 transition-bounce">
-                <div className="aspect-[16/10] bg-gradient-primary overflow-hidden">
+                <Link to={`/actualites/${n.id}`} className="aspect-[16/10] bg-gradient-primary overflow-hidden block">
                   <img src="https://placehold.co/640x400/1A6147/F5A623?text=MA2E&font=playfair" alt="" className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-smooth" />
-                </div>
+                </Link>
                 <div className="p-6">
                   <div className="flex items-center gap-3 text-xs">
                     <span className="rounded-full bg-primary/10 text-primary px-3 py-1 font-semibold">{n.category}</span>
                     <span className="text-muted-foreground">{n.date}</span>
                   </div>
-                  <h3 className="mt-4 font-display text-xl font-bold leading-snug group-hover:text-primary transition-smooth">{n.title}</h3>
+                  <h3 className="mt-4 font-display text-xl font-bold leading-snug group-hover:text-primary transition-smooth">
+                    <Link to={`/actualites/${n.id}`}>{n.title}</Link>
+                  </h3>
                   <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{n.excerpt}</p>
-                  <a href="#" className="mt-4 inline-flex items-center gap-1 text-primary text-sm font-semibold">
+                  <Link to={`/actualites/${n.id}`} className="mt-4 inline-flex items-center gap-1 text-primary text-sm font-semibold hover:gap-2 transition-all">
                     Lire la suite <ArrowRight className="h-3.5 w-3.5" />
-                  </a>
+                  </Link>
                 </div>
               </article>
             ))}
