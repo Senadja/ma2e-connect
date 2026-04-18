@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { ChevronDown, Menu, X, ArrowRight } from "lucide-react";
-import { Logo } from "./Logo";
+import { Logo } from "../Logo";
 import { NAV_LINKS } from "@/data/site";
 import { cn } from "@/lib/utils";
 
