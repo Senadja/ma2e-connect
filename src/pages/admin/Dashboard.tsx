@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, FileText, Newspaper, TrendingUp, ArrowUpRight, ArrowDownRight, Clock } from "lucide-react";
 import { STATS } from "@/data/site";

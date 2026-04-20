@@ -12,7 +12,8 @@ import {
   Mail,
   Phone,
   User,
-  ArrowRight
+  ArrowRight,
+  ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 // Simulated applications data
 const APPLICATIONS = [
@@ -208,6 +210,3 @@ export const ApplicationsManager = () => {
     </div>
   );
 };
-
-import { cn } from "@/lib/utils";
-import { ChevronRight } from "lucide-react";
