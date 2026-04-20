@@ -26,18 +26,6 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Fix rendering bug: Lock scroll when mobile menu is open
-  useEffect(() => {
-    if (isMobileOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [isMobileOpen]);
-
   useEffect(() => {
     setMobileOpen(false);
     setOpenMenu(null);
@@ -47,7 +35,7 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
     <header
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-all duration-500",
-        scrolled || isMobileOpen ? "bg-background/95 backdrop-blur-xl border-b border-border shadow-soft" : "bg-background/0"
+        scrolled || isMobileOpen ? "bg-background/80 backdrop-blur-xl border-b border-border shadow-soft" : "bg-background/0"
       )}
     >
       <div className={cn("container flex items-center justify-between transition-all duration-500", scrolled ? "h-16" : "h-20 lg:h-24")}>
@@ -125,7 +113,7 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
         </div>
 
         <button
-          className="lg:hidden p-2 text-foreground relative z-[100] transition-transform active:scale-90"
+          className="lg:hidden p-2 text-foreground relative z-50 transition-transform active:scale-90"
           aria-label={isMobileOpen ? "Fermer le menu" : "Ouvrir le menu"}
           onClick={() => setMobileOpen(!isMobileOpen)}
         >
@@ -135,16 +123,16 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
 
       {/* FULL SCREEN MOBILE MENU */}
       <div className={cn(
-        "lg:hidden fixed inset-0 bg-background transition-all duration-300 ease-in-out z-[90]",
-        isMobileOpen ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-4 pointer-events-none"
+        "lg:hidden fixed inset-0 bg-background/98 backdrop-blur-2xl transition-all duration-500 ease-in-out z-40 transform-gpu",
+        isMobileOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full pointer-events-none"
       )}>
         <div className="container h-full flex flex-col pt-24 pb-32 overflow-y-auto overscroll-contain">
           <nav className="flex-1 space-y-1" aria-label="Menu mobile immersif">
             {NAV_LINKS.map((link, i) => (
               <div 
                 key={link.href} 
-                className={cn("transition-all duration-500", isMobileOpen ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0")}
-                style={{ transitionDelay: `${i * 50}ms` }}
+                className={cn("animate-in fade-in slide-in-from-bottom-4 duration-500", !isMobileOpen && "opacity-0")} 
+                style={{ animationDelay: `${i * 50}ms` }}
               >
                 <Link 
                   to={link.href} 
@@ -172,7 +160,7 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
             ))}
           </nav>
 
-          <div className={cn("mt-8 space-y-4 transition-all duration-700 delay-200", isMobileOpen ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0")}>
+          <div className={cn("mt-8 space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200", !isMobileOpen && "opacity-0")}>
             <a href="#" className="flex items-center justify-center gap-3 rounded-2xl bg-primary h-16 text-lg font-bold text-white shadow-xl shadow-primary/20">
               <Smartphone className="h-6 w-6" /> Espace E-MA2E
             </a>
