@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Calendar, ChevronRight, Clock, Facebook, Linkedin, Share2, Twitter, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Check, ChevronRight, Clock, Copy, Facebook, Linkedin, Share2, Twitter, User } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { NEWS, type NewsArticle } from "@/data/site";
+import { toast } from "@/hooks/use-toast";
 
 const ContentBlock = ({ block }: { block: NewsArticle["content"][number] }) => {
   switch (block.type) {
