@@ -33,35 +33,34 @@ const About = () => {
         subtitle="Découvrez l'histoire, la mission et l'organisation de votre mutuelle."
         breadcrumb={[{ label: "Accueil", href: "/" }, { label: "À propos" }]}
       />
-
       {/* Founder quote */}
-      <section className="py-20">
-        <div className="container max-w-4xl">
-          <div ref={r1} className="reveal rounded-3xl bg-gradient-primary text-primary-foreground p-10 md:p-14 shadow-elegant relative overflow-hidden">
-            <Quote className="absolute top-6 right-6 h-20 w-20 text-white/10" />
-            <span className="text-xs font-mono uppercase tracking-widest text-accent">Vision du fondateur</span>
-            <blockquote className="mt-4 font-display text-2xl md:text-3xl italic leading-tight text-balance">
+      <section className="py-12 md:py-20">
+        <div className="container max-w-4xl px-4 md:px-6">
+          <div ref={r1} className="reveal rounded-2xl md:rounded-3xl bg-gradient-primary text-primary-foreground p-8 md:p-14 shadow-elegant relative overflow-hidden text-center md:text-left">
+            <Quote className="absolute top-4 right-4 md:top-6 md:right-6 h-12 w-12 md:h-20 md:w-20 text-white/10" />
+            <span className="text-[10px] md:text-xs font-mono uppercase tracking-widest text-accent">Vision du fondateur</span>
+            <blockquote className="mt-4 font-display text-xl md:text-3xl italic leading-tight text-balance">
               « Donner aux agents les moyens de bâtir leur autonomie financière, c'est bâtir une société plus juste. »
             </blockquote>
-            <div className="mt-6 font-semibold">Marcel ZADI KESSY <span className="font-normal text-white/70">— Fondateur</span></div>
+            <div className="mt-6 text-sm md:text-base font-semibold">Marcel ZADI KESSY <span className="font-normal text-white/70 block md:inline">— Fondateur</span></div>
           </div>
         </div>
       </section>
 
       {/* History timeline */}
-      <section id="histoire" className="py-20 bg-secondary/40">
-        <div className="container">
-          <div ref={r2} className="reveal max-w-2xl mb-12">
-            <span className="text-sm font-mono uppercase tracking-wider text-primary">Notre histoire</span>
-            <h2 className="mt-2 font-display text-4xl md:text-5xl font-bold">Une trajectoire de confiance</h2>
+      <section id="histoire" className="py-16 md:py-24 bg-secondary/40">
+        <div className="container px-4 md:px-6">
+          <div ref={r2} className="reveal max-w-2xl mb-12 text-center md:text-left">
+            <span className="text-xs md:text-sm font-mono uppercase tracking-wider text-primary">Notre histoire</span>
+            <h2 className="mt-2 font-display text-3xl md:text-5xl font-bold">Une trajectoire de confiance</h2>
           </div>
-          <ol className="relative border-l-2 border-accent/30 ml-3 space-y-10">
+          <ol className="relative border-l-2 border-accent/30 ml-4 md:ml-3 space-y-10">
             {MILESTONES.map((m) => (
-              <li key={m.year} className="pl-8 relative">
+              <li key={m.year} className="pl-6 md:pl-8 relative">
                 <span className="absolute -left-[11px] top-1 h-5 w-5 rounded-full bg-accent ring-4 ring-accent/20" />
-                <div className="font-mono text-accent font-bold">{m.year}</div>
-                <h3 className="font-display text-2xl font-bold mt-1">{m.title}</h3>
-                <p className="text-muted-foreground mt-1 max-w-xl">{m.desc}</p>
+                <div className="font-mono text-accent font-bold text-lg">{m.year}</div>
+                <h3 className="font-display text-xl md:text-2xl font-bold mt-1">{m.title}</h3>
+                <p className="text-muted-foreground mt-2 max-w-xl text-sm md:text-base leading-relaxed">{m.desc}</p>
               </li>
             ))}
           </ol>

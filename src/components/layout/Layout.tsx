@@ -1,13 +1,19 @@
-import { ReactNode } from "react";
+import { useState } from "react";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { FlashBanner } from "./FlashBanner";
+import { MobileBottomNav } from "./MobileBottomNav";
 
-export const Layout = ({ children }: { children: ReactNode }) => (
-  <div className="min-h-screen flex flex-col">
-    <FlashBanner />
-    <Navbar />
-    <main className="flex-1 pt-16 lg:pt-20">{children}</main>
-    <Footer />
-  </div>
-);
+export const Layout = ({ children }: { children: React.ReactNode }) => {
+  const [mobileMenuOpen, setMobileOpen] = useState(false);
+
+  return (
+    <div className="flex min-h-screen flex-col bg-background selection:bg-primary/10">
+      <FlashBanner />
+      <Navbar mobileOpenExtern={mobileMenuOpen} setMobileOpenExtern={setMobileOpen} />
+      <main className="flex-1 pb-20 lg:pb-0">{children}</main>
+      <Footer />
+      <MobileBottomNav onMenuClick={() => setMobileOpen(true)} />
+    </div>
+  );
+};

@@ -75,30 +75,30 @@ const Index = () => {
         <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-primary/40 blur-3xl animate-drift" aria-hidden />
         <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-accent/10 blur-3xl" aria-hidden />
 
-        <div className="relative container grid lg:grid-cols-2 gap-12 items-center py-20">
-          <div className="animate-fade-in">
-            <span className="inline-block rounded-full bg-white/10 border border-white/20 px-4 py-1.5 text-xs font-medium text-white/90 backdrop-blur">
+        <div className="relative container grid lg:grid-cols-2 gap-12 items-center py-12 md:py-20 lg:py-24">
+          <div className="animate-fade-in text-center lg:text-left">
+            <span className="inline-block rounded-full bg-white/10 border border-white/20 px-4 py-1.5 text-[10px] md:text-xs font-bold text-white/90 backdrop-blur uppercase tracking-widest">
               Microfinance mutualiste · 2006
             </span>
-            <h1 className="mt-6 font-display text-5xl md:text-6xl xl:text-7xl font-bold leading-[1.05] text-balance">
+            <h1 className="mt-6 font-display text-4xl md:text-6xl xl:text-7xl font-bold leading-[1.1] text-balance">
               Votre mutuelle,<br />
               <em className="not-italic font-bold text-accent italic">votre avenir.</em>
             </h1>
-            <p className="mt-6 max-w-xl text-lg text-white/80 leading-relaxed">
-              La MA2E accompagne <strong className="text-white">7 335 adhérents</strong> dans leurs projets d'épargne, de crédit et d'accession à la propriété.
+            <p className="mt-6 mx-auto lg:mx-0 max-w-xl text-base md:text-lg text-white/80 leading-relaxed">
+              La MA2E accompagne <strong className="text-white font-bold">7 335 adhérents</strong> dans leurs projets d'épargne, de crédit et d'accession à la propriété.
             </p>
-            <div className="mt-8 flex flex-wrap gap-4">
+            <div className="mt-10 flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
               <Link
                 to="/produits"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-7 py-3.5 font-semibold text-accent-foreground shadow-gold hover:scale-[1.02] transition-bounce"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-gold px-8 py-4 font-bold text-accent-foreground shadow-gold hover:scale-[1.02] active:scale-95 transition-all"
               >
                 Découvrir nos produits <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                to="/contact"
-                className="inline-flex items-center gap-2 rounded-full border-2 border-white/40 px-7 py-3.5 font-semibold text-white hover:bg-white hover:text-primary-dark transition-smooth"
+                to="/adhesion"
+                className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/40 px-8 py-4 font-bold text-white hover:bg-white hover:text-primary-dark active:scale-95 transition-all"
               >
-                Nous rejoindre
+                Devenir adhérent
               </Link>
             </div>
           </div>
