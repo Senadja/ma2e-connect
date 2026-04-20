@@ -34,11 +34,33 @@ const ContentBlock = ({ block }: { block: NewsArticle["content"][number] }) => {
 const NewsDetail = () => {
   const { id } = useParams<{ id: string }>();
   const article = NEWS.find((n) => String(n.id) === id);
+  const [copied, setCopied] = useState(false);
 
   if (!article) return <Navigate to="/actualites" replace />;
 
   const related = NEWS.filter((n) => n.id !== article.id).slice(0, 3);
 
+  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+  const shareText = `${article.title} — MA2E`;
+  const openShare = (url: string) => window.open(url, "_blank", "noopener,noreferrer,width=640,height=560");
+  const handleFacebook = () =>
+    openShare(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`);
+  const handleTwitter = () =>
+    openShare(
+      `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`,
+    );
+  const handleLinkedIn = () =>
+    openShare(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      toast({ title: "Lien copié", description: "Le lien de l'article a été copié dans le presse-papiers." });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: "Impossible de copier", description: "Veuillez copier le lien manuellement.", variant: "destructive" });
+    }
+  };
   return (
     <Layout>
       {/* Hero image */}
@@ -87,9 +109,10 @@ const NewsDetail = () => {
               </Link>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground inline-flex items-center gap-1.5"><Share2 className="h-4 w-4" /> Partager</span>
-                <button aria-label="Partager sur Facebook" className="h-9 w-9 rounded-full bg-card border border-border hover:border-primary hover:text-primary inline-flex items-center justify-center transition-smooth"><Facebook className="h-4 w-4" /></button>
-                <button aria-label="Partager sur Twitter" className="h-9 w-9 rounded-full bg-card border border-border hover:border-primary hover:text-primary inline-flex items-center justify-center transition-smooth"><Twitter className="h-4 w-4" /></button>
-                <button aria-label="Partager sur LinkedIn" className="h-9 w-9 rounded-full bg-card border border-border hover:border-primary hover:text-primary inline-flex items-center justify-center transition-smooth"><Linkedin className="h-4 w-4" /></button>
+                <button onClick={handleFacebook} aria-label="Partager sur Facebook" className="h-9 w-9 rounded-full bg-card border border-border hover:border-primary hover:text-primary inline-flex items-center justify-center transition-smooth"><Facebook className="h-4 w-4" /></button>
+                <button onClick={handleTwitter} aria-label="Partager sur X (Twitter)" className="h-9 w-9 rounded-full bg-card border border-border hover:border-primary hover:text-primary inline-flex items-center justify-center transition-smooth"><Twitter className="h-4 w-4" /></button>
+                <button onClick={handleLinkedIn} aria-label="Partager sur LinkedIn" className="h-9 w-9 rounded-full bg-card border border-border hover:border-primary hover:text-primary inline-flex items-center justify-center transition-smooth"><Linkedin className="h-4 w-4" /></button>
+                <button onClick={handleCopy} aria-label="Copier le lien" className="h-9 w-9 rounded-full bg-card border border-border hover:border-primary hover:text-primary inline-flex items-center justify-center transition-smooth">{copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}</button>
               </div>
             </div>
           </article>
