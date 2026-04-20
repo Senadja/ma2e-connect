@@ -29,6 +29,9 @@ const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 // Admin Pages
 const AdminLogin = lazy(() => import("./pages/admin/Login.tsx"));
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard.tsx"));
+const NewsManager = lazy(() => import("./pages/admin/NewsManager.tsx").then(m => ({ default: m.NewsManager })));
+const ApplicationsManager = lazy(() => import("./pages/admin/ApplicationsManager.tsx").then(m => ({ default: m.ApplicationsManager })));
+const MediaLibraryPage = lazy(() => import("./components/admin/MediaLibrary.tsx").then(m => ({ default: m.MediaLibrary })));
 
 const PageLoader = () => (
   <div className="h-screen w-full flex items-center justify-center bg-background">
@@ -80,9 +83,9 @@ const App = () => (
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Navigate to="/admin/dashboard" replace />} />
                 <Route path="dashboard" element={<AdminDashboard />} />
-                <Route path="news" element={<Placeholder title="Gestion des Actualités" />} />
-                <Route path="products" element={<Placeholder title="Gestion des Produits" />} />
-                <Route path="applications" element={<Placeholder title="Gestion des Demandes" />} />
+                <Route path="news" element={<NewsManager />} />
+                <Route path="products" element={<MediaLibraryPage />} /> {/* Using Media Library for now as proof of concept */}
+                <Route path="applications" element={<ApplicationsManager />} />
                 <Route path="users" element={<Placeholder title="Gestion des Utilisateurs" />} />
                 <Route path="settings" element={<Placeholder title="Paramètres du système" />} />
               </Route>
