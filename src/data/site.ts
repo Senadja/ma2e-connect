@@ -75,6 +75,7 @@ export const NEWS: NewsArticle[] = [
   {
     id: 1,
     category: "Événements",
+    tags: ["Assemblée générale", "Gouvernance", "2025"],
     date: "12 mars 2025",
     title: "Assemblée Générale Ordinaire 2025",
     excerpt: "La MA2E convie tous ses adhérents à l'AG annuelle pour présenter les résultats et perspectives.",
@@ -93,6 +94,7 @@ export const NEWS: NewsArticle[] = [
   {
     id: 2,
     category: "Communiqués",
+    tags: ["Agence", "Yamoussoukro", "Réseau"],
     date: "01 février 2025",
     title: "Nouvelle agence à Yamoussoukro",
     excerpt: "Ouverture officielle de notre 3ème agence pour mieux servir nos adhérents de l'intérieur.",
@@ -110,6 +112,7 @@ export const NEWS: NewsArticle[] = [
   {
     id: 3,
     category: "Offres",
+    tags: ["Crédit immobilier", "Promotion", "Taux"],
     date: "15 janvier 2025",
     title: "Promotion crédit immobilier 2025",
     excerpt: "Bénéficiez d'un taux préférentiel de 6,2% sur tous les crédits immobiliers signés avant juin.",
@@ -127,6 +130,7 @@ export const NEWS: NewsArticle[] = [
   {
     id: 4,
     category: "Événements",
+    tags: ["Immobilier", "Logement", "Cérémonie"],
     date: "05 décembre 2024",
     title: "Cérémonie de remise des clés — 2ème tranche",
     excerpt: "12 nouvelles familles deviennent propriétaires grâce au programme immobilier MA2E.",
@@ -144,6 +148,7 @@ export const NEWS: NewsArticle[] = [
   {
     id: 5,
     category: "Communiqués",
+    tags: ["E-MA2E", "Digital", "Plateforme"],
     date: "20 novembre 2024",
     title: "Mise à jour de la plateforme E-MA2E",
     excerpt: "Nouvelle interface, espace adhérent enrichi et notifications en temps réel.",
@@ -159,6 +164,7 @@ export const NEWS: NewsArticle[] = [
   {
     id: 6,
     category: "Offres",
+    tags: ["Épargne logement", "Bonification", "Offre"],
     date: "10 octobre 2024",
     title: "Épargne Logement bonifiée",
     excerpt: "Profitez d'une bonification exceptionnelle sur l'épargne logement jusqu'au 31 décembre.",
