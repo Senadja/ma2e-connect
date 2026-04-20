@@ -67,6 +67,7 @@ export type NewsArticle = {
   excerpt: string;
   author?: string;
   readTime?: string;
+  tags?: string[];
   content: { type: "p" | "h2" | "quote" | "list"; text?: string; items?: string[] }[];
 };
 
