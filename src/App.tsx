@@ -12,6 +12,12 @@ import RealEstate from "./pages/RealEstate.tsx";
 import News from "./pages/News.tsx";
 import NewsDetail from "./pages/NewsDetail.tsx";
 import Contact from "./pages/Contact.tsx";
+import Faq from "./pages/Faq.tsx";
+import Mediatheque from "./pages/Mediatheque.tsx";
+import Partners from "./pages/Partners.tsx";
+import MentionsLegales from "./pages/legal/MentionsLegales.tsx";
+import Cgu from "./pages/legal/Cgu.tsx";
+import PolitiqueDcp from "./pages/legal/PolitiqueDcp.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -32,6 +38,12 @@ const App = () => (
           <Route path="/actualites" element={<News />} />
           <Route path="/actualites/:id" element={<NewsDetail />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/faq" element={<Faq />} />
+          <Route path="/mediatheque" element={<Mediatheque />} />
+          <Route path="/partenaires" element={<Partners />} />
+          <Route path="/mentions-legales" element={<MentionsLegales />} />
+          <Route path="/cgu" element={<Cgu />} />
+          <Route path="/politique-dcp" element={<PolitiqueDcp />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

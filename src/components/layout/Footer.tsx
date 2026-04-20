@@ -27,8 +27,10 @@ export const Footer = () => (
             <li><Link to="/a-propos" className="hover:text-accent transition-smooth">À propos</Link></li>
             <li><Link to="/produits" className="hover:text-accent transition-smooth">Nos produits</Link></li>
             <li><Link to="/actualites" className="hover:text-accent transition-smooth">Actualités</Link></li>
+            <li><Link to="/faq" className="hover:text-accent transition-smooth">FAQ</Link></li>
+            <li><Link to="/mediatheque" className="hover:text-accent transition-smooth">Médiathèque</Link></li>
+            <li><Link to="/partenaires" className="hover:text-accent transition-smooth">Partenaires</Link></li>
             <li><Link to="/contact" className="hover:text-accent transition-smooth">Contact</Link></li>
-            <li><a href="#" className="hover:text-accent transition-smooth">Espace E-MA2E</a></li>
           </ul>
         </div>
 
@@ -53,9 +55,10 @@ export const Footer = () => (
 
       <div className="mt-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-t border-white/10 pt-6 text-xs text-white/50">
         <p>© {new Date().getFullYear()} MA2E — Tous droits réservés.</p>
-        <div className="flex gap-6">
-          <a href="mailto:privacyMA2E@ma2e.ci" className="hover:text-accent">Données personnelles (DCP)</a>
-          <a href="#" className="hover:text-accent">Mentions légales</a>
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          <Link to="/mentions-legales" className="hover:text-accent">Mentions légales</Link>
+          <Link to="/cgu" className="hover:text-accent">CGU</Link>
+          <Link to="/politique-dcp" className="hover:text-accent">Politique DCP</Link>
         </div>
       </div>
     </div>
