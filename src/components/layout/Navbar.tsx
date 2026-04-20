@@ -35,7 +35,7 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
     <header
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-all duration-500",
-        scrolled || isMobileOpen ? "bg-background/80 backdrop-blur-xl border-b border-border shadow-soft" : "bg-background/0"
+        scrolled ? "bg-background/80 backdrop-blur-xl border-b border-border shadow-soft" : "bg-background/0"
       )}
     >
       <div className={cn("container flex items-center justify-between transition-all duration-500", scrolled ? "h-16" : "h-20 lg:h-24")}>
@@ -117,13 +117,13 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
           aria-label={isMobileOpen ? "Fermer le menu" : "Ouvrir le menu"}
           onClick={() => setMobileOpen(!isMobileOpen)}
         >
-          {isMobileOpen ? <X className={cn("h-7 w-7", scrolled ? "text-primary" : "text-white")} /> : <Menu className={cn("h-7 w-7", !scrolled && "text-white")} />}
+          {isMobileOpen ? <X className={cn("h-7 w-7", scrolled || isMobileOpen ? "text-primary" : "text-white")} /> : <Menu className={cn("h-7 w-7", !scrolled && "text-white")} />}
         </button>
       </div>
 
       {/* FULL SCREEN MOBILE MENU */}
       <div className={cn(
-        "lg:hidden fixed inset-0 bg-background/98 backdrop-blur-2xl transition-all duration-500 ease-in-out z-40 transform-gpu",
+        "lg:hidden fixed inset-0 bg-background transition-all duration-300 ease-in-out z-40 transform-gpu",
         isMobileOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full pointer-events-none"
       )}>
         <div className="container h-full flex flex-col pt-24 pb-32 overflow-y-auto overscroll-contain">
