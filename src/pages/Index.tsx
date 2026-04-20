@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, ChevronDown, Wallet, Landmark, Home, Quote, TrendingUp, Users, Award, Coins } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
+import { SEO } from "@/components/SEO";
 import { useReveal, useCounter } from "@/hooks/useReveal";
 import { STATS, MILESTONES, NEWS } from "@/data/site";
 
@@ -67,6 +68,7 @@ const Index = () => {
 
   return (
     <Layout>
+      <SEO />
       {/* HERO */}
       <section className="relative bg-gradient-hero text-white overflow-hidden min-h-[calc(100vh-5rem)] flex items-center">
         <div className="absolute inset-0 grid-pattern-light opacity-60" aria-hidden />
