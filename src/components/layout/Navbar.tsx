@@ -57,12 +57,14 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
                   className={({ isActive }) =>
                     cn(
                       "group relative inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold transition-all duration-300 rounded-full",
-                      isActive ? "text-primary bg-primary/5" : "text-foreground/70 hover:text-primary hover:bg-primary/5"
+                      isActive 
+                        ? (scrolled ? "text-primary bg-primary/5" : "text-accent bg-white/10") 
+                        : (scrolled ? "text-foreground/70 hover:text-primary hover:bg-primary/5" : "text-white/90 hover:text-white hover:bg-white/10")
                     )
                   }
                 >
                   {link.label}
-                  {hasChildren && <ChevronDown className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-180" />}
+                  {hasChildren && <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-180", !scrolled && "text-white/70")} />}
                 </NavLink>
 
                 {hasChildren && openMenu === link.label && (
