@@ -1,5 +1,6 @@
 export const NAV_LINKS = [
   { label: "Accueil", href: "/" },
+  { label: "Adhésion", href: "/adhesion" },
   {
     label: "À propos",
     href: "/a-propos",
