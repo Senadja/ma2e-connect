@@ -35,7 +35,8 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
     <header
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-all duration-500",
-        scrolled ? "bg-background/80 backdrop-blur-xl border-b border-border shadow-soft" : "bg-background/0"
+        // Test: Removing backdrop-blur and semi-transparency that might cause gray/buggy rendering
+        scrolled ? "bg-background border-b border-border shadow-soft" : "bg-transparent"
       )}
     >
       <div className={cn("container flex items-center justify-between transition-all duration-500", scrolled ? "h-16" : "h-20 lg:h-24")}>
