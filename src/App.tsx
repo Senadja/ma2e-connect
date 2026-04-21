@@ -78,6 +78,7 @@ const App = () => (
               <Route path="/mentions-legales" element={<MentionsLegales />} />
               <Route path="/cgu" element={<Cgu />} />
               <Route path="/politique-dcp" element={<PolitiqueDcp />} />
+              <Route path="/espace-ema2e" element={<EspaceSocietaire />} />
 
               {/* Admin Routes */}
               <Route path="/admin/login" element={<AdminLogin />} />
