@@ -2,7 +2,7 @@ import { Layout } from "@/components/layout/Layout";
 import { PageHero } from "@/components/PageHero";
 import { useReveal, useCounter } from "@/hooks/useReveal";
 import { MILESTONES, STATS, TEAM } from "@/data/site";
-import { Quote, ShieldCheck, Heart, Briefcase, Users, Award, TrendingUp, Coins } from "lucide-react";
+import { Quote, ShieldCheck, Wallet, Briefcase, Users, Award, TrendingUp, Coins } from "lucide-react";
 
 const StatItem = ({ stat, icon: Icon }: { stat: typeof STATS[number]; icon: any }) => {
   const { ref, value } = useCounter<HTMLDivElement>(stat.value);
@@ -21,7 +21,7 @@ const About = () => {
   const r1 = useReveal(); const r2 = useReveal(); const r3 = useReveal(); const r4 = useReveal();
   const statIcons = [Users, Award, TrendingUp, Coins];
   const missions = [
-    { icon: Heart, title: "Accessibilité financière", desc: "Permettre à chaque agent d'accéder à des services financiers adaptés et abordables." },
+    { icon: Wallet, title: "Accessibilité financière", desc: "Permettre à chaque agent d'accéder à des services financiers adaptés et abordables." },
     { icon: Briefcase, title: "Professionnalisme", desc: "Offrir un service de qualité, transparent, conforme aux standards de la microfinance." },
     { icon: ShieldCheck, title: "Amélioration sociale", desc: "Contribuer concrètement à l'amélioration des conditions de vie de nos adhérents." },
   ];
