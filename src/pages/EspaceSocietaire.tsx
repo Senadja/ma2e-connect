@@ -17,10 +17,10 @@ const EspaceSocietaire = () => {
             <Lock className="h-4 w-4" />
           </div>
         </div>
-        
+
         <h1 className="font-display text-4xl md:text-5xl font-bold text-primary-dark">Espace E-MA2E</h1>
         <p className="mt-4 text-xl font-medium text-accent italic">Bientôt disponible</p>
-        
+
         <div className="mt-8 max-w-lg p-8 rounded-3xl border border-border bg-card shadow-sm">
           <Rocket className="mx-auto h-8 w-8 text-primary mb-4" />
           <p className="text-muted-foreground leading-relaxed">
