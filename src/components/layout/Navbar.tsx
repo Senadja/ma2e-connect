@@ -104,13 +104,13 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
           >
             Accès Admin
           </Link>
-          <a
-            href="#"
+          <Link
+            to="/espace-ema2e"
             className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-2.5 text-sm font-bold text-accent-foreground shadow-gold hover:scale-[1.03] transition-bounce"
           >
             Espace E-MA2E
             <ArrowRight className="h-4 w-4" />
-          </a>
+          </Link>
         </div>
 
         <button
@@ -161,10 +161,10 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
             ))}
           </nav>
 
-          <div className={cn("mt-8 space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200", !isMobileOpen && "opacity-0")}>
-            <a href="#" className="flex items-center justify-center gap-3 rounded-2xl bg-primary h-16 text-lg font-bold text-white shadow-xl shadow-primary/20">
+          <div className={cn("mt-8 space-y-4 transition-all duration-700 delay-200", !isMobileOpen && "opacity-0")}>
+            <Link to="/espace-ema2e" className="flex items-center justify-center gap-3 rounded-2xl bg-primary h-16 text-lg font-bold text-white shadow-xl shadow-primary/20">
               <Smartphone className="h-6 w-6" /> Espace E-MA2E
-            </a>
+            </Link>
             <div className="grid grid-cols-2 gap-4">
               <Link to="/faq" className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-secondary text-xs font-bold text-muted-foreground">
                 <HelpCircle className="h-5 w-5 text-primary" /> FAQ
@@ -179,3 +179,4 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
     </header>
   );
 };
+

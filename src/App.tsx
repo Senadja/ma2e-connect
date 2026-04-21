@@ -24,6 +24,7 @@ const Partners = lazy(() => import("./pages/Partners.tsx"));
 const MentionsLegales = lazy(() => import("./pages/legal/MentionsLegales.tsx"));
 const Cgu = lazy(() => import("./pages/legal/Cgu.tsx"));
 const PolitiqueDcp = lazy(() => import("./pages/legal/PolitiqueDcp.tsx"));
+const EspaceSocietaire = lazy(() => import("./pages/EspaceSocietaire.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 // Admin Pages
