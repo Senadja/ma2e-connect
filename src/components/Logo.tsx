@@ -3,13 +3,13 @@ import { cn } from "@/lib/utils";
 
 export const Logo = ({ className, dark = false }: { className?: string; dark?: boolean }) => (
   <Link to="/" aria-label="MA2E - Accueil" className={cn("inline-flex items-center", className)}>
-    <span
+    <img 
+      src="/logo-ma2e.png" 
+      alt="MA2E Logo" 
       className={cn(
-        "inline-flex items-center rounded-md px-3 py-1.5 font-display font-bold text-lg tracking-tight",
-        dark ? "bg-white text-primary" : "bg-primary text-white"
-      )}
-    >
-      M<span className="text-accent">A</span>2E
-    </span>
+        "h-12 w-auto object-contain transition-all",
+        dark && "brightness-0 invert" // Optional: makes it white if background is very dark
+      )} 
+    />
   </Link>
 );
