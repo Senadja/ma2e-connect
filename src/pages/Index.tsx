@@ -23,33 +23,39 @@ const StatItem = ({ stat, icon: Icon }: { stat: typeof STATS[number]; icon: any 
 };
 
 const HeroIllustration = () => (
-  <svg viewBox="0 0 400 400" className="w-full h-auto" aria-hidden>
-    <defs>
-      <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
-        <stop offset="0" stopColor="hsl(154 58% 34%)" />
-        <stop offset="1" stopColor="hsl(154 58% 18%)" />
-      </linearGradient>
-      <linearGradient id="g2" x1="0" x2="1" y1="0" y2="0">
-        <stop offset="0" stopColor="hsl(36 91% 55%)" />
-        <stop offset="1" stopColor="hsl(40 95% 65%)" />
-      </linearGradient>
-    </defs>
-    {/* House */}
-    <path d="M80 220 L200 130 L320 220 L320 340 L80 340 Z" fill="url(#g1)" opacity="0.9" />
-    <path d="M80 220 L200 130 L320 220" fill="none" stroke="url(#g2)" strokeWidth="3" />
-    <rect x="170" y="250" width="60" height="90" fill="hsl(36 91% 55%)" rx="4" />
-    <rect x="110" y="250" width="40" height="40" fill="hsl(140 27% 97%)" rx="2" opacity="0.85" />
-    <rect x="250" y="250" width="40" height="40" fill="hsl(140 27% 97%)" rx="2" opacity="0.85" />
-    {/* Coins */}
-    <circle cx="80" cy="100" r="30" fill="url(#g2)" />
-    <text x="80" y="108" textAnchor="middle" fontSize="22" fontWeight="bold" fill="hsl(150 53% 11%)">F</text>
-    <circle cx="340" cy="80" r="20" fill="url(#g2)" opacity="0.9" />
-    <circle cx="50" cy="170" r="14" fill="url(#g2)" opacity="0.7" />
-    {/* Plant */}
-    <path d="M200 340 Q190 310 200 280 Q210 310 200 340" fill="hsl(154 58% 45%)" />
-    <ellipse cx="184" cy="295" rx="14" ry="6" fill="hsl(154 58% 50%)" transform="rotate(-30 184 295)" />
-    <ellipse cx="216" cy="295" rx="14" ry="6" fill="hsl(154 58% 50%)" transform="rotate(30 216 295)" />
-  </svg>
+  <div className="relative w-full aspect-square md:aspect-auto md:h-[500px] flex items-center justify-center">
+    {/* Decorative background blobs */}
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-primary/20 rounded-full blur-[80px] -z-10 animate-pulse" />
+    <div className="absolute top-0 right-0 w-32 h-32 bg-accent/20 rounded-full blur-[40px] -z-10" />
+    
+    {/* Main Image Container */}
+    <div className="relative w-full max-w-lg animate-float">
+      <div className="relative rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white/20">
+        <img 
+          src="https://images.unsplash.com/photo-1571175355524-747376044737?auto=format&fit=crop&q=80&w=800" 
+          alt="Famille heureuse et accès à la propriété" 
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-primary-dark/60 via-transparent to-transparent" />
+      </div>
+
+      {/* Floating Info Cards (UI/UX Premium) */}
+      <div className="absolute -bottom-6 -left-6 bg-white/90 backdrop-blur-xl p-4 rounded-2xl shadow-elegant border border-white/50 flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-700 delay-300">
+        <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+          <CheckCircle2 className="h-6 w-6" />
+        </div>
+        <div>
+          <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Statut Projet</div>
+          <div className="text-sm font-bold text-primary-dark">Logement livré</div>
+        </div>
+      </div>
+
+      <div className="absolute top-12 -right-6 bg-accent/90 backdrop-blur-xl p-4 rounded-2xl shadow-gold border border-white/50 flex flex-col items-center animate-in fade-in slide-in-from-right-4 duration-700 delay-500">
+        <div className="text-xs font-bold text-accent-foreground">Taux Exceptionnel</div>
+        <div className="text-2xl font-display font-black text-accent-foreground">6,5%</div>
+      </div>
+    </div>
+  </div>
 );
 
 const Index = () => {
