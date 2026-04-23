@@ -3,8 +3,6 @@ import { X } from "lucide-react";
 
 export const FlashBanner = () => {
   const [open, setOpen] = useState(true);
-  // Temporarily hidden for screenshots
-  return null;
   
   if (!open) return null;
   return (
