@@ -23,40 +23,33 @@ const StatItem = ({ stat, icon: Icon }: { stat: typeof STATS[number]; icon: any 
 };
 
 const HeroIllustration = () => (
-  <div className="relative w-full min-h-[400px] lg:h-[600px] flex items-center justify-center">
-    {/* High-end decorative elements */}
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110%] h-[110%] bg-primary/20 rounded-full blur-[100px] -z-10 opacity-60" />
-    
-    {/* Main Composition */}
-    <div className="relative w-full max-w-2xl transform hover:scale-[1.01] transition-all duration-700">
-      <div className="relative rounded-[3rem] overflow-hidden shadow-2xl border-[1px] border-white/20 group text-center">
-        <img 
-          src="https://images.unsplash.com/photo-1581092921461-7d15886a5488?auto=format&fit=crop&q=90&w=1200" 
-          alt="Expert technique au service des agents" 
-          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-        />
-        <div className="absolute inset-0 bg-gradient-to-tr from-primary-dark/60 via-transparent to-transparent mix-blend-multiply" />
-      </div>
-
-      {/* Floating UI Elements (Senior UX) */}
-      <div className="absolute -bottom-8 -left-8 bg-white p-5 rounded-3xl shadow-elegant border border-primary/10 flex items-center gap-4 animate-float">
-        <div className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center text-white shadow-lg">
-          <Landmark className="h-8 w-8" />
-        </div>
-        <div>
-          <div className="text-[11px] uppercase font-black text-muted-foreground tracking-widest mb-0.5">Votre Mutuelle</div>
-          <div className="text-lg font-display font-bold text-primary-dark leading-none">Solide & Durable</div>
-        </div>
-      </div>
-
-      <div className="absolute top-12 -right-8 bg-white/20 backdrop-blur-xl p-6 rounded-[2.5rem] shadow-2xl border border-white/30 flex flex-col items-center">
-        <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center text-accent-foreground mb-2">
-          <Users className="h-5 w-5" />
-        </div>
-        <div className="text-[10px] font-bold text-white uppercase tracking-tighter">Agents CIE · SODECI</div>
-      </div>
-    </div>
-  </div>
+  <svg viewBox="0 0 400 400" className="w-full h-auto" aria-hidden>
+    <defs>
+      <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
+        <stop offset="0" stopColor="hsl(154 58% 34%)" />
+        <stop offset="1" stopColor="hsl(154 58% 18%)" />
+      </linearGradient>
+      <linearGradient id="g2" x1="0" x2="1" y1="0" y2="0">
+        <stop offset="0" stopColor="hsl(36 91% 55%)" />
+        <stop offset="1" stopColor="hsl(40 95% 65%)" />
+      </linearGradient>
+    </defs>
+    {/* House */}
+    <path d="M80 220 L200 130 L320 220 L320 340 L80 340 Z" fill="url(#g1)" opacity="0.9" />
+    <path d="M80 220 L200 130 L320 220" fill="none" stroke="url(#g2)" strokeWidth="3" />
+    <rect x="170" y="250" width="60" height="90" fill="hsl(36 91% 55%)" rx="4" />
+    <rect x="110" y="250" width="40" height="40" fill="hsl(140 27% 97%)" rx="2" opacity="0.85" />
+    <rect x="250" y="250" width="40" height="40" fill="hsl(140 27% 97%)" rx="2" opacity="0.85" />
+    {/* Coins */}
+    <circle cx="80" cy="100" r="30" fill="url(#g2)" />
+    <text x="80" y="108" textAnchor="middle" fontSize="22" fontWeight="bold" fill="hsl(150 53% 11%)">F</text>
+    <circle cx="340" cy="80" r="20" fill="url(#g2)" opacity="0.9" />
+    <circle cx="50" cy="170" r="14" fill="url(#g2)" opacity="0.7" />
+    {/* Plant */}
+    <path d="M200 340 Q190 310 200 280 Q210 310 200 340" fill="hsl(154 58% 45%)" />
+    <ellipse cx="184" cy="295" rx="14" ry="6" fill="hsl(154 58% 50%)" transform="rotate(-30 184 295)" />
+    <ellipse cx="216" cy="295" rx="14" ry="6" fill="hsl(154 58% 50%)" transform="rotate(30 216 295)" />
+  </svg>
 );
 
 const Index = () => {
