@@ -55,11 +55,6 @@ const HeroIllustration = () => (
           <div className="text-lg font-display font-bold text-primary-dark leading-none">Accordé en 48h</div>
         </div>
       </div>
-
-      <div className="absolute top-20 -right-10 bg-white/10 backdrop-blur-2xl p-6 rounded-[2.5rem] shadow-2xl border border-white/20 flex flex-col items-center group cursor-pointer hover:bg-accent/90 transition-all duration-500">
-        <div className="text-xs font-bold text-white group-hover:text-accent-foreground uppercase tracking-widest mb-1">Sociétaires</div>
-        <div className="text-4xl font-display font-black text-accent group-hover:text-accent-foreground animate-counter">+7k</div>
-      </div>
     </div>
   </div>
 );
