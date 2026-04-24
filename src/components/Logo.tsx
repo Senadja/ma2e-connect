@@ -8,7 +8,10 @@ export const Logo = ({ className, dark = false }: { className?: string; dark?: b
       alt="MA2E Logo" 
       className={cn(
         "h-12 w-auto object-contain transition-all",
-        dark && "brightness-0 invert" // Optional: makes it white if background is very dark
+        // If dark is true (footer), we keep it as is because the logo has a green background 
+        // that contrasts well with the dark green of the footer.
+        // We only apply brightness boost if really needed.
+        dark ? "brightness-110" : ""
       )} 
     />
   </Link>

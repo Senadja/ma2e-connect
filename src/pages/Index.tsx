@@ -23,36 +23,42 @@ const StatItem = ({ stat, icon: Icon }: { stat: typeof STATS[number]; icon: any 
 };
 
 const HeroIllustration = () => (
-  <div className="relative w-full aspect-square md:aspect-auto md:h-[500px] flex items-center justify-center">
-    {/* Decorative background blobs */}
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-primary/20 rounded-full blur-[80px] -z-10 animate-pulse" />
-    <div className="absolute top-0 right-0 w-32 h-32 bg-accent/20 rounded-full blur-[40px] -z-10" />
+  <div className="relative w-full min-h-[400px] lg:h-[600px] flex items-center justify-center">
+    {/* High-end decorative elements */}
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110%] h-[110%] bg-primary/30 rounded-full blur-[100px] -z-10 opacity-60" />
+    <div className="absolute -top-10 -right-10 w-48 h-48 bg-accent/30 rounded-full blur-[60px] -z-10 animate-pulse" />
     
-    {/* Main Image Container */}
-    <div className="relative w-full max-w-lg animate-float">
-      <div className="relative rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white/20">
+    {/* Main Composition */}
+    <div className="relative w-full max-w-2xl transform hover:scale-[1.02] transition-all duration-700">
+      <div className="relative rounded-[3rem] overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,0.4)] border-[1px] border-white/30 group">
         <img 
-          src="https://images.unsplash.com/photo-1571175355524-747376044737?auto=format&fit=crop&q=80&w=800" 
-          alt="Famille heureuse et accès à la propriété" 
-          className="w-full h-full object-cover"
+          src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=90&w=1200" 
+          alt="Succès professionnel et familial" 
+          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-primary-dark/60 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-primary-dark/80 via-transparent to-transparent mix-blend-multiply" />
+        
+        {/* Subtle Overlay text */}
+        <div className="absolute bottom-8 left-8 right-8">
+          <div className="h-px w-12 bg-accent mb-4" />
+          <p className="text-white/90 text-sm font-medium italic">« Nous avons enfin les clés de notre futur. »</p>
+        </div>
       </div>
 
-      {/* Floating Info Cards (UI/UX Premium) */}
-      <div className="absolute -bottom-6 -left-6 bg-white/90 backdrop-blur-xl p-4 rounded-2xl shadow-elegant border border-white/50 flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-700 delay-300">
-        <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-          <CheckCircle2 className="h-6 w-6" />
+      {/* Floating UI Badges (Senior UX) */}
+      <div className="absolute -bottom-8 -left-8 bg-white p-5 rounded-3xl shadow-elegant border border-primary/10 flex items-center gap-4 animate-bounce-soft">
+        <div className="h-14 w-14 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-200">
+          <CheckCircle2 className="h-8 w-8" />
         </div>
         <div>
-          <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Statut Projet</div>
-          <div className="text-sm font-bold text-primary-dark">Logement livré</div>
+          <div className="text-[11px] uppercase font-black text-muted-foreground tracking-widest mb-0.5">Financement</div>
+          <div className="text-lg font-display font-bold text-primary-dark leading-none">Accordé en 48h</div>
         </div>
       </div>
 
-      <div className="absolute top-12 -right-6 bg-accent/90 backdrop-blur-xl p-4 rounded-2xl shadow-gold border border-white/50 flex flex-col items-center animate-in fade-in slide-in-from-right-4 duration-700 delay-500">
-        <div className="text-xs font-bold text-accent-foreground">Taux Exceptionnel</div>
-        <div className="text-2xl font-display font-black text-accent-foreground">6,5%</div>
+      <div className="absolute top-20 -right-10 bg-white/10 backdrop-blur-2xl p-6 rounded-[2.5rem] shadow-2xl border border-white/20 flex flex-col items-center group cursor-pointer hover:bg-accent/90 transition-all duration-500">
+        <div className="text-xs font-bold text-white group-hover:text-accent-foreground uppercase tracking-widest mb-1">Sociétaires</div>
+        <div className="text-4xl font-display font-black text-accent group-hover:text-accent-foreground animate-counter">+7k</div>
       </div>
     </div>
   </div>
