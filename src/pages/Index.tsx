@@ -25,35 +25,35 @@ const StatItem = ({ stat, icon: Icon }: { stat: typeof STATS[number]; icon: any 
 const HeroIllustration = () => (
   <div className="relative w-full min-h-[400px] lg:h-[600px] flex items-center justify-center">
     {/* High-end decorative elements */}
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110%] h-[110%] bg-primary/30 rounded-full blur-[100px] -z-10 opacity-60" />
-    <div className="absolute -top-10 -right-10 w-48 h-48 bg-accent/30 rounded-full blur-[60px] -z-10 animate-pulse" />
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110%] h-[110%] bg-primary/20 rounded-full blur-[100px] -z-10 opacity-60" />
     
     {/* Main Composition */}
-    <div className="relative w-full max-w-2xl transform hover:scale-[1.02] transition-all duration-700">
-      <div className="relative rounded-[3rem] overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,0.4)] border-[1px] border-white/30 group">
+    <div className="relative w-full max-w-2xl transform hover:scale-[1.01] transition-all duration-700">
+      <div className="relative rounded-[3rem] overflow-hidden shadow-2xl border-[1px] border-white/20 group text-center">
         <img 
-          src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=90&w=1200" 
-          alt="Succès professionnel et familial" 
-          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+          src="https://images.unsplash.com/photo-1581092921461-7d15886a5488?auto=format&fit=crop&q=90&w=1200" 
+          alt="Expert technique au service des agents" 
+          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-tr from-primary-dark/80 via-transparent to-transparent mix-blend-multiply" />
-        
-        {/* Subtle Overlay text */}
-        <div className="absolute bottom-8 left-8 right-8">
-          <div className="h-px w-12 bg-accent mb-4" />
-          <p className="text-white/90 text-sm font-medium italic">« Nous avons enfin les clés de notre futur. »</p>
+        <div className="absolute inset-0 bg-gradient-to-tr from-primary-dark/60 via-transparent to-transparent mix-blend-multiply" />
+      </div>
+
+      {/* Floating UI Elements (Senior UX) */}
+      <div className="absolute -bottom-8 -left-8 bg-white p-5 rounded-3xl shadow-elegant border border-primary/10 flex items-center gap-4 animate-float">
+        <div className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center text-white shadow-lg">
+          <Landmark className="h-8 w-8" />
+        </div>
+        <div>
+          <div className="text-[11px] uppercase font-black text-muted-foreground tracking-widest mb-0.5">Votre Mutuelle</div>
+          <div className="text-lg font-display font-bold text-primary-dark leading-none">Solide & Durable</div>
         </div>
       </div>
 
-      {/* Floating UI Badges (Senior UX) */}
-      <div className="absolute -bottom-8 -left-8 bg-white p-5 rounded-3xl shadow-elegant border border-primary/10 flex items-center gap-4 animate-bounce-soft">
-        <div className="h-14 w-14 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-200">
-          <CheckCircle2 className="h-8 w-8" />
+      <div className="absolute top-12 -right-8 bg-white/20 backdrop-blur-xl p-6 rounded-[2.5rem] shadow-2xl border border-white/30 flex flex-col items-center">
+        <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center text-accent-foreground mb-2">
+          <Users className="h-5 w-5" />
         </div>
-        <div>
-          <div className="text-[11px] uppercase font-black text-muted-foreground tracking-widest mb-0.5">Financement</div>
-          <div className="text-lg font-display font-bold text-primary-dark leading-none">Accordé en 48h</div>
-        </div>
+        <div className="text-[10px] font-bold text-white uppercase tracking-tighter">Agents CIE · SODECI</div>
       </div>
     </div>
   </div>
