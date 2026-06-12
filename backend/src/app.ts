@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
 import { env } from './lib/env';
 import { authRouter } from './routes/auth';
 import { articlesRouter } from './routes/articles';
@@ -33,6 +34,14 @@ app.use(
 );
 app.use(express.json({ limit: '2mb' }));
 app.use(auditMiddleware);
+
+// Sert les fichiers uploadés (pièces jointes, visuels). En prod (front sur Vercel),
+// c'est le backend qui les expose, derrière le reverse proxy ; le front les atteint
+// via une rewrite "/documents/uploads/*".
+const UPLOAD_DIR = process.env.UPLOAD_DIR
+  ? path.resolve(process.env.UPLOAD_DIR)
+  : path.resolve(__dirname, '../../public/documents/uploads');
+app.use('/documents/uploads', express.static(UPLOAD_DIR));
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', message: 'MA2E Connect Backend API is running' });

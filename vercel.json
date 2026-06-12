@@ -1,5 +1,14 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://188-165-77-237.sslip.io/api/:path*"
+    },
+    {
+      "source": "/documents/uploads/:path*",
+      "destination": "https://188-165-77-237.sslip.io/documents/uploads/:path*"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

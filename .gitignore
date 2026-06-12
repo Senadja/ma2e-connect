@@ -27,6 +27,8 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+.env.prod
+.env.production
 
 # Documents sources & artefacts internes (non versionnés)
 /MA2E/

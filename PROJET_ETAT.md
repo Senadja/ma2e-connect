@@ -4,6 +4,15 @@
 > ou une nouvelle session. **À mettre à jour à la fin de chaque tâche significative.**
 > Dernière mise à jour : 2026-06-11.
 
+## Git & déploiement (état au 2026-06-12)
+- Remote : `github.com/Senadja/ma2e-connect`.
+- `main` (`95c7767`) = **ancienne version front statique, déployée par Vercel** (`ma2e-connect.vercel.app`). **Ne pas pousser dessus** sans gérer Vercel.
+- `online-vercel-backup` + tag `vercel-prod-2026-06-12` = sauvegarde de la prod Vercel.
+- `refonte-fullstack` = nouvelle version full-stack (branche de travail courante, poussée).
+- **Cible de déploiement** : front sur **Vercel**, backend (Node + PostgreSQL) sur **serveur dédié OVH**, tout en **Docker**.
+  Identifiants serveur fournis hors-repo (NE PAS committer ; à faire tourner en clé SSH + rotation du mot de passe).
+- **À décider avant déploiement** : domaine/sous-domaine de l'API (CORS + `VITE_API_URL`), stratégie de stockage des uploads (cf. ci-dessous).
+
 ## Stack
 - **Front** : Vite + React + React Router (SPA), react-i18next (FR/EN), React Query, zustand (`useAuth`).
 - **Back** : Node/Express 5 + Prisma 5.22 + PostgreSQL.

@@ -1,0 +1,73 @@
+# Stack de PRODUCTION (serveur OVH) : PostgreSQL + API Node + Caddy (reverse proxy + HTTPS auto).
+# Le FRONT n'est PAS ici (il est sur Vercel). Caddy expose l'API en HTTPS.
+#
+# Déploiement :
+#   cp .env.prod.example .env.prod   (puis remplir)
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# Front Vercel : voir vercel.json (rewrites /api et /documents/uploads vers ce serveur).
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ma2e_admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ma2edb
+    volumes:
+      - ma2e_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ma2e_admin -d ma2edb"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://ma2e_admin:${DB_PASSWORD}@db:5432/ma2edb?schema=public
+      PORT: "3000"
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: "8h"
+      # Origines autorisées (front Vercel). Les rewrites Vercel passent par le serveur,
+      # mais on autorise quand même l'origine pour tout appel direct.
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      UPLOAD_DIR: /app/uploads
+      SEED_ON_START: ${SEED_ON_START:-true}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-MA2E <no-reply@ma2e.ci>}
+      MAIL_TO_APPLICATIONS: ${MAIL_TO_APPLICATIONS:-contact@ma2e.ci}
+    volumes:
+      - ma2e_uploads:/app/uploads
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  ma2e_pgdata:
+  ma2e_uploads:
+  caddy_data:
+  caddy_config:
