@@ -38,18 +38,18 @@ export const MILESTONES = [
 ];
 
 export const SAVINGS = [
-  { id: "expresse", name: "Épargne Expresse", desc: "Épargne souple et disponible à tout moment pour répondre à vos besoins quotidiens.", features: ["Versements libres", "Disponibilité immédiate", "Sans frais d'ouverture", "Suivi en ligne"] },
-  { id: "ordinaire", name: "Épargne Ordinaire", desc: "Une formule classique pour épargner régulièrement et constituer votre capital.", features: ["Taux d'intérêt avantageux", "Versements programmés", "Capital sécurisé", "Retraits encadrés"] },
-  { id: "logement", name: "Épargne Logement", desc: "Préparez l'acquisition de votre futur logement avec une épargne dédiée.", features: ["Bonification logement", "Accès au crédit immobilier", "Durée 3 à 10 ans", "Plafond élevé"] },
-  { id: "dat", name: "Dépôt à terme simple", desc: "Bloquez votre capital sur une durée définie pour un rendement optimisé.", features: ["Taux fixe garanti", "Durée 6 à 60 mois", "Capital protégé", "Intérêts capitalisés"] },
-  { id: "datv", name: "DAT à versements progressifs", desc: "Combinez sécurité et flexibilité avec des versements échelonnés.", features: ["Versements progressifs", "Rendement croissant", "Engagement modéré", "Souplesse contractuelle"] },
+  { id: "expresse", name: "Épargne Expresse", desc: "Épargne souple et disponible à tout moment pour répondre à vos besoins quotidiens.", features: ["Versements libres", "Disponibilité immédiate", "Sans frais d'ouverture", "Taux de rendement attractif"], image: "/images/products/Fiche_Produit_EPARGNE EXPRESSE.jpg", form: "/documents/formulaires/Formulaire_DEMANDE D'EPARGNE.docx" },
+  { id: "ordinaire", name: "Épargne Ordinaire", desc: "Une formule classique pour épargner régulièrement et constituer votre capital.", features: ["Taux de 5% l'an", "Versements programmés", "Capital sécurisé", "Retraits encadrés"], image: "/images/products/Fiche_Produit_EPARGNE ORDINAIRE.jpg", form: "/documents/formulaires/Formulaire_DEMANDE D'EPARGNE.docx" },
+  { id: "logement", name: "Épargne Logement", desc: "Préparez l'acquisition de votre futur logement avec une épargne dédiée.", features: ["Taux de 4% l'an", "Accès au crédit immobilier", "Durée 3 à 10 ans", "Plafond élevé"], image: "/images/products/Fiche_Produit_EPARGNE LOGEMENT.jpg", form: "/documents/formulaires/Formulaire_DEMANDE D'EPARGNE.docx" },
+  { id: "dat", name: "Dépôt à terme simple", desc: "Bloquez votre capital sur une durée définie pour un rendement optimisé.", features: ["Taux de 6% à 7% l'an", "Durée 6 à 60 mois", "Capital protégé", "Intérêts capitalisés"], image: "/images/products/Fiche_Produit_DAT SIMPLE.jpg", form: "/documents/formulaires/Formulaire_DEMANDE DE SOUSCRIPTION DATS.docx" },
+  { id: "datv", name: "DAT à versements progressifs", desc: "Combinez sécurité et flexibilité avec des versements échelonnés.", features: ["Taux de 6% à 7% l'an", "Rendement croissant", "Engagement modéré", "Souplesse contractuelle"], image: "/images/products/Fiche_Produit_DAT à VERSEMENT PROGRESSIF.jpg", form: "/documents/formulaires/Formulaire_DEMANDE DE SOUSCRIPTION DATAVP.docx" },
 ];
 
 export const CREDITS = [
-  { id: "ordinaire", name: "Crédit Ordinaire", duree: "Jusqu'à 60 mois", taux: "8% / an", montant: "5 M FCFA", conditions: "Adhérent depuis 6 mois" },
-  { id: "expresse", name: "Crédit Expresse", duree: "Jusqu'à 24 mois", taux: "9% / an", montant: "1,5 M FCFA", conditions: "Décaissement sous 48h" },
-  { id: "immobilier", name: "Crédit Immobilier", duree: "Jusqu'à 15 ans", taux: "6,5% / an", montant: "50 M FCFA", conditions: "Apport personnel 10%" },
-  { id: "immobilier-differe", name: "Crédit Immobilier Différé", duree: "Jusqu'à 20 ans", taux: "6,5% / an", montant: "50 M FCFA", conditions: "Différé 12 mois max" },
+  { id: "ordinaire", name: "Crédit Ordinaire", duree: "Jusqu'à 60 mois", taux: "8% / an", montant: "Jusqu'à 30 M FCFA", conditions: "Adhérent depuis 6 mois", image: "/images/products/Fiche_Produit_CREDIT ORDINAIRE.jpg", form: "/documents/formulaires/Formulaire_DEMANDE DE CREDIT ORDINAIRE 2026.docx" },
+  { id: "expresse", name: "Crédit Expresse", duree: "Jusqu'à 24 mois", taux: "9% / an", montant: "Jusqu'à 5 M FCFA", conditions: "Décaissement sous 48h", image: "/images/products/Fiche_Produit_CREDIT EXPRESS.jpg", form: "/documents/formulaires/Formulaire_DEMANDE DE CREDIT EXPRESS NOUVEAU.docx" },
+  { id: "scolaire", name: "Crédit Scolaire", duree: "Jusqu'à 10 mois", taux: "5% / an", montant: "Jusqu'à 3 M FCFA", conditions: "Spécial Rentrée", image: "/images/products/Fiche_Produit_CREDIT SCOLAIRE copie.jpg", form: "/documents/formulaires/Formulaire_DEMANDE DE CREDIT ORDINAIRE 2026.docx" },
+  { id: "immobilier", name: "Crédit Immobilier", duree: "Jusqu'à 15 ans", taux: "6,5% / an", montant: "Jusqu'à 50 M FCFA", conditions: "Apport personnel 10%", image: "/images/products/Fiche_Produit_CREDIT IMMOBILIER copie.jpg", form: "/documents/formulaires/Formulaire_DEMANDE DE CREDIT ORDINAIRE 2026.docx" },
 ];
 
 export const REAL_ESTATE_TYPES = [
@@ -188,11 +188,13 @@ export const FAQ_IMMO = [
   { q: "Comment se passe la sélection des bénéficiaires ?", a: "Une commission interne examine les dossiers selon des critères transparents : ancienneté, capacité de remboursement, projet familial." },
 ];
 
+// Organes de gouvernance issus de l'organigramme officiel MA2E (22/05/2026).
+// Les noms des responsables seront ajoutés après validation par la MA2E.
 export const TEAM = [
-  { name: "Ahmadou BAKAYOKO", role: "Président du Conseil d'Administration", initials: "AB" },
-  { name: "Marcel ZADI KESSY", role: "Fondateur, Président d'Honneur", initials: "MZ" },
-  { name: "Konan KOUASSI", role: "Directeur Général", initials: "KK" },
-  { name: "Aminata DIALLO", role: "Directrice des Opérations", initials: "AD" },
-  { name: "Yao BROU", role: "Directeur Financier", initials: "YB" },
-  { name: "Fatou TOURÉ", role: "Responsable Crédit", initials: "FT" },
+  { name: "Assemblée Générale", role: "Organe souverain réunissant l'ensemble des sociétaires", initials: "AG" },
+  { name: "Conseil d'Administration", role: "Définit la stratégie et oriente la gestion de la mutuelle", initials: "CA" },
+  { name: "Conseil de Surveillance", role: "Contrôle la régularité et la conformité de la gestion", initials: "CS" },
+  { name: "Comité de Crédit", role: "Étudie les dossiers et décide de l'octroi des crédits", initials: "CC" },
+  { name: "Comité d'Éthique et de Déontologie", role: "Veille au respect des valeurs et règles mutualistes", initials: "CE" },
+  { name: "Direction Générale", role: "Pilote l'exploitation, les finances et l'administration", initials: "DG" },
 ];

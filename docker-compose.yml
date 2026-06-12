@@ -1,0 +1,64 @@
+# Stack complète MA2E : PostgreSQL + API Node + Front (nginx).
+# Démarrage : docker compose up --build
+# Front : http://localhost:8080   ·   API : http://localhost:8080/api
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ma2e_admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ma2e_password}
+      POSTGRES_DB: ma2edb
+    volumes:
+      - ma2e_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ma2e_admin -d ma2edb"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://ma2e_admin:${DB_PASSWORD:-ma2e_password}@db:5432/ma2edb?schema=public
+      PORT: "3000"
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-please}
+      JWT_EXPIRES_IN: "8h"
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      UPLOAD_DIR: /app/uploads
+      SEED_ON_START: ${SEED_ON_START:-true}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-MA2E <no-reply@ma2e.ci>}
+      MAIL_TO_APPLICATIONS: ${MAIL_TO_APPLICATIONS:-contact@ma2e.ci}
+    volumes:
+      - ma2e_uploads:/app/uploads
+    ports:
+      - "3000:3000" # exposé pour le débogage (le front passe par nginx)
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    volumes:
+      # Sert les fichiers uploadés (médiathèque) écrits par le backend.
+      - ma2e_uploads:/usr/share/nginx/html/documents/uploads:ro
+
+volumes:
+  ma2e_pgdata:
+  ma2e_uploads:

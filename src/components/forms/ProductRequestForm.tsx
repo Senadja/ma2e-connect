@@ -16,6 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useState } from "react";
 import { CheckCircle2 } from "lucide-react";
+import { api } from "@/lib/api";
+import { useTranslation } from "react-i18next";
 
 const formSchema = z.object({
   fullName: z.string().min(3, "Nom complet requis"),
@@ -32,6 +34,7 @@ interface ProductRequestFormProps {
 }
 
 export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestFormProps) => {
+  const { t } = useTranslation();
   const [submitted, setSubmitted] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -46,29 +49,48 @@ export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestF
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    setSubmitted(true);
-    toast.success("Votre demande a été transmise au service concerné.");
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setLoading(true);
+    try {
+      const { appId } = await api<{ appId: string }>("/applications", {
+        method: "POST",
+        body: {
+          category,
+          type: values.productType,
+          name: values.fullName,
+          matricule: values.matricule,
+          phone: values.phone,
+          data: { amount: values.amount || "", message: values.message || "" },
+        },
+      });
+      setSubmitted(true);
+      toast.success(`${t("form.sentTitle")} (${appId})`);
+    } catch (e: any) {
+      toast.error(e?.message || t("form.errorToast"));
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (submitted) {
     return (
       <div className="bg-primary/5 rounded-2xl p-8 text-center animate-scale-in">
         <CheckCircle2 className="mx-auto h-12 w-12 text-primary mb-4" />
-        <h3 className="font-display text-xl font-bold">Demande envoyée !</h3>
+        <h3 className="font-display text-xl font-bold">{t("form.sentTitle")}</h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          Un conseiller vous recontactera très prochainement pour finaliser votre dossier.
+          {t("form.sentText")}
         </p>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="mt-6 rounded-full"
           onClick={() => {
             setSubmitted(false);
             form.reset();
           }}
         >
-          Nouvelle demande
+          {t("form.newRequest")}
         </Button>
       </div>
     );
@@ -76,7 +98,7 @@ export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestF
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-      <h3 className="font-display text-xl font-bold mb-6">Demande de renseignements</h3>
+      <h3 className="font-display text-xl font-bold mb-6">{t("form.title")}</h3>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
@@ -84,9 +106,9 @@ export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestF
             name="fullName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nom complet</FormLabel>
+                <FormLabel>{t("form.fullName")}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Votre nom" {...field} />
+                  <Input placeholder={t("form.fullNamePlaceholder")} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -98,9 +120,9 @@ export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestF
               name="matricule"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Matricule</FormLabel>
+                  <FormLabel>{t("form.matricule")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Matricule" {...field} />
+                    <Input placeholder={t("form.matricule")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -111,9 +133,9 @@ export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestF
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Téléphone</FormLabel>
+                  <FormLabel>{t("form.phone")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Téléphone" {...field} />
+                    <Input placeholder={t("form.phone")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -125,11 +147,11 @@ export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestF
             name="productType"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Produit souhaité</FormLabel>
+                <FormLabel>{t("form.product")}</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Choisir un produit" />
+                      <SelectValue placeholder={t("form.chooseProduct")} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -146,7 +168,7 @@ export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestF
                         <SelectItem value="ordinaire">Crédit Ordinaire</SelectItem>
                         <SelectItem value="expresse">Crédit Expresse</SelectItem>
                         <SelectItem value="scolaire">Crédit Scolaire</SelectItem>
-                        <SelectItem value="fetes">Crédit Fêtes</SelectItem>
+                        <SelectItem value="immobilier">Crédit Immobilier</SelectItem>
                       </>
                     )}
                     {category === "immobilier" && (
@@ -168,7 +190,7 @@ export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestF
             name="amount"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{category === "épargne" ? "Montant à épargner (FCFA)" : "Montant souhaité (FCFA)"}</FormLabel>
+                <FormLabel>{category === "épargne" ? t("form.amountSavings") : t("form.amountOther")}</FormLabel>
                 <FormControl>
                   <Input type="number" placeholder="Ex: 1000000" {...field} />
                 </FormControl>
@@ -181,16 +203,16 @@ export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestF
             name="message"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Message (Optionnel)</FormLabel>
+                <FormLabel>{t("form.message")}</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Précisez votre besoin..." className="resize-none" {...field} />
+                  <Textarea placeholder={t("form.messagePlaceholder")} className="resize-none" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full rounded-full font-bold bg-primary text-primary-foreground hover:bg-primary/90">
-            Envoyer ma demande
+          <Button type="submit" disabled={loading} className="w-full rounded-full font-bold bg-primary text-primary-foreground hover:bg-primary/90">
+            {loading ? t("form.submitting") : t("form.submit")}
           </Button>
         </form>
       </Form>

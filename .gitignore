@@ -22,3 +22,25 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Secrets / environnement (les .env.example restent versionnés)
+.env
+.env.local
+.env.*.local
+
+# Documents sources & artefacts internes (non versionnés)
+/MA2E/
+/offre_content/
+/offre.zip
+/offre_technique_ebenyx_ma2e_FINAL.docx
+/ma2e_redesign.html
+/extract_docx.cjs
+/Logo BCEAO.png
+/*.xlsx
+/*.docx
+/*.pdf
+~$*
+/Capture*.png
+
+# Captures issues des tests e2e
+e2e/*.png

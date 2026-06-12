@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { PageHero } from "@/components/PageHero";
-import { NEWS } from "@/data/site";
+import { useArticles } from "@/lib/content";
+import { useTranslation } from "react-i18next";
 import { ArrowRight, ArrowLeft, Search, X, Rss } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -15,12 +16,16 @@ const News = () => {
   const [query, setQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const { data: NEWS = [] } = useArticles();
+  const { t } = useTranslation();
+  // Traduit le libellé d'une catégorie (repli sur la valeur d'origine si non mappée).
+  const tCat = (c: string) => t(`newsPage.categories.${c}`, { defaultValue: c });
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
     NEWS.forEach((n) => n.tags?.forEach((t) => set.add(t)));
     return Array.from(set).sort();
-  }, []);
+  }, [NEWS]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -34,7 +39,7 @@ const News = () => {
         n.tags?.some((t) => t.toLowerCase().includes(q));
       return okCat && okTag && okQ;
     });
-  }, [filter, query, activeTag]);
+  }, [filter, query, activeTag, NEWS]);
 
   // Reset page on filter/search changes
   useEffect(() => setPage(1), [filter, query, activeTag]);
@@ -47,16 +52,15 @@ const News = () => {
   return (
     <Layout>
       <PageHero
-        title="Actualités & événements"
-        subtitle="Suivez la vie de votre mutuelle, ses offres et ses temps forts."
-        breadcrumb={[{ label: "Accueil", href: "/" }, { label: "Actualités" }]}
+        title={t("newsPage.heroTitle")}
+        subtitle={t("newsPage.heroSubtitle")}
       />
 
       {/* Toolbar */}
       <section className="py-12">
         <div className="container space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrer par catégorie">
+            <div className="flex flex-wrap gap-2" role="tablist" aria-label={t("common.filterByCategory")}>
               {FILTERS.map((f) => (
                 <button
                   key={f}
@@ -70,7 +74,7 @@ const News = () => {
                       : "bg-card text-muted-foreground border-border hover:border-primary/40",
                   )}
                 >
-                  {f}
+                  {f === "Tous" ? t("newsPage.all") : tCat(f)}
                 </button>
               ))}
             </div>
@@ -81,14 +85,14 @@ const News = () => {
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Rechercher un article…"
+                  placeholder={t("newsPage.search")}
                   className="pl-11 pr-10"
-                  aria-label="Rechercher dans les actualités"
+                  aria-label={t("newsPage.search")}
                 />
                 {query && (
                   <button
                     onClick={() => setQuery("")}
-                    aria-label="Effacer la recherche"
+                    aria-label={t("newsPage.clear")}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     <X className="h-4 w-4" />
@@ -97,9 +101,9 @@ const News = () => {
               </div>
               <a
                 href="/rss.xml"
-                aria-label="Flux RSS"
+                aria-label={t("common.rssFeed")}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-accent hover:border-accent transition-smooth"
-                title="Flux RSS"
+                title={t("common.rssFeed")}
               >
                 <Rss className="h-4 w-4" />
               </a>
@@ -109,7 +113,7 @@ const News = () => {
           {/* Tags cloud */}
           {allTags.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-xs font-mono uppercase tracking-widest text-muted-foreground mr-2">Tags</span>
+              <span className="text-xs font-mono uppercase tracking-widest text-muted-foreground mr-2">{t("newsPage.tags")}</span>
               {allTags.map((t) => {
                 const active = activeTag === t;
                 return (
@@ -132,14 +136,14 @@ const News = () => {
                   onClick={() => setActiveTag(null)}
                   className="ml-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                 >
-                  <X className="h-3 w-3" /> Effacer
+                  <X className="h-3 w-3" /> {t("newsPage.clear")}
                 </button>
               )}
             </div>
           )}
 
           <div className="text-sm text-muted-foreground">
-            {filtered.length} résultat{filtered.length > 1 ? "s" : ""}
+            {filtered.length} {t("newsPage.resultsSuffix")}
           </div>
         </div>
       </section>
@@ -150,7 +154,7 @@ const News = () => {
           <div className="container">
             <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center">
               <Search className="mx-auto h-10 w-10 text-muted-foreground/40 mb-4" />
-              <p className="text-muted-foreground">Aucun article ne correspond à vos critères.</p>
+              <p className="text-muted-foreground">{t("newsPage.noResult")}</p>
               <button
                 onClick={() => {
                   setQuery("");
@@ -159,7 +163,7 @@ const News = () => {
                 }}
                 className="mt-4 text-primary font-semibold hover:underline"
               >
-                Réinitialiser les filtres
+                {t("newsPage.reset")}
               </button>
             </div>
           </div>
@@ -172,11 +176,11 @@ const News = () => {
           <div className="container">
             <article className="grid lg:grid-cols-2 gap-0 rounded-3xl overflow-hidden bg-card border border-border shadow-soft hover:shadow-elegant transition-smooth">
               <Link
-                to={`/actualites/${featured.id}`}
+                to={`/actualites/${featured.slug}`}
                 className="aspect-[16/10] lg:aspect-auto relative overflow-hidden bg-gradient-primary group"
               >
                 <img
-                  src="https://placehold.co/1200x800/1A6147/F5A623?text=MA2E&font=playfair"
+                  src={featured.image || "https://placehold.co/1200x800/1A6147/F5A623?text=MA2E&font=playfair"}
                   alt=""
                   className="w-full h-full object-cover group-hover:scale-105 transition-smooth"
                 />
@@ -184,15 +188,15 @@ const News = () => {
               <div className="p-8 md:p-12 flex flex-col justify-center">
                 <div className="flex items-center gap-3 text-xs">
                   <span className="rounded-full bg-accent/20 text-accent-foreground px-3 py-1 font-semibold">
-                    À la une
+                    {t("newsPage.featured")}
                   </span>
                   <span className="rounded-full bg-primary/10 text-primary px-3 py-1 font-semibold">
-                    {featured.category}
+                    {tCat(featured.category)}
                   </span>
                   <span className="text-muted-foreground">{featured.date}</span>
                 </div>
                 <h2 className="mt-4 font-display text-3xl md:text-4xl font-bold leading-tight">
-                  <Link to={`/actualites/${featured.id}`} className="hover:text-primary transition-smooth">
+                  <Link to={`/actualites/${featured.slug}`} className="hover:text-primary transition-smooth">
                     {featured.title}
                   </Link>
                 </h2>
@@ -207,10 +211,10 @@ const News = () => {
                   </div>
                 )}
                 <Link
-                  to={`/actualites/${featured.id}`}
+                  to={`/actualites/${featured.slug}`}
                   className="mt-6 inline-flex items-center gap-2 text-primary font-semibold w-fit hover:gap-3 transition-all"
                 >
-                  Lire l'article complet <ArrowRight className="h-4 w-4" />
+                  {t("newsPage.readFull")} <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             </article>
@@ -225,12 +229,12 @@ const News = () => {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {paged.map((n) => (
                 <article
-                  key={n.id}
+                  key={n.slug}
                   className="group rounded-2xl bg-card border border-border overflow-hidden hover:shadow-elegant hover:-translate-y-1 transition-bounce flex flex-col"
                 >
-                  <Link to={`/actualites/${n.id}`} className="aspect-[16/10] bg-gradient-primary overflow-hidden block">
+                  <Link to={`/actualites/${n.slug}`} className="aspect-[16/10] bg-gradient-primary overflow-hidden block">
                     <img
-                      src="https://placehold.co/640x400/1A6147/F5A623?text=MA2E&font=playfair"
+                      src={n.image || "https://placehold.co/640x400/1A6147/F5A623?text=MA2E&font=playfair"}
                       alt=""
                       className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-smooth"
                     />
@@ -238,12 +242,12 @@ const News = () => {
                   <div className="p-6 flex flex-col flex-1">
                     <div className="flex items-center gap-3 text-xs">
                       <span className="rounded-full bg-primary/10 text-primary px-3 py-1 font-semibold">
-                        {n.category}
+                        {tCat(n.category)}
                       </span>
                       <span className="text-muted-foreground">{n.date}</span>
                     </div>
                     <h3 className="mt-4 font-display text-xl font-bold leading-snug group-hover:text-primary transition-smooth">
-                      <Link to={`/actualites/${n.id}`}>{n.title}</Link>
+                      <Link to={`/actualites/${n.slug}`}>{n.title}</Link>
                     </h3>
                     <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{n.excerpt}</p>
                     {n.tags && (
@@ -256,10 +260,9 @@ const News = () => {
                       </div>
                     )}
                     <Link
-                      to={`/actualites/${n.id}`}
+                      to={`/actualites/${n.slug}`}
                       className="mt-auto pt-4 inline-flex items-center gap-1 text-primary text-sm font-semibold hover:gap-2 transition-all"
-                    >
-                      Lire la suite <ArrowRight className="h-3.5 w-3.5" />
+                    >{t("newsPage.readMore")} <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>
                 </article>
@@ -274,7 +277,7 @@ const News = () => {
                   disabled={safePage === 1}
                   className="h-10 px-4 rounded-full bg-card border border-border font-semibold text-sm hover:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1"
                 >
-                  <ArrowLeft className="h-3.5 w-3.5" /> Précédent
+                  <ArrowLeft className="h-3.5 w-3.5" /> {t("newsPage.previous")}
                 </button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
                   <button
@@ -296,7 +299,7 @@ const News = () => {
                   disabled={safePage === totalPages}
                   className="h-10 px-4 rounded-full bg-card border border-border font-semibold text-sm hover:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1"
                 >
-                  Suivant <ArrowRight className="h-3.5 w-3.5" />
+                  {t("newsPage.next")} <ArrowRight className="h-3.5 w-3.5" />
                 </button>
               </nav>
             )}

@@ -5,11 +5,15 @@ import { PageHero } from "@/components/PageHero";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { FAQS, FAQ_CATEGORIES, type FaqCategory } from "@/data/institutional";
+import { FAQ_CATEGORIES, type FaqCategory } from "@/data/institutional";
+import { useFaq } from "@/lib/content";
+import { useTranslation } from "react-i18next";
 
 const Faq = () => {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<FaqCategory | "Toutes">("Toutes");
+  const { data: FAQS = [] } = useFaq();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -18,14 +22,14 @@ const Faq = () => {
       const okQ = !q || f.q.toLowerCase().includes(q) || f.a.toLowerCase().includes(q);
       return okCat && okQ;
     });
-  }, [query, category]);
+  }, [query, category, FAQS]);
 
   return (
     <Layout>
       <PageHero
-        title="Questions fréquentes"
-        subtitle="Trouvez rapidement des réponses aux questions les plus posées par nos adhérents."
-        breadcrumb={[{ label: "Accueil", href: "/" }, { label: "FAQ" }]}
+        title={t("faq.heroTitle")}
+        subtitle={t("faq.heroSubtitle")}
+        breadcrumb={[{ label: t("nav.home"), href: "/" }, { label: "FAQ" }]}
       />
 
       <section className="container py-16">
@@ -35,9 +39,9 @@ const Faq = () => {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher une question…"
+              placeholder={t("faq.searchPlaceholder")}
               className="pl-12 h-12 text-base"
-              aria-label="Rechercher dans la FAQ"
+              aria-label={t("faq.searchPlaceholder")}
             />
           </div>
 
@@ -47,7 +51,7 @@ const Faq = () => {
               size="sm"
               onClick={() => setCategory("Toutes")}
             >
-              Toutes
+              {t("faq.all")}
             </Button>
             {FAQ_CATEGORIES.map((c) => (
               <Button
@@ -65,7 +69,7 @@ const Faq = () => {
             {filtered.length === 0 ? (
               <div className="text-center py-16 text-muted-foreground">
                 <HelpCircle className="mx-auto h-12 w-12 mb-4 opacity-40" />
-                <p>Aucune question ne correspond à votre recherche.</p>
+                <p>{t("faq.noResult")}</p>
               </div>
             ) : (
               <Accordion type="single" collapsible className="space-y-3">

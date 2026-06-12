@@ -1,22 +1,13 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { 
-  Upload, 
-  File, 
-  Image as ImageIcon, 
-  Search, 
-  MoreVertical, 
-  Trash2, 
-  Download, 
-  Check, 
-  X,
-  Plus
-} from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Upload, File, Search, Trash2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
 
 export interface MediaFile {
   id: string;
@@ -27,48 +18,78 @@ export interface MediaFile {
   date: string;
 }
 
+interface ApiMedia {
+  id: string;
+  title: string;
+  category: string;
+  path: string;
+  size?: string;
+  year?: string;
+  createdAt: string;
+}
+
 interface MediaLibraryProps {
   onSelect?: (file: MediaFile) => void;
   selectionMode?: boolean;
 }
 
-// Simulated data
-const INITIAL_MEDIA: MediaFile[] = [
-  { id: "1", name: "Rapport-Annuel-2024.pdf", url: "#", type: "pdf", size: "2.4 MB", date: "15 Mars 2025" },
-  { id: "2", name: "Assemblee-Generale.jpg", url: "https://placehold.co/600x400/1A6147/white?text=AG+2025", type: "image", size: "1.2 MB", date: "12 Mars 2025" },
-  { id: "3", name: "Brochure-Epargne.pdf", url: "#", type: "pdf", size: "850 KB", date: "01 Fév 2025" },
-  { id: "4", name: "Nouvelle-Agence.jpg", url: "https://placehold.co/600x400/F5A623/white?text=Yamoussoukro", type: "image", size: "900 KB", date: "01 Fév 2025" },
-];
+function mapMedia(m: ApiMedia): MediaFile {
+  const ext = (m.path || "").split(".").pop()?.toLowerCase() || "";
+  const type: MediaFile["type"] = ["jpg", "jpeg", "png", "webp", "gif", "svg"].includes(ext)
+    ? "image"
+    : ext === "pdf"
+    ? "pdf"
+    : "other";
+  return {
+    id: m.id,
+    name: m.title,
+    url: m.path || "#",
+    type,
+    size: m.size || "",
+    date: m.year || new Date(m.createdAt).toLocaleDateString("fr-FR"),
+  };
+}
 
 export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryProps) => {
-  const [files, setFiles] = useState<MediaFile[]>(INITIAL_MEDIA);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "image" | "pdf">("all");
   const [uploading, setUploading] = useState(false);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const { data: files = [] } = useQuery({
+    queryKey: ["media"],
+    queryFn: async () => (await api<ApiMedia[]>("/media")).map(mapMedia),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api(`/media/${id}`, { method: "DELETE", auth: true }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["media"] }); toast.success("Fichier supprimé."); },
+    onError: (e: any) => toast.error(e?.message || "Suppression impossible."),
+  });
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     setUploading(true);
-    // Simulate upload
-    setTimeout(() => {
-      const newMedia: MediaFile[] = acceptedFiles.map((file, i) => ({
-        id: Math.random().toString(36).substr(2, 9),
-        name: file.name,
-        url: URL.createObjectURL(file),
-        type: file.type.includes("image") ? "image" : file.name.endsWith(".pdf") ? "pdf" : "other",
-        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-        date: "Aujourd'hui",
-      }));
-      setFiles([...newMedia, ...files]);
+    try {
+      for (const file of acceptedFiles) {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("title", file.name.replace(/\.[^.]+$/, ""));
+        fd.append("category", "Téléversements");
+        await api("/media", { method: "POST", auth: true, isForm: true, body: fd });
+      }
+      queryClient.invalidateQueries({ queryKey: ["media"] });
+      toast.success(`${acceptedFiles.length} fichier(s) téléversé(s).`);
+    } catch (e: any) {
+      toast.error(e?.message || "Téléversement impossible.");
+    } finally {
       setUploading(false);
-      toast.success(`${acceptedFiles.length} fichier(s) téléversé(s)`);
-    }, 1500);
-  }, [files]);
+    }
+  }, [queryClient]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
-  const filteredFiles = files.filter(f => 
-    (filter === "all" || f.type === filter) &&
-    f.name.toLowerCase().includes(search.toLowerCase())
+  const filteredFiles = files.filter(
+    (f) => (filter === "all" || f.type === filter) && f.name.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -76,43 +97,19 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
       <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Rechercher un fichier..." 
-            className="pl-9 rounded-full"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <Input placeholder="Rechercher un fichier..." className="pl-9 rounded-full" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant={filter === "all" ? "default" : "outline"} 
-            size="sm" 
-            className="rounded-full"
-            onClick={() => setFilter("all")}
-          >
-            Tous
-          </Button>
-          <Button 
-            variant={filter === "image" ? "default" : "outline"} 
-            size="sm" 
-            className="rounded-full"
-            onClick={() => setFilter("image")}
-          >
-            Images
-          </Button>
-          <Button 
-            variant={filter === "pdf" ? "default" : "outline"} 
-            size="sm" 
-            className="rounded-full"
-            onClick={() => setFilter("pdf")}
-          >
-            PDF
-          </Button>
+          {(["all", "image", "pdf"] as const).map((f) => (
+            <Button key={f} variant={filter === f ? "default" : "outline"} size="sm" className="rounded-full" onClick={() => setFilter(f)}>
+              {f === "all" ? "Tous" : f === "image" ? "Images" : "PDF"}
+            </Button>
+          ))}
         </div>
       </div>
 
-      <div 
-        {...getRootProps()} 
+      <div
+        {...getRootProps()}
         className={cn(
           "border-2 border-dashed rounded-2xl p-10 text-center transition-all cursor-pointer",
           isDragActive ? "border-primary bg-primary/5 scale-[1.01]" : "border-border hover:border-primary/50 bg-secondary/20",
@@ -124,17 +121,17 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
           <Upload className="h-6 w-6" />
         </div>
         <h4 className="font-bold text-lg">Déposez vos fichiers ici</h4>
-        <p className="text-sm text-muted-foreground mt-1">Images (JPG, PNG, WebP) ou documents (PDF) jusqu'à 10 MB.</p>
+        <p className="text-sm text-muted-foreground mt-1">Images (JPG, PNG, WebP) ou documents (PDF) jusqu'à 15 MB.</p>
         {uploading && <p className="text-primary font-bold mt-4 animate-pulse italic">Téléversement en cours...</p>}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {filteredFiles.map((file) => (
-          <Card 
-            key={file.id} 
+          <Card
+            key={file.id}
             className={cn(
-              "group relative overflow-hidden border-border/40 hover:shadow-md transition-all cursor-pointer",
-              selectionMode && "hover:ring-2 hover:ring-primary"
+              "group relative overflow-hidden border-border/40 hover:shadow-md transition-all",
+              selectionMode && "cursor-pointer hover:ring-2 hover:ring-primary"
             )}
             onClick={() => onSelect?.(file)}
           >
@@ -144,12 +141,19 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
               ) : (
                 <File className="h-12 w-12 text-muted-foreground/40" />
               )}
-              
+
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full">
-                  <Download className="h-4 w-4" />
-                </Button>
-                <Button size="icon" variant="destructive" className="h-8 w-8 rounded-full">
+                {file.url && file.url !== "#" && (
+                  <Button asChild size="icon" variant="secondary" className="h-8 w-8 rounded-full" onClick={(e) => e.stopPropagation()}>
+                    <a href={file.url} download target="_blank" rel="noreferrer"><Download className="h-4 w-4" /></a>
+                  </Button>
+                )}
+                <Button
+                  size="icon"
+                  variant="destructive"
+                  className="h-8 w-8 rounded-full"
+                  onClick={(e) => { e.stopPropagation(); if (confirm(`Supprimer "${file.name}" ?`)) deleteMutation.mutate(file.id); }}
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -166,9 +170,7 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
       </div>
 
       {filteredFiles.length === 0 && (
-        <div className="py-20 text-center text-muted-foreground">
-          Aucun fichier ne correspond à votre recherche.
-        </div>
+        <div className="py-20 text-center text-muted-foreground">Aucun fichier ne correspond à votre recherche.</div>
       )}
     </div>
   );

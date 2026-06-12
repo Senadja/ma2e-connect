@@ -1,0 +1,23 @@
+node_modules
+dist
+backend
+e2e
+.git
+.github
+*.log
+
+# Documents de travail / volumineux (hors build front)
+MA2E
+offre
+offre.zip
+offre_content
+offre_technique_ebenyx_ma2e_FINAL.docx
+ma2e_redesign.html
+extract_docx.cjs
+*.pdf
+*.docx
+*.xlsx
+Capture*.png
+Plan_Implementation*.md
+Point_Avancement_MA2E.md
+Planning_MA2E*.xlsx

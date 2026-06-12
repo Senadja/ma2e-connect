@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { api, setToken } from '@/lib/api';
 
 interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'editor';
+  role: string; // 'admin' | 'editor' | 'user'
+  permissions: string[];
 }
 
 interface AuthState {
@@ -13,36 +15,32 @@ interface AuthState {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  can: (permission: string) => boolean;
 }
 
 export const useAuth = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       isAuthenticated: false,
       login: async (email, password) => {
-        // Simulating API call
-        return new Promise((resolve, reject) => {
-          setTimeout(() => {
-            if (email === "admin@ma2e.ci" && password === "admin123") {
-              set({
-                user: { id: "1", name: "Administrateur MA2E", email: "admin@ma2e.ci", role: "admin" },
-                isAuthenticated: true,
-              });
-              resolve();
-            } else if (email === "editor@ma2e.ci" && password === "editor123") {
-              set({
-                user: { id: "2", name: "Éditeur Com", email: "editor@ma2e.ci", role: "editor" },
-                isAuthenticated: true,
-              });
-              resolve();
-            } else {
-              reject(new Error("Identifiants incorrects"));
-            }
-          }, 1000);
+        const { token, user } = await api<{ token: string; user: User }>('/auth/login', {
+          method: 'POST',
+          body: { email, password },
         });
+        setToken(token);
+        set({ user, isAuthenticated: true });
       },
-      logout: () => set({ user: null, isAuthenticated: false }),
+      logout: () => {
+        setToken(null);
+        set({ user: null, isAuthenticated: false });
+      },
+      // L'ADMIN possède toutes les permissions implicitement.
+      can: (permission) => {
+        const u = get().user;
+        if (!u) return false;
+        return u.role === 'admin' || (u.permissions || []).includes(permission);
+      },
     }),
     { name: 'auth-storage' }
   )

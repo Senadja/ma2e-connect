@@ -22,18 +22,17 @@ export const FAQS: { category: FaqCategory; q: string; a: string }[] = [
 export const MEDIA_CATEGORIES = ["Formulaires", "Rapports annuels", "Statuts & règlements", "Brochures"] as const;
 export type MediaCategory = typeof MEDIA_CATEGORIES[number];
 
-export const MEDIA: { category: MediaCategory; title: string; desc: string; size: string; year: string }[] = [
-  { category: "Formulaires", title: "Formulaire d'adhésion MA2E", desc: "Demande d'adhésion à la mutuelle (PDF à compléter et déposer en agence).", size: "180 Ko", year: "2025" },
-  { category: "Formulaires", title: "Demande d'épargne logement", desc: "Formulaire d'ouverture d'un compte épargne logement.", size: "210 Ko", year: "2025" },
-  { category: "Formulaires", title: "Demande de crédit ordinaire", desc: "Dossier de demande pour un crédit ordinaire.", size: "240 Ko", year: "2025" },
-  { category: "Formulaires", title: "Demande de crédit immobilier", desc: "Dossier complet pour un projet immobilier MA2E.", size: "320 Ko", year: "2025" },
-  { category: "Rapports annuels", title: "Rapport annuel 2024", desc: "Bilan d'activité, états financiers et perspectives.", size: "4,2 Mo", year: "2024" },
+export const MEDIA: { category: MediaCategory; title: string; desc: string; size: string; year: string; href?: string }[] = [  
+  { category: "Formulaires", title: "Formulaire d'adhésion MA2E", desc: "Demande d'adhésion à la mutuelle.", size: "191 Ko", year: "2025", href: "/documents/formulaires/Formulaire_FICHE D'ADHESION E-MA2E.pdf" },
+  { category: "Formulaires", title: "Demande d'épargne", desc: "Formulaire d'ouverture d'un compte épargne.", size: "60 Ko", year: "2025", href: "/documents/formulaires/Formulaire_DEMANDE D'EPARGNE.docx" },
+  { category: "Formulaires", title: "Demande de crédit ordinaire", desc: "Dossier de demande pour un crédit ordinaire.", size: "190 Ko", year: "2026", href: "/documents/formulaires/Formulaire_DEMANDE DE CREDIT ORDINAIRE 2026.docx" },
+  { category: "Formulaires", title: "Demande de crédit express", desc: "Dossier de demande pour un crédit express.", size: "140 Ko", year: "2025", href: "/documents/formulaires/Formulaire_DEMANDE DE CREDIT EXPRESS NOUVEAU.docx" },
+  { category: "Formulaires", title: "Demande de souscription DAT", desc: "Dossier de demande pour un Dépôt à Terme.", size: "84 Ko", year: "2025", href: "/documents/formulaires/Formulaire_DEMANDE DE SOUSCRIPTION DATS.docx" },
+  { category: "Rapports annuels", title: "Rapport annuel 2024", desc: "Bilan d'activité, états financiers et perspectives.", size: "6,4 Mo", year: "2024", href: "/documents/institutionnel/MA2E_Rapport_2024_22 Sept 2025.pdf" },
   { category: "Rapports annuels", title: "Rapport annuel 2023", desc: "Bilan d'activité de l'exercice 2023.", size: "3,8 Mo", year: "2023" },
-  { category: "Rapports annuels", title: "Rapport annuel 2022", desc: "Bilan d'activité de l'exercice 2022.", size: "3,5 Mo", year: "2022" },
-  { category: "Statuts & règlements", title: "Statuts de la MA2E", desc: "Texte fondateur de la mutuelle, version consolidée.", size: "560 Ko", year: "2024" },
-  { category: "Statuts & règlements", title: "Règlement intérieur", desc: "Règles de fonctionnement et droits des adhérents.", size: "420 Ko", year: "2024" },
+  { category: "Statuts & règlements", title: "Statuts de la MA2E", desc: "Texte fondateur de la mutuelle, version consolidée.", size: "5,8 Mo", year: "2025", href: "/documents/institutionnel/STATUTS MODIFIE LE 26 JUIN 2025 ENREGISTRE.pdf" },
+  { category: "Statuts & règlements", title: "Organigramme de la MA2E", desc: "Structure organisationnelle mise à jour.", size: "109 Ko", year: "2026", href: "/documents/institutionnel/Organigramme de la MA2E - MISE A JOUR LE 22-05-2026.pdf" },
   { category: "Brochures", title: "Brochure produits 2025", desc: "Présentation complète de l'offre MA2E.", size: "2,1 Mo", year: "2025" },
-  { category: "Brochures", title: "Programme immobilier — Plaquette", desc: "Présentation du programme immobilier et des typologies de logements.", size: "5,4 Mo", year: "2025" },
 ];
 
 export const PARTNERS: { name: string; type: string; desc: string }[] = [

@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { 
-  Plus, 
+import { useState, useRef } from "react";
+import {
+  Plus,
   Search, 
   Filter, 
   MoreVertical, 
@@ -13,11 +13,14 @@ import {
   FileText,
   Calendar,
   Globe,
-  Settings2
+  Settings2,
+  Image as ImageIcon,
+  ChevronLeft,
+  Share2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -27,151 +30,293 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Editor } from "@/components/admin/Editor";
-import { NEWS } from "@/data/site";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+
+interface Block { type: "p" | "h2" | "quote" | "list"; text?: string; items?: string[] }
+interface ApiArticle {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  category: string;
+  content: Block[];
+  image?: string;
+  date?: string;
+  status: string;
+  createdAt: string;
+}
+
+// Conversion naïve éditeur <-> blocs (l'éditeur de blocs riche viendra en 2e passe).
+const blocksToText = (blocks: Block[] = []) =>
+  blocks.map((b) => (b.type === "list" ? (b.items || []).join("\n") : b.text || "")).join("\n\n");
+const textToBlocks = (text: string): Block[] =>
+  text
+    .split(/\n{2,}|<br\s*\/?>(?:\s*<br\s*\/?>)*/i)
+    .map((s) => s.replace(/<[^>]+>/g, "").trim())
+    .filter(Boolean)
+    .map((t) => ({ type: "p", text: t }));
 
 export const NewsManager = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [search, setSearch] = useState("");
   const [currentArticle, setCurrentArticle] = useState<any>(null);
+  const queryClient = useQueryClient();
 
-  // Simplified state for the editor
+  // Editor State
   const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
+  const [excerpt, setExcerpt] = useState("");
   const [category, setCategory] = useState("Actualités");
   const [status, setStatus] = useState("draft");
+  const [image, setImage] = useState("");
+  const [imgUploading, setImgUploading] = useState(false);
+  const newsImgRef = useRef<HTMLInputElement>(null);
 
-  const handleEdit = (article: any) => {
+  const uploadNewsImage = async (file: File) => {
+    setImgUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { path } = await api<{ path: string }>("/uploads", { method: "POST", auth: true, isForm: true, body: fd });
+      setImage(path);
+      toast.success("Image téléversée.");
+    } catch (e: any) {
+      toast.error(e?.message || "Échec du téléversement.");
+    } finally {
+      setImgUploading(false);
+    }
+  };
+
+  const { data: articles = [], isLoading } = useQuery({
+    queryKey: ["articles", "all"],
+    queryFn: () => api<ApiArticle[]>("/articles?status=all"),
+  });
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["articles"] });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api(`/articles/${id}`, { method: "DELETE", auth: true }),
+    onSuccess: () => { invalidate(); toast.success("Article supprimé."); },
+    onError: (e: any) => toast.error(e?.message || "Suppression impossible."),
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: (payload: any) =>
+      currentArticle
+        ? api(`/articles/${currentArticle.id}`, { method: "PUT", auth: true, body: payload })
+        : api("/articles", { method: "POST", auth: true, body: payload }),
+    onSuccess: () => {
+      invalidate();
+      toast.success(currentArticle ? "Article mis à jour." : "Article publié sur le site.");
+      setIsEditing(false);
+    },
+    onError: (e: any) => toast.error(e?.message || "Enregistrement impossible."),
+  });
+
+  const handleEdit = (article: ApiArticle) => {
     setCurrentArticle(article);
     setTitle(article.title);
-    setContent(article.content.map((c: any) => c.text || "").join("<br>"));
+    setExcerpt(article.excerpt || "");
+    setContent(blocksToText(article.content));
     setCategory(article.category);
+    setStatus(article.status || "draft");
+    setImage(article.image || "");
     setIsEditing(true);
   };
 
   const handleCreate = () => {
     setCurrentArticle(null);
     setTitle("");
+    setExcerpt("");
     setContent("");
     setCategory("Actualités");
+    setStatus("draft");
+    setImage("");
     setIsEditing(true);
   };
 
-  const handleSave = () => {
-    toast.success(currentArticle ? "Article mis à jour" : "Article publié");
-    setIsEditing(false);
+  const handleSave = (publish: boolean) => {
+    if (!title.trim()) { toast.error("Le titre est requis."); return; }
+    const finalStatus = publish ? "published" : "draft";
+    setStatus(finalStatus);
+    saveMutation.mutate({
+      title,
+      excerpt: excerpt || title,
+      category,
+      content: textToBlocks(content),
+      image: image || "",
+      status: finalStatus,
+    });
   };
 
   if (isEditing) {
     return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-display font-bold text-primary-dark">
-              {currentArticle ? "Modifier l'article" : "Nouvel article"}
-            </h2>
-            <p className="text-muted-foreground text-sm">Rédigez et configurez votre contenu.</p>
+      <div className="space-y-6 animate-fade-in max-w-6xl mx-auto">
+        <div className="flex items-center justify-between border-b pb-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => setIsEditing(false)} className="rounded-full">
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
+            <div>
+              <h2 className="text-2xl font-display font-bold text-primary-dark">
+                {currentArticle ? "Modifier la publication" : "Créer un nouvel article"}
+              </h2>
+              <p className="text-muted-foreground text-sm">Rédigez un contenu captivant pour vos adhérents.</p>
+            </div>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => setIsEditing(false)} className="rounded-full px-6">
-              Annuler
+            <Button variant="outline" disabled={saveMutation.isPending} onClick={() => handleSave(false)} className="rounded-full px-6">
+              Enregistrer en brouillon
             </Button>
-            <Button onClick={handleSave} className="rounded-full px-8 bg-primary text-white">
-              Enregistrer
+            <Button disabled={saveMutation.isPending} onClick={() => handleSave(true)} className="rounded-full px-8 bg-primary text-white shadow-lg shadow-primary/20">
+              {saveMutation.isPending ? "Enregistrement…" : currentArticle ? "Mettre à jour" : "Publier maintenant"}
             </Button>
           </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <Card className="border-border/40 shadow-sm overflow-hidden">
-              <CardContent className="p-6 space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold">Titre de l'article</label>
+            <Card className="border-border/40 shadow-sm overflow-hidden rounded-2xl">
+              <CardContent className="p-8 space-y-6">
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-primary tracking-wide uppercase">Titre de l'article</label>
                   <Input 
-                    placeholder="Ex: Assemblée Générale Ordinaire 2025" 
+                    placeholder="Saisissez un titre percutant..." 
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="text-lg font-bold"
+                    className="text-2xl font-display font-bold h-16 border-none px-0 focus-visible:ring-0 placeholder:text-muted-foreground/30"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold">Contenu</label>
+                
+                <div className="h-px bg-border/40 w-full" />
+
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-primary tracking-wide uppercase">Corps de l'article</label>
                   <Editor content={content} onChange={setContent} />
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/40 shadow-sm rounded-2xl bg-secondary/10">
+              <CardHeader>
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                  <ImageIcon className="h-5 w-5 text-primary" /> Image à la une
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div
+                  onClick={() => newsImgRef.current?.click()}
+                  className="aspect-video rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center bg-card group hover:bg-primary/5 transition-colors cursor-pointer overflow-hidden relative"
+                >
+                  {image ? (
+                    <>
+                      <img src={image} alt="Aperçu image à la une" className="absolute inset-0 h-full w-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-sm font-bold">{imgUploading ? "Envoi…" : "Changer l'image"}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-3 group-hover:scale-110 transition-transform">
+                        <Plus className="h-6 w-6" />
+                      </div>
+                      <p className="text-sm font-bold">{imgUploading ? "Envoi en cours…" : "Ajouter une image"}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Format recommandé : 1200x630px</p>
+                    </>
+                  )}
+                </div>
+                <input ref={newsImgRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadNewsImage(f); e.target.value = ""; }} />
+                {image && (
+                  <button type="button" onClick={() => setImage("")} className="mt-2 text-xs text-muted-foreground hover:text-destructive font-medium">
+                    Retirer l'image
+                  </button>
+                )}
               </CardContent>
             </Card>
           </div>
 
           <div className="space-y-6">
-            <Card className="border-border/40 shadow-sm">
+            <Card className="border-border/40 shadow-sm rounded-2xl">
               <CardContent className="p-6 space-y-6">
                 <div className="space-y-4">
-                  <h3 className="font-bold flex items-center gap-2 border-b pb-2">
-                    <Settings2 className="h-4 w-4" /> Publication
+                  <h3 className="font-bold flex items-center gap-2 border-b pb-3">
+                    <Settings2 className="h-4 w-4 text-primary" /> Configuration
                   </h3>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase text-muted-foreground">Statut</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button 
-                        variant={status === "draft" ? "default" : "outline"} 
-                        size="sm" 
-                        onClick={() => setStatus("draft")}
-                        className="rounded-lg h-9"
-                      >
-                        Brouillon
-                      </Button>
-                      <Button 
-                        variant={status === "published" ? "default" : "outline"} 
-                        size="sm" 
-                        onClick={() => setStatus("published")}
-                        className="rounded-lg h-9"
-                      >
-                        Publié
-                      </Button>
+                  
+                  <div className="space-y-3">
+                    <label className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Catégorie</label>
+                    <div className="grid grid-cols-1 gap-2">
+                      {["Actualités", "Événements", "Communiqués", "Offres"].map((cat) => (
+                        <button
+                          key={cat}
+                          onClick={() => setCategory(cat)}
+                          className={cn(
+                            "flex items-center justify-between px-4 py-2 rounded-xl text-sm transition-all",
+                            category === cat 
+                              ? "bg-primary text-white font-bold shadow-md shadow-primary/10" 
+                              : "bg-secondary/40 text-muted-foreground hover:bg-secondary/60"
+                          )}
+                        >
+                          {cat}
+                          {category === cat && <CheckCircle2 className="h-4 w-4" />}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase text-muted-foreground">Catégorie</label>
-                    <select 
-                      className="w-full h-10 rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                    >
-                      <option>Actualités</option>
-                      <option>Événements</option>
-                      <option>Communiqués</option>
-                      <option>Offres</option>
-                    </select>
+
+                  <div className="pt-4 border-t space-y-3">
+                    <label className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Options</label>
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/20">
+                      <span className="text-sm font-medium">Épingler en haut</span>
+                      <div className="h-5 w-10 bg-border rounded-full relative">
+                        <div className="absolute left-1 top-1 h-3 w-3 bg-white rounded-full shadow-sm" />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-4 pt-4 border-t">
+                <div className="space-y-4 pt-6 border-t">
                   <h3 className="font-bold flex items-center gap-2">
-                    <Globe className="h-4 w-4" /> SEO & Réseaux
+                    <Globe className="h-4 w-4 text-primary" /> SEO & Social
                   </h3>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground">Méta-description</label>
-                    <textarea 
-                      className="w-full min-h-[80px] rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-                      placeholder="Description pour les moteurs de recherche..."
+                    <label className="text-xs font-bold text-muted-foreground uppercase">Extrait (Méta-description)</label>
+                    <textarea
+                      value={excerpt}
+                      onChange={(e) => setExcerpt(e.target.value)}
+                      maxLength={160}
+                      className="w-full min-h-[100px] rounded-xl border border-input bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none transition-all"
+                      placeholder="Court résumé pour Google et les réseaux sociaux..."
                     />
+                    <p className="text-[10px] text-right text-muted-foreground">{excerpt.length} / 160 caractères</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-border/40 shadow-sm bg-primary/5">
-              <CardContent className="p-4 space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-primary">Aide au rédacteur</h3>
-                <ul className="text-xs space-y-2 text-muted-foreground">
-                  <li className="flex gap-2"><CheckCircle2 className="h-3 w-3 text-primary" /> Utilisez des titres H2 pour structurer.</li>
-                  <li className="flex gap-2"><CheckCircle2 className="h-3 w-3 text-primary" /> Ajoutez une image à la une.</li>
-                  <li className="flex gap-2"><CheckCircle2 className="h-3 w-3 text-primary" /> Longueur idéale : 300 - 600 mots.</li>
-                </ul>
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl bg-gradient-to-br from-primary to-primary-dark p-6 text-white shadow-xl">
+              <h3 className="font-bold flex items-center gap-2 mb-4">
+                <AlertCircle className="h-5 w-5" /> Checklist Qualité
+              </h3>
+              <ul className="space-y-4 text-sm opacity-90">
+                <li className="flex gap-3">
+                  <div className="h-5 w-5 rounded-full bg-white/20 flex items-center justify-center shrink-0">1</div>
+                  <span>Vérifiez l'orthographe et la ponctuation.</span>
+                </li>
+                <li className="flex gap-3">
+                  <div className="h-5 w-5 rounded-full bg-white/20 flex items-center justify-center shrink-0">2</div>
+                  <span>L'image doit être claire et sans filigrane.</span>
+                </li>
+                <li className="flex gap-3">
+                  <div className="h-5 w-5 rounded-full bg-white/20 flex items-center justify-center shrink-0">3</div>
+                  <span>Le titre doit être explicite et accrocheur.</span>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
@@ -179,88 +324,125 @@ export const NewsManager = () => {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+    <div className="space-y-8 animate-fade-in">
+      <div className="flex flex-col sm:flex-row gap-6 justify-between items-start sm:items-center">
         <div>
-          <h2 className="text-3xl font-display font-bold text-primary-dark">Gestion des Actualités</h2>
-          <p className="text-muted-foreground">Gérez les articles de blog et communiqués officiels.</p>
+          <h2 className="text-4xl font-display font-bold text-primary-dark">Actualités & Presse</h2>
+          <p className="text-muted-foreground mt-1 text-lg">Gérez la voix éditoriale de la MA2E.</p>
         </div>
-        <Button onClick={handleCreate} className="rounded-full bg-primary text-white gap-2 shadow-lg shadow-primary/20">
-          <Plus className="h-5 w-5" /> Nouvel article
+        <Button onClick={handleCreate} className="rounded-full bg-primary text-white h-14 px-8 gap-3 shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform">
+          <Plus className="h-6 w-6" /> <span className="text-lg font-bold">Nouvel article</span>
         </Button>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between py-2">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between py-4 bg-card rounded-3xl px-6 border border-border/40 shadow-sm">
+        <div className="relative w-full md:w-[450px]">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input 
-            placeholder="Rechercher un titre, un auteur..." 
-            className="pl-9 rounded-full bg-card"
+            placeholder="Rechercher par titre, mot-clé ou auteur..." 
+            className="pl-12 h-12 rounded-2xl bg-secondary/20 border-none focus-visible:ring-primary/20"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="rounded-full gap-2">
-            <Filter className="h-4 w-4" /> Filtrer
+        <div className="flex gap-3">
+          <Button variant="outline" className="rounded-2xl h-12 px-6 gap-2">
+            <Filter className="h-5 w-5" /> Filtrage avancé
           </Button>
-          <Button variant="outline" size="sm" className="rounded-full gap-2">
-            <FileText className="h-4 w-4" /> Exporter
+          <Button variant="outline" className="rounded-2xl h-12 px-6 gap-2">
+            <Share2 className="h-5 w-5" /> Partager
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-4">
-        {NEWS.filter(n => n.title.toLowerCase().includes(search.toLowerCase())).map((article) => (
-          <Card key={article.id} className="border-border/40 hover:shadow-md transition-all overflow-hidden group">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center p-4 gap-4">
-              <div className="h-16 w-16 rounded-xl bg-primary/5 flex items-center justify-center shrink-0">
-                <FileText className="h-8 w-8 text-primary/40" />
+      <div className="grid gap-6">
+        {isLoading && (
+          <div className="py-16 text-center text-muted-foreground italic">Chargement des articles…</div>
+        )}
+        {!isLoading && articles.length === 0 && (
+          <div className="py-16 text-center text-muted-foreground italic">Aucun article. Cliquez sur « Nouvel article » pour publier.</div>
+        )}
+        {articles.filter(n => n.title.toLowerCase().includes(search.toLowerCase())).map((article) => (
+          <Card key={article.id} className="border-border/40 hover:shadow-xl transition-all overflow-hidden group rounded-[2rem]">
+            <div className="flex flex-col md:flex-row items-stretch p-6 gap-8">
+              <div className="md:w-64 h-48 md:h-auto rounded-2xl overflow-hidden bg-primary/5 shrink-0 relative">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                   <FileText className="h-16 w-16 text-primary/10 group-hover:scale-110 transition-transform duration-500" />
+                </div>
+                <Badge className="absolute top-4 left-4 bg-primary text-white border-none shadow-lg">{article.category}</Badge>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <Badge variant="secondary" className="text-[10px] font-bold uppercase">{article.category}</Badge>
-                  <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                    <Calendar className="h-3 w-3" /> {article.date}
+              
+              <div className="flex-1 flex flex-col py-2">
+                <div className="flex items-center gap-4 text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
+                  <span className="flex items-center gap-2 bg-secondary/40 px-3 py-1 rounded-full text-primary">
+                    <Calendar className="h-3 w-3" /> {article.date || new Date(article.createdAt).toLocaleDateString("fr-FR")}
                   </span>
-                  <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                    <Clock className="h-3 w-3" /> 4 min de lecture
+                  <span className="flex items-center gap-2">
+                    <Clock className="h-3.5 w-3.5" /> 4 min
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <Eye className="h-3.5 w-3.5" /> 1.2k vues
                   </span>
                 </div>
-                <h3 className="font-bold text-lg truncate group-hover:text-primary transition-colors">{article.title}</h3>
-                <p className="text-sm text-muted-foreground line-clamp-1">{article.excerpt}</p>
-              </div>
-              <div className="flex items-center gap-2 self-end sm:self-center">
-                <div className="hidden lg:flex items-center gap-4 mr-4 text-xs text-muted-foreground">
-                  <div className="flex flex-col items-center">
-                    <span className="font-bold text-foreground">1.2k</span>
-                    <span>Vues</span>
+                
+                <h3 className="font-display text-2xl font-bold group-hover:text-primary transition-colors mb-4 line-clamp-2">
+                  {article.title}
+                </h3>
+                
+                <p className="text-muted-foreground leading-relaxed line-clamp-2 mb-6">
+                  {article.excerpt}
+                </p>
+                
+                <div className="mt-auto flex items-center justify-between pt-4 border-t border-border/40">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-full bg-secondary border border-border flex items-center justify-center text-[10px] font-bold">
+                      AD
+                    </div>
+                    <span className="text-sm font-bold">Admin MA2E</span>
                   </div>
-                  <div className="flex flex-col items-center">
-                    <span className="font-bold text-foreground">42</span>
-                    <span>Partages</span>
+                  
+                  <div className="flex items-center gap-3">
+                    {article.status === "published" ? (
+                      <div className="hidden sm:flex items-center gap-1 text-[10px] font-bold text-emerald-600 uppercase bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Publié
+                      </div>
+                    ) : (
+                      <div className="hidden sm:flex items-center gap-1 text-[10px] font-bold text-amber-600 uppercase bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
+                        <div className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Brouillon
+                      </div>
+                    )}
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="secondary" size="icon" className="h-10 w-10 rounded-xl hover:bg-primary hover:text-white transition-all">
+                          <MoreVertical className="h-5 w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-2xl">
+                        <DropdownMenuItem className="rounded-xl py-3 cursor-pointer" onClick={() => handleEdit(article)}>
+                          <Edit2 className="h-4 w-4 mr-3 text-primary" /> 
+                          <span className="font-bold">Modifier l'article</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="rounded-xl py-3 cursor-pointer"
+                          onClick={() => window.open(`/actualites/${article.slug}`, "_blank", "noopener")}
+                        >
+                          <Eye className="h-4 w-4 mr-3 text-primary" />
+                          <span className="font-bold">Aperçu en direct</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="rounded-xl py-3 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
+                          onClick={() => { if (confirm(`Supprimer définitivement « ${article.title} » ?`)) deleteMutation.mutate(article.id); }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-3" />
+                          <span className="font-bold">Supprimer définitivement</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
-                <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none">Publié</Badge>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => handleEdit(article)}>
-                      <Edit2 className="h-4 w-4 mr-2" /> Modifier
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Eye className="h-4 w-4 mr-2" /> Voir sur le site
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive focus:text-destructive">
-                      <Trash2 className="h-4 w-4 mr-2" /> Supprimer
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
             </div>
           </Card>

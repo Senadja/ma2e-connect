@@ -1,0 +1,168 @@
+generator client {
+  provider      = "prisma-client-js"
+  // "native" pour le dev (Windows) + cible Alpine/musl pour les conteneurs Docker.
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  name        String
+  role        Role     @default(USER)
+  // Permissions fines (ex. "news:write", "products:write"). ADMIN = toutes implicitement.
+  permissions String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Application {
+  id          String   @id @default(uuid())
+  appId       String   @unique
+  type        String
+  category    String
+  name        String
+  matricule   String
+  email       String
+  phone       String
+  status      AppStatus @default(PENDING)
+  priority    Priority  @default(MEDIUM)
+  data        Json
+  // Traçabilité de la décision (validation / refus motivé).
+  decisionReason String?   // motif du refus ou note de validation
+  decidedAt      DateTime? // horodatage de la décision
+  decidedBy      String?   // e-mail de l'admin ayant statué
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Article {
+  id          String    @id @default(uuid())
+  slug        String    @unique
+  title       String
+  excerpt     String
+  category    String
+  content     Json      // blocs { type: "p"|"h2"|"quote"|"list", text?, items? }
+  image       String?   // visuel à la une (chemin /documents/uploads/…)
+  author      String?
+  readTime    String?
+  date        String?   // libellé humain conservé (ex. "12 mars 2025")
+  tags        String[]  @default([])
+  status      String    @default("draft") // draft | published
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  slug        String
+  type        String   // epargne | credit | immobilier
+  name        String
+  description String
+  features    String[] @default([])
+  meta        Json?    // { taux, duree, montant, conditions, ... }
+  image       String?
+  form        String?  // chemin du formulaire à télécharger
+  active      Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([type, slug])
+}
+
+model MediaFile {
+  id        String   @id @default(uuid())
+  title     String
+  desc      String?
+  category  String
+  path      String
+  size      String?
+  year      String?
+  createdAt DateTime @default(now())
+}
+
+model FaqItem {
+  id        String   @id @default(uuid())
+  category  String
+  question  String
+  answer    String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  key       String   @id // ex. "flashBanner", "contact", "social", "stats"
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model Partner {
+  id        String   @id @default(uuid())
+  name      String
+  type      String   // Tutelle | Partenaire institutionnel | Association professionnelle | Partenaire
+  desc      String
+  logo      String?
+  url       String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  name      String
+  role      String
+  initials  String
+  category  String   @default("Gouvernance") // Gouvernance | Direction
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userEmail String
+  userName  String?
+  method    String
+  path      String
+  status    Int
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  USER
+  EDITOR
+  ADMIN
+}
+
+enum AppStatus {
+  PENDING
+  REVIEWING
+  APPROVED
+  REJECTED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}

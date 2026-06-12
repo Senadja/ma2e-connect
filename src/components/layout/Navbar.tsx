@@ -1,9 +1,29 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { ChevronDown, Menu, X, ArrowRight, Smartphone, ShieldCheck, HelpCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Logo } from "../Logo";
+import { LanguageSwitcher } from "../LanguageSwitcher";
 import { NAV_LINKS } from "@/data/site";
 import { cn } from "@/lib/utils";
+
+// Correspondance href → clé de traduction (évite de modifier NAV_LINKS).
+const NAV_KEY: Record<string, string> = {
+  "/": "home",
+  "/adhesion": "adhesion",
+  "/a-propos": "about",
+  "/produits": "products",
+  "/actualites": "news",
+  "/contact": "contact",
+};
+const CHILD_KEY: Record<string, { label: string; desc: string }> = {
+  "/a-propos#histoire": { label: "history", desc: "descHistory" },
+  "/a-propos#mission": { label: "mission", desc: "descMission" },
+  "/a-propos#organisation": { label: "organisation", desc: "descOrganisation" },
+  "/produits/epargne": { label: "savings", desc: "descSavings" },
+  "/produits/credits": { label: "credits", desc: "descCredits" },
+  "/produits/immobilier": { label: "realEstate", desc: "descRealEstate" },
+};
 
 interface NavbarProps {
   mobileOpenExtern?: boolean;
@@ -12,18 +32,37 @@ interface NavbarProps {
 
 export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) => {
   const [scrolled, setScrolled] = useState(false);
+  const [topOffset, setTopOffset] = useState(0);
   const [internalMobileOpen, setInternalMobileOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const location = useLocation();
+  const { t } = useTranslation();
+  const navLabel = (href: string, fallback: string) => (NAV_KEY[href] ? t(`nav.${NAV_KEY[href]}`) : fallback);
+  const childLabel = (href: string, fallback: string) => (CHILD_KEY[href] ? t(`nav.${CHILD_KEY[href].label}`) : fallback);
+  const childDesc = (href: string, fallback?: string) => (CHILD_KEY[href] ? t(`nav.${CHILD_KEY[href].desc}`) : fallback);
 
   const isMobileOpen = mobileOpenExtern ?? internalMobileOpen;
   const setMobileOpen = setMobileOpenExtern ?? setInternalMobileOpen;
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
+    const onScroll = () => {
+      setScrolled(window.scrollY > 5);
+      // Positionne le header juste sous la banderole (qui défile naturellement),
+      // pour éviter tout chevauchement. 0 si la banderole est absente/dépassée.
+      const banner = document.querySelector("[data-flash-banner]") as HTMLElement | null;
+      const bottom = banner ? banner.getBoundingClientRect().bottom : 0;
+      setTopOffset(Math.max(0, bottom));
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    window.addEventListener("resize", onScroll);
+    // Recalcule immédiatement quand la banderole apparaît/disparaît.
+    window.addEventListener("layoutchange", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("layoutchange", onScroll);
+    };
   }, []);
 
   useEffect(() => {
@@ -33,9 +72,9 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
 
   return (
     <header
+      style={{ top: topOffset }}
       className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-all duration-500",
-        // Test: Removing backdrop-blur and semi-transparency that might cause gray/buggy rendering
+        "fixed inset-x-0 z-50 transition-all duration-300",
         scrolled ? "bg-background border-b border-border shadow-soft" : "bg-transparent"
       )}
     >
@@ -64,7 +103,7 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
                     )
                   }
                 >
-                  {link.label}
+                  {navLabel(link.href, link.label)}
                   {hasChildren && <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-180", !scrolled && "text-white/70")} />}
                 </NavLink>
 
@@ -83,8 +122,8 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
                               <ArrowRight className="h-4 w-4" />
                             </div>
                             <div>
-                              <div className="font-bold text-sm text-foreground">{c.label}</div>
-                              <div className="text-xs text-muted-foreground line-clamp-1">{c.desc}</div>
+                              <div className="font-bold text-sm text-foreground">{childLabel(c.href, c.label)}</div>
+                              <div className="text-xs text-muted-foreground line-clamp-1">{childDesc(c.href, c.desc)}</div>
                             </div>
                           </Link>
                         ))}
@@ -98,24 +137,25 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
         </nav>
 
         <div className="hidden lg:flex items-center gap-4">
+          <LanguageSwitcher dark={!scrolled} />
           <Link
             to="/admin/login"
             className={cn("text-sm font-bold transition-colors", scrolled ? "text-muted-foreground hover:text-primary" : "text-white/70 hover:text-white")}
           >
-            Accès Admin
+            {t("common.accessAdmin")}
           </Link>
           <Link
             to="/espace-ema2e"
             className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-2.5 text-sm font-bold text-accent-foreground shadow-gold hover:scale-[1.03] transition-bounce"
           >
-            Espace E-MA2E
+            {t("common.espaceEma2e")}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
         <button
           className="lg:hidden p-2 text-foreground relative z-50 transition-transform active:scale-90"
-          aria-label={isMobileOpen ? "Fermer le menu" : "Ouvrir le menu"}
+          aria-label={isMobileOpen ? t("common.closeMenu") : t("common.openMenu")}
           onClick={() => setMobileOpen(!isMobileOpen)}
         >
           {isMobileOpen ? <X className={cn("h-7 w-7", scrolled || isMobileOpen ? "text-primary" : "text-white")} /> : <Menu className={cn("h-7 w-7", !scrolled && "text-white")} />}
@@ -136,10 +176,10 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
                 style={{ animationDelay: `${i * 50}ms` }}
               >
                 <Link 
-                  to={link.href} 
+                  to={link.href}
                   className="flex items-center justify-between py-4 text-2xl font-display font-bold text-foreground active:text-primary"
                 >
-                  {link.label}
+                  {navLabel(link.href, link.label)}
                   <ArrowRight className="h-6 w-6 text-primary/40" />
                 </Link>
                 {"children" in link && link.children && (
@@ -151,7 +191,7 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
                         className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50 text-sm font-bold text-muted-foreground"
                       >
                         <div className="h-2 w-2 rounded-full bg-accent" />
-                        {c.label}
+                        {childLabel(c.href, c.label)}
                       </Link>
                     ))}
                   </div>
@@ -162,15 +202,18 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
           </nav>
 
           <div className={cn("mt-8 space-y-4 transition-all duration-700 delay-200", !isMobileOpen && "opacity-0")}>
+            <div className="flex justify-center">
+              <LanguageSwitcher />
+            </div>
             <Link to="/espace-ema2e" className="flex items-center justify-center gap-3 rounded-2xl bg-primary h-16 text-lg font-bold text-white shadow-xl shadow-primary/20">
-              <Smartphone className="h-6 w-6" /> Espace E-MA2E
+              <Smartphone className="h-6 w-6" /> {t("common.espaceEma2e")}
             </Link>
             <div className="grid grid-cols-2 gap-4">
               <Link to="/faq" className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-secondary text-xs font-bold text-muted-foreground">
-                <HelpCircle className="h-5 w-5 text-primary" /> FAQ
+                <HelpCircle className="h-5 w-5 text-primary" /> {t("common.faq")}
               </Link>
               <Link to="/politique-dcp" className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-secondary text-xs font-bold text-muted-foreground">
-                <ShieldCheck className="h-5 w-5 text-primary" /> Sécurité
+                <ShieldCheck className="h-5 w-5 text-primary" /> {t("common.security")}
               </Link>
             </div>
           </div>

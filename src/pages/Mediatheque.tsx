@@ -4,11 +4,15 @@ import { Layout } from "@/components/layout/Layout";
 import { PageHero } from "@/components/PageHero";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { MEDIA, MEDIA_CATEGORIES, type MediaCategory } from "@/data/institutional";
+import { MEDIA_CATEGORIES, type MediaCategory } from "@/data/institutional";
+import { useMedia } from "@/lib/content";
+import { useTranslation } from "react-i18next";
 
 const Mediatheque = () => {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<MediaCategory | "Tous">("Tous");
+  const { data: MEDIA = [] } = useMedia();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -17,14 +21,13 @@ const Mediatheque = () => {
       const okQ = !q || m.title.toLowerCase().includes(q) || m.desc.toLowerCase().includes(q);
       return okCat && okQ;
     });
-  }, [query, category]);
+  }, [query, category, MEDIA]);
 
   return (
     <Layout>
       <PageHero
-        title="Médiathèque"
-        subtitle="Téléchargez nos formulaires, rapports annuels, statuts et brochures officielles."
-        breadcrumb={[{ label: "Accueil", href: "/" }, { label: "Médiathèque" }]}
+        title={t("media.heroTitle")}
+        subtitle={t("media.heroSubtitle")}
       />
 
       <section className="container py-16">
@@ -34,9 +37,9 @@ const Mediatheque = () => {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher un document…"
+              placeholder={t("media.search")}
               className="pl-11"
-              aria-label="Rechercher un document"
+              aria-label={t("media.search")}
             />
           </div>
 
@@ -46,7 +49,7 @@ const Mediatheque = () => {
               size="sm"
               onClick={() => setCategory("Tous")}
             >
-              Tous
+              {t("media.all")}
             </Button>
             {MEDIA_CATEGORIES.map((c) => (
               <Button
@@ -62,7 +65,7 @@ const Mediatheque = () => {
         </div>
 
         {filtered.length === 0 ? (
-          <p className="text-center py-16 text-muted-foreground">Aucun document ne correspond à votre recherche.</p>
+          <p className="text-center py-16 text-muted-foreground">{t("media.noResult")}</p>
         ) : (
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {filtered.map((m, i) => (
@@ -81,19 +84,25 @@ const Mediatheque = () => {
                 <h3 className="font-display text-lg leading-snug">{m.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground flex-1">{m.desc}</p>
                 <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>PDF · {m.size}</span>
+                  <span>{m.size ? `PDF · ${m.size}` : t("media.document")}</span>
                   <span>{m.year}</span>
                 </div>
-                <Button
-                  variant="outline"
-                  className="mt-5 w-full group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary"
-                  asChild
-                >
-                  <a href="#" aria-label={`Télécharger ${m.title}`}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Télécharger
-                  </a>
-                </Button>
+                {m.href ? (
+                  <Button
+                    variant="outline"
+                    className="mt-5 w-full group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary"
+                    asChild
+                  >
+                    <a href={m.href} download aria-label={`${t("common.download")} ${m.title}`}>
+                      <Download className="mr-2 h-4 w-4" />
+                      {t("media.download")}
+                    </a>
+                  </Button>
+                ) : (
+                  <Button variant="outline" className="mt-5 w-full opacity-60 cursor-not-allowed" disabled>
+                    {t("media.comingSoon")}
+                  </Button>
+                )}
               </article>
             ))}
           </div>

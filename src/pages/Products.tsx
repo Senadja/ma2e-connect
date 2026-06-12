@@ -2,24 +2,26 @@ import { Link } from "react-router-dom";
 import { Wallet, Landmark, Home, ArrowRight } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { PageHero } from "@/components/PageHero";
+import { useTranslation } from "react-i18next";
 
 const Products = () => {
+  const { t } = useTranslation();
   const products = [
     {
-      icon: Wallet, title: "Épargne rémunérée", to: "/produits/epargne",
-      desc: "Cinq formules d'épargne pour faire fructifier votre capital à votre rythme.",
+      icon: Wallet, title: t("home.prodSavingsTitle"), to: "/produits/epargne",
+      desc: t("products.savingsDesc"),
       items: ["Épargne Expresse", "Épargne Ordinaire", "Épargne Logement", "Dépôt à terme simple", "DAT à versements progressifs"],
       gradient: "from-primary to-primary-glow",
     },
     {
-      icon: Landmark, title: "Formules de crédit", to: "/produits/credits",
-      desc: "Quatre formules pour financer chaque type de projet, à taux préférentiel.",
-      items: ["Crédit Ordinaire", "Crédit Expresse", "Crédit Immobilier", "Crédit Immobilier Différé"],
+      icon: Landmark, title: t("home.prodCreditTitle"), to: "/produits/credits",
+      desc: t("products.creditDesc"),
+      items: ["Crédit Ordinaire", "Crédit Expresse", "Crédit Scolaire", "Crédit Immobilier"],
       gradient: "from-primary-dark to-primary",
     },
     {
-      icon: Home, title: "Projet immobilier", to: "/produits/immobilier",
-      desc: "Devenez propriétaire grâce à notre programme de logements clés en main.",
+      icon: Home, title: t("home.prodRealEstateTitle"), to: "/produits/immobilier",
+      desc: t("products.realEstateDesc"),
       items: ["Duplex 4 & 5 pièces", "Villas 3, 4 & 5 pièces", "Tranches successives", "Accompagnement complet"],
       gradient: "from-accent to-accent-glow",
     },
@@ -28,9 +30,9 @@ const Products = () => {
   return (
     <Layout>
       <PageHero
-        title="Nos produits & services"
-        subtitle="Des solutions financières pensées pour les agents, par les agents."
-        breadcrumb={[{ label: "Accueil", href: "/" }, { label: "Produits" }]}
+        title={t("products.heroTitle")}
+        subtitle={t("products.heroSubtitle")}
+        breadcrumb={[{ label: t("nav.home"), href: "/" }, { label: t("nav.products") }]}
       />
 
       <section className="py-20">
@@ -53,7 +55,7 @@ const Products = () => {
                   ))}
                 </ul>
                 <span className="mt-6 inline-flex items-center gap-2 font-semibold text-primary">
-                  Découvrir <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  {t("products.discover")} <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </span>
               </div>
             </Link>
