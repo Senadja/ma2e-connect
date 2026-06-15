@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, MessageCircle, Users } from "lucide-react";
+import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 interface StatItem { value: number; label: string; suffix: string }
@@ -17,8 +17,6 @@ interface Settings {
   stats?: StatItem[];
   orgChart?: OrgChart;
   orgUnits?: OrgUnit[];
-  whatsapp?: { enabled: boolean; phone: string; message: string };
-  chatbot?: { enabled: boolean; url: string };
 }
 
 // Pages du site proposées pour le lien du bandeau (évite de taper une URL à la main).
@@ -71,8 +69,6 @@ export const SettingsManager = () => {
   const [stats, setStats] = useState<StatItem[]>(DEFAULT_STATS);
   const [org, setOrg] = useState<OrgChart>(DEFAULT_ORG);
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>(DEFAULT_ORG_UNITS);
-  const [whatsapp, setWhatsapp] = useState({ enabled: false, phone: "", message: "" });
-  const [chatbot, setChatbot] = useState({ enabled: false, url: "" });
   const [smtp, setSmtp] = useState({ enabled: false, host: "", port: 587, user: "", pass: "", secure: false, from: "", to: "" });
 
   // SMTP : lu via l'endpoint sécurisé (contient un mot de passe, jamais exposé publiquement).
@@ -96,8 +92,6 @@ export const SettingsManager = () => {
       departments: Array.isArray(data.orgChart.departments) && data.orgChart.departments.length ? data.orgChart.departments : DEFAULT_ORG.departments,
     });
     if (Array.isArray(data.orgUnits) && data.orgUnits.length) setOrgUnits(data.orgUnits.map((u) => ({ name: u.name || "", note: u.note || "" })));
-    if (data.whatsapp) setWhatsapp({ enabled: !!data.whatsapp.enabled, phone: data.whatsapp.phone || "", message: data.whatsapp.message || "" });
-    if (data.chatbot) setChatbot({ enabled: !!data.chatbot.enabled, url: data.chatbot.url || "" });
   }, [data]);
 
   const updateDept = (i: number, val: string) =>
@@ -294,36 +288,6 @@ export const SettingsManager = () => {
           ))}
           <Button type="button" variant="outline" size="sm" onClick={addUnit} className="w-fit rounded-full gap-2"><Plus className="h-4 w-4" /> Ajouter un organe</Button>
           <div><Button onClick={saveUnits} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les organes</Button></div>
-        </CardContent>
-      </Card>
-
-      {/* Contact rapide & Assistant (widget flottant) */}
-      <Card className="border-border/40 shadow-sm">
-        <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><MessageCircle className="h-5 w-5 text-primary" /> Contact rapide &amp; Assistant</CardTitle></CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-3 rounded-xl border border-border/50 p-4">
-            <label className="flex items-center justify-between text-sm font-semibold cursor-pointer">
-              <span>Bouton WhatsApp flottant</span>
-              <input type="checkbox" checked={whatsapp.enabled} onChange={(e) => setWhatsapp({ ...whatsapp, enabled: e.target.checked })} className="h-4 w-4 accent-primary" />
-            </label>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="grid gap-2"><label className={label}>Numéro (format international)</label>
-                <Input value={whatsapp.phone} onChange={(e) => setWhatsapp({ ...whatsapp, phone: e.target.value })} placeholder="2250787137512" /></div>
-              <div className="grid gap-2"><label className={label}>Message pré-rempli</label>
-                <Input value={whatsapp.message} onChange={(e) => setWhatsapp({ ...whatsapp, message: e.target.value })} placeholder="Bonjour AYA, je suis sociétaire MA2E." /></div>
-            </div>
-            <Button onClick={() => save.mutate({ key: "whatsapp", value: whatsapp })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer WhatsApp</Button>
-          </div>
-          <div className="space-y-3 rounded-xl border border-border/50 p-4">
-            <label className="flex items-center justify-between text-sm font-semibold cursor-pointer">
-              <span>Assistant / chatbot (bulle flottante)</span>
-              <input type="checkbox" checked={chatbot.enabled} onChange={(e) => setChatbot({ ...chatbot, enabled: e.target.checked })} className="h-4 w-4 accent-primary" />
-            </label>
-            <div className="grid gap-2"><label className={label}>URL du chatbot (affichée en fenêtre intégrée)</label>
-              <Input value={chatbot.url} onChange={(e) => setChatbot({ ...chatbot, url: e.target.value })} placeholder="https://…/chat" /></div>
-            <p className="text-[11px] text-muted-foreground">La page doit autoriser l'intégration en iframe. Sinon, on basculera vers une reconstruction native.</p>
-            <Button onClick={() => save.mutate({ key: "chatbot", value: chatbot })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer l'assistant</Button>
-          </div>
         </CardContent>
       </Card>
 

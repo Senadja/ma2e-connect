@@ -183,8 +183,6 @@ export interface SiteSettings {
   social?: { facebook: string; linkedin: string; twitter: string };
   orgChart?: OrgChart;
   orgUnits?: OrgUnit[];
-  whatsapp?: { enabled: boolean; phone: string; message?: string };
-  chatbot?: { enabled: boolean; url: string };
 }
 
 const fallbackSettings: SiteSettings = {
