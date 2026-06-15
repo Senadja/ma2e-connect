@@ -7,6 +7,12 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "localhost",
     port: 5174,
+    // En dev, l'app appelle des URLs relatives (/api, /documents) ; on les proxifie
+    // vers le backend local. En prod (Vercel), ce sont les rewrites de vercel.json.
+    proxy: {
+      "/api": "http://localhost:3000",
+      "/documents": "http://localhost:3000",
+    },
     hmr: {
       overlay: false,
     },

@@ -1,7 +1,7 @@
 // Client API centralisé pour le backend MA2E.
 // Injecte automatiquement le token Bearer et gère les erreurs JSON.
 
-const BASE_URL = (import.meta.env.VITE_API_URL as string) || "http://localhost:3000/api";
+const BASE_URL = (import.meta.env.VITE_API_URL as string) || "/api";
 const TOKEN_KEY = "ma2e-token";
 
 export function getToken(): string | null {
