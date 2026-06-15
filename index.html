@@ -4,20 +4,54 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MA2E — Mutuelle des Agents de l'Eau et de l'Électricité</title>
-    <meta name="description" content="La MA2E accompagne 7 335 adhérents dans leurs projets d'épargne, de crédit et d'accession à la propriété depuis 2006." />
     <meta name="author" content="MA2E" />
     <link rel="icon" type="image/svg+xml" href="/ma2e-favicon.svg" />
-    <link rel="canonical" href="/" />
+    <!-- description + canonical sont gérés par page via react-helmet (composant SEO). -->
+    <meta name="theme-color" content="#0a2540" />
 
     <meta property="og:title" content="MA2E — Votre mutuelle, votre avenir" />
     <meta property="og:description" content="Microfinance mutualiste au service des agents de l'eau et de l'électricité de Côte d'Ivoire." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://ma2e-connect.vercel.app/" />
-    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image" content="https://ma2e-connect.vercel.app/logo-ma2e.png" />
     <meta property="og:locale" content="fr_FR" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="/og-image.png" />
+    <meta name="twitter:image" content="https://ma2e-connect.vercel.app/logo-ma2e.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "MA2E — Mutuelle des Agents de l'Eau et de l'Électricité",
+        "alternateName": "MA2E",
+        "url": "https://ma2e-connect.vercel.app",
+        "logo": "https://ma2e-connect.vercel.app/logo-ma2e.png",
+        "description": "Mutuelle de microfinance au service des agents de l'eau et de l'électricité de Côte d'Ivoire : épargne, crédit et accession à la propriété.",
+        "foundingDate": "2006",
+        "areaServed": "CI",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Avenue Houdaille, Immeuble SIDAM, 6e étage, Plateau",
+          "addressLocality": "Abidjan",
+          "addressCountry": "CI"
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "+225 27 21 23 64 87",
+          "email": "contact@ma2e.ci",
+          "contactType": "customer service"
+        }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "MA2E",
+        "url": "https://ma2e-connect.vercel.app"
+      }
+    </script>
   </head>
 
   <body>

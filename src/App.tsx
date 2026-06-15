@@ -8,6 +8,7 @@ import { Suspense, lazy, type ComponentType } from "react";
 import { AdminLayout } from "./components/layout/AdminLayout";
 import { MatomoTracker } from "./components/MatomoTracker";
 import { ScrollToHash } from "./components/ScrollToHash";
+import { RouteSEO } from "./components/RouteSEO";
 
 // Recharge la page si un chunk lazy échoue (cas du redéploiement : noms de chunks renommés).
 // Garde anti-boucle : un seul rechargement par fenêtre de 10 s.
@@ -87,6 +88,7 @@ const App = () => (
         <BrowserRouter>
           <MatomoTracker />
           <ScrollToHash />
+          <RouteSEO />
           <Suspense fallback={<PageLoader />}>
             <Routes>
               {/* Public Routes */}

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { FAQ_CATEGORIES, type FaqCategory } from "@/data/institutional";
 import { useFaq } from "@/lib/content";
+import { SEO } from "@/components/SEO";
 import { useTranslation } from "react-i18next";
 
 const Faq = () => {
@@ -24,8 +25,15 @@ const Faq = () => {
     });
   }, [query, category, FAQS]);
 
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQS.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+  };
+
   return (
     <Layout>
+      <SEO title="FAQ" description="Questions fréquentes sur l'adhésion, l'épargne, les crédits, l'immobilier et l'espace E-MA2E de la mutuelle MA2E." jsonLd={faqJsonLd} />
       <PageHero
         title={t("faq.heroTitle")}
         subtitle={t("faq.heroSubtitle")}

@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Remplacer https://www.ma2e.ci par le domaine définitif fourni par la MA2E. -->
+<!-- Remplacer https://ma2e-connect.vercel.app par le domaine définitif fourni par la MA2E. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://www.ma2e.ci/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://www.ma2e.ci/adhesion</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://www.ma2e.ci/a-propos</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://www.ma2e.ci/produits</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://www.ma2e.ci/produits/epargne</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://www.ma2e.ci/produits/credits</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://www.ma2e.ci/produits/immobilier</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://www.ma2e.ci/actualites</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://www.ma2e.ci/contact</loc><changefreq>yearly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://www.ma2e.ci/faq</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://www.ma2e.ci/mediatheque</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://www.ma2e.ci/partenaires</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://www.ma2e.ci/mentions-legales</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://www.ma2e.ci/cgu</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://www.ma2e.ci/politique-dcp</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://ma2e-connect.vercel.app/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://ma2e-connect.vercel.app/adhesion</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://ma2e-connect.vercel.app/a-propos</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://ma2e-connect.vercel.app/produits</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://ma2e-connect.vercel.app/produits/epargne</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://ma2e-connect.vercel.app/produits/credits</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://ma2e-connect.vercel.app/produits/immobilier</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://ma2e-connect.vercel.app/actualites</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://ma2e-connect.vercel.app/contact</loc><changefreq>yearly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://ma2e-connect.vercel.app/faq</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://ma2e-connect.vercel.app/mediatheque</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://ma2e-connect.vercel.app/partenaires</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://ma2e-connect.vercel.app/mentions-legales</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://ma2e-connect.vercel.app/cgu</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://ma2e-connect.vercel.app/politique-dcp</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
 </urlset>
