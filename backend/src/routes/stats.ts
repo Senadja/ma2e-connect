@@ -6,10 +6,10 @@ export const statsRouter = Router();
 // Valeurs de référence officielles MA2E (à valider avec le rapport annuel).
 // Les comptages dynamiques s'ajoutent à ces bases.
 const BASELINE = {
-  adherents: 7335,
+  adherents: 8430,
   produitsActifs: 9,
   anneesExperience: 14,
-  mdsFcfa: 2.4,
+  mdsFcfa: 2.9,
 };
 
 statsRouter.get('/', async (_req, res) => {
