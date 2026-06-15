@@ -24,6 +24,10 @@ const About = () => {
   const r1 = useReveal(); const r2 = useReveal(); const r3 = useReveal(); const r4 = useReveal();
   const { data: TEAM = [] } = useTeam();
   const { data: settings } = useSettings();
+  const about = settings?.aboutContent;
+  const milestones = settings?.milestones?.length
+    ? settings.milestones
+    : MILESTONES.map((m) => ({ year: m.year, title: t(`about.milestones.${m.year}.title`, { defaultValue: m.title }), desc: t(`about.milestones.${m.year}.desc`, { defaultValue: m.desc }) }));
   const statIcons = [Users, Award, TrendingUp, Coins];
 
   // Organigramme : valeurs du CMS si présentes, sinon repli sur les libellés i18n.
@@ -37,9 +41,9 @@ const About = () => {
   const deptIcons = [Settings2, Wallet, ShieldCheck, Briefcase, Coins, Users];
   const orgDepts = deptNames.map((name, i) => ({ icon: deptIcons[i % deptIcons.length], name }));
   const missions = [
-    { icon: Wallet, title: t("about.mission1Title"), desc: t("about.mission1Desc") },
-    { icon: Briefcase, title: t("about.mission2Title"), desc: t("about.mission2Desc") },
-    { icon: ShieldCheck, title: t("about.mission3Title"), desc: t("about.mission3Desc") },
+    { icon: Wallet, title: about?.mission1Title || t("about.mission1Title"), desc: about?.mission1Desc || t("about.mission1Desc") },
+    { icon: Briefcase, title: about?.mission2Title || t("about.mission2Title"), desc: about?.mission2Desc || t("about.mission2Desc") },
+    { icon: ShieldCheck, title: about?.mission3Title || t("about.mission3Title"), desc: about?.mission3Desc || t("about.mission3Desc") },
   ];
 
   // Organes (CA/CC/CS/CED) éditables via le CMS — repli sur la composition officielle.
@@ -70,11 +74,11 @@ const About = () => {
         <div className="container max-w-4xl px-4 md:px-6">
           <div ref={r1} className="reveal rounded-2xl md:rounded-3xl bg-gradient-primary text-primary-foreground p-8 md:p-14 shadow-elegant relative overflow-hidden text-center md:text-left">
             <Quote className="absolute top-4 right-4 md:top-6 md:right-6 h-12 w-12 md:h-20 md:w-20 text-white/10" />
-            <span className="text-[10px] md:text-xs font-mono uppercase tracking-widest text-accent">{t("about.founderVision")}</span>
+            <span className="text-[10px] md:text-xs font-mono uppercase tracking-widest text-accent">{about?.founderVision || t("about.founderVision")}</span>
             <blockquote className="mt-4 font-display text-xl md:text-3xl italic leading-tight text-balance">
-              « {t("about.founderQuote")} »
+              « {about?.founderQuote || t("about.founderQuote")} »
             </blockquote>
-            <div className="mt-6 text-sm md:text-base font-semibold">Marcel ZADI KESSY <span className="font-normal text-white/70 block md:inline">— {t("about.founder")}</span></div>
+            <div className="mt-6 text-sm md:text-base font-semibold">{about?.founderName || "Marcel ZADI KESSY"} <span className="font-normal text-white/70 block md:inline">— {about?.founderRole || t("about.founder")}</span></div>
           </div>
         </div>
       </section>
@@ -87,12 +91,12 @@ const About = () => {
             <h2 className="mt-2 font-display text-3xl md:text-5xl font-bold">{t("about.historyTitle")}</h2>
           </div>
           <ol className="relative border-l-2 border-accent/30 ml-4 md:ml-3 space-y-10">
-            {MILESTONES.map((m) => (
+            {milestones.map((m) => (
               <li key={m.year} className="pl-6 md:pl-8 relative">
                 <span className="absolute -left-[11px] top-1 h-5 w-5 rounded-full bg-accent ring-4 ring-accent/20" />
                 <div className="font-mono text-accent font-bold text-lg">{m.year}</div>
-                <h3 className="font-display text-xl md:text-2xl font-bold mt-1">{t(`about.milestones.${m.year}.title`, { defaultValue: m.title })}</h3>
-                <p className="text-muted-foreground mt-2 max-w-xl text-sm md:text-base leading-relaxed">{t(`about.milestones.${m.year}.desc`, { defaultValue: m.desc })}</p>
+                <h3 className="font-display text-xl md:text-2xl font-bold mt-1">{m.title}</h3>
+                <p className="text-muted-foreground mt-2 max-w-xl text-sm md:text-base leading-relaxed">{m.desc}</p>
               </li>
             ))}
           </ol>

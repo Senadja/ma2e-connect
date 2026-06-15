@@ -128,6 +128,10 @@ const Index = () => {
   const tCat = (c: string) => t(`newsPage.categories.${c}`, { defaultValue: c });
   const { data: settings } = useSettings();
   const why = settings?.whyUs;
+  const hero = settings?.homeHero;
+  const milestones = settings?.milestones?.length
+    ? settings.milestones
+    : MILESTONES.map((m) => ({ year: m.year, title: t(`about.milestones.${m.year}.title`, { defaultValue: m.title }), desc: t(`about.milestones.${m.year}.desc`, { defaultValue: m.desc }) }));
   const pca = settings?.presidentQuote;
   const pcaName = pca?.name || "Ahmadou BAKAYOKO";
   const pcaInitials = pcaName.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
@@ -169,27 +173,27 @@ const Index = () => {
         <div className="relative container grid lg:grid-cols-2 gap-12 items-center py-12 md:py-20 lg:py-24">
           <div className="animate-fade-in text-center lg:text-left z-10">
             <span className="inline-block rounded-full bg-white/10 border border-white/20 px-4 py-1.5 text-[10px] md:text-xs font-bold text-white/90 backdrop-blur uppercase tracking-widest">
-              {t("home.heroBadge")}
+              {hero?.badge || t("home.heroBadge")}
             </span>
             <h1 className="mt-6 font-display text-4xl md:text-6xl xl:text-7xl font-bold leading-[1.1] text-balance">
-              {t("home.heroTitle1")}<br />
-              <em className="not-italic font-bold text-accent italic">{t("home.heroTitle2")}</em>
+              {hero?.title1 || t("home.heroTitle1")}<br />
+              <em className="not-italic font-bold text-accent italic">{hero?.title2 || t("home.heroTitle2")}</em>
             </h1>
             <p className="mt-6 mx-auto lg:mx-0 max-w-xl text-base md:text-lg text-white/80 leading-relaxed">
-              {t("home.heroLeadPre")} <strong className="text-white font-bold">{stats[0]?.value.toLocaleString("fr-FR")} {t("home.heroLeadMembers")}</strong> {t("home.heroLeadPost")}
+              {hero?.leadPre || t("home.heroLeadPre")} <strong className="text-white font-bold">{stats[0]?.value.toLocaleString("fr-FR")} {hero?.leadMembers || t("home.heroLeadMembers")}</strong> {hero?.leadPost || t("home.heroLeadPost")}
             </p>
             <div className="mt-10 flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
               <Link
                 to="/produits"
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-gold px-8 py-4 font-bold text-accent-foreground shadow-gold hover:scale-[1.02] active:scale-95 transition-all"
               >
-                {t("home.ctaProducts")} <ArrowRight className="h-4 w-4" />
+                {hero?.ctaProducts || t("home.ctaProducts")} <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 to="/adhesion"
                 className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/40 px-8 py-4 font-bold text-white hover:bg-white hover:text-primary-dark active:scale-95 transition-all"
               >
-                {t("home.ctaJoin")}
+                {hero?.ctaJoin || t("home.ctaJoin")}
               </Link>
             </div>
           </div>
@@ -279,14 +283,14 @@ const Index = () => {
 
           <div className="relative">
             <ol className="relative space-y-6 lg:space-y-0 lg:grid lg:grid-cols-4 lg:gap-4">
-              {MILESTONES.map((m, i) => (
+              {milestones.map((m, i) => (
                 <li key={m.year} className="relative pl-8 lg:pl-0 lg:pt-10">
                   <div className="absolute left-0 top-1 lg:left-auto lg:top-0 lg:right-auto h-3 w-3 rounded-full bg-accent ring-4 ring-accent/20" />
                   <div className="absolute left-1.5 top-4 bottom-0 w-px bg-border lg:hidden" />
                   <div className="hidden lg:block absolute left-0 right-0 top-1.5 h-px bg-border -z-0" />
                   <div className="font-mono text-accent font-bold text-lg">{m.year}</div>
-                  <div className="font-display font-bold mt-1">{t(`about.milestones.${m.year}.title`, { defaultValue: m.title })}</div>
-                  <div className="text-sm text-muted-foreground mt-1">{t(`about.milestones.${m.year}.desc`, { defaultValue: m.desc })}</div>
+                  <div className="font-display font-bold mt-1">{m.title}</div>
+                  <div className="text-sm text-muted-foreground mt-1">{m.desc}</div>
                 </li>
               ))}
             </ol>

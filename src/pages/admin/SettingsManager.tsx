@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { MILESTONES } from "@/data/site";
 
 interface StatItem { value: number; label: string; suffix: string }
 interface OrgChart { level1Name: string; level2Name: string; departments: string[] }
@@ -24,6 +25,9 @@ interface Settings {
   chatbot?: { enabled: boolean; url: string };
   whyUs?: Record<string, string>;
   presidentQuote?: { quote?: string; name?: string; role?: string; bgImage?: string; bgColor?: string };
+  homeHero?: Record<string, string>;
+  aboutContent?: Record<string, string>;
+  milestones?: { year: string; title: string; desc: string }[];
 }
 
 const DEFAULT_STATS: StatItem[] = [
@@ -86,6 +90,29 @@ export const SettingsManager = () => {
       setUploadingBg(false);
     }
   };
+
+  const heroDefaults: Record<string, string> = {
+    badge: t("home.heroBadge"), title1: t("home.heroTitle1"), title2: t("home.heroTitle2"),
+    leadPre: t("home.heroLeadPre"), leadMembers: t("home.heroLeadMembers"), leadPost: t("home.heroLeadPost"),
+    ctaProducts: t("home.ctaProducts"), ctaJoin: t("home.ctaJoin"),
+  };
+  const [homeHero, setHomeHero] = useState<Record<string, string>>(heroDefaults);
+  const aboutDefaults: Record<string, string> = {
+    founderVision: t("about.founderVision"), founderQuote: t("about.founderQuote"),
+    founderName: "Marcel ZADI KESSY", founderRole: t("about.founder"),
+    mission1Title: t("about.mission1Title"), mission1Desc: t("about.mission1Desc"),
+    mission2Title: t("about.mission2Title"), mission2Desc: t("about.mission2Desc"),
+    mission3Title: t("about.mission3Title"), mission3Desc: t("about.mission3Desc"),
+  };
+  const [aboutContent, setAboutContent] = useState<Record<string, string>>(aboutDefaults);
+  const [milestones, setMilestones] = useState<{ year: string; title: string; desc: string }[]>(
+    MILESTONES.map((m) => ({ year: m.year, title: t(`about.milestones.${m.year}.title`, { defaultValue: m.title }), desc: t(`about.milestones.${m.year}.desc`, { defaultValue: m.desc }) }))
+  );
+  const updateMs = (i: number, field: "year" | "title" | "desc", val: string) =>
+    setMilestones((ms) => ms.map((m, idx) => (idx === i ? { ...m, [field]: val } : m)));
+  const addMs = () => setMilestones((ms) => [...ms, { year: "", title: "", desc: "" }]);
+  const removeMs = (i: number) => setMilestones((ms) => ms.filter((_, idx) => idx !== i));
+  const saveMs = () => save.mutate({ key: "milestones", value: milestones.map((m) => ({ year: m.year.trim(), title: m.title.trim(), desc: m.desc.trim() })).filter((m) => m.year || m.title) });
   const [smtp, setSmtp] = useState({ enabled: false, host: "", port: 587, user: "", pass: "", secure: false, from: "", to: "" });
 
   // SMTP : lu via l'endpoint sécurisé (contient un mot de passe, jamais exposé publiquement).
@@ -121,6 +148,9 @@ export const SettingsManager = () => {
       const pq = data.presidentQuote;
       setPresident((p) => ({ quote: pq.quote ?? p.quote, name: pq.name ?? p.name, role: pq.role ?? p.role, bgImage: pq.bgImage ?? p.bgImage, bgColor: pq.bgColor ?? p.bgColor }));
     }
+    if (data.homeHero) setHomeHero((h) => ({ ...h, ...data.homeHero }));
+    if (data.aboutContent) setAboutContent((a) => ({ ...a, ...data.aboutContent }));
+    if (Array.isArray(data.milestones) && data.milestones.length) setMilestones(data.milestones.map((m) => ({ year: m.year || "", title: m.title || "", desc: m.desc || "" })));
   }, [data]);
 
   const updateDept = (i: number, val: string) =>
@@ -435,6 +465,74 @@ export const SettingsManager = () => {
           {president.bgImage && <img src={president.bgImage} alt="" className="max-h-32 w-auto rounded-lg border border-border" />}
           <p className="text-[11px] text-muted-foreground">Si une image est définie, elle prime sur la couleur (un voile sombre garde le texte lisible).</p>
           <Button onClick={() => save.mutate({ key: "presidentQuote", value: president })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer le bloc</Button>
+        </CardContent>
+      </Card>
+
+      {/* Hero d'accueil */}
+      <Card className="border-border/40 shadow-sm">
+        <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Hero d'accueil</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-2"><label className={label}>Badge</label><Input value={homeHero.badge} onChange={(e) => setHomeHero({ ...homeHero, badge: e.target.value })} /></div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid gap-2"><label className={label}>Titre — ligne 1</label><Input value={homeHero.title1} onChange={(e) => setHomeHero({ ...homeHero, title1: e.target.value })} /></div>
+            <div className="grid gap-2"><label className={label}>Titre — ligne 2 (colorée)</label><Input value={homeHero.title2} onChange={(e) => setHomeHero({ ...homeHero, title2: e.target.value })} /></div>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid gap-2"><label className={label}>Accroche (avant le nombre)</label><Input value={homeHero.leadPre} onChange={(e) => setHomeHero({ ...homeHero, leadPre: e.target.value })} /></div>
+            <div className="grid gap-2"><label className={label}>Mot après le nombre</label><Input value={homeHero.leadMembers} onChange={(e) => setHomeHero({ ...homeHero, leadMembers: e.target.value })} /></div>
+            <div className="grid gap-2"><label className={label}>Accroche (suite)</label><Input value={homeHero.leadPost} onChange={(e) => setHomeHero({ ...homeHero, leadPost: e.target.value })} /></div>
+          </div>
+          <p className="text-[11px] text-muted-foreground">Le nombre d'adhérents s'insère automatiquement entre les deux premiers champs d'accroche.</p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid gap-2"><label className={label}>Bouton 1 (produits)</label><Input value={homeHero.ctaProducts} onChange={(e) => setHomeHero({ ...homeHero, ctaProducts: e.target.value })} /></div>
+            <div className="grid gap-2"><label className={label}>Bouton 2 (adhésion)</label><Input value={homeHero.ctaJoin} onChange={(e) => setHomeHero({ ...homeHero, ctaJoin: e.target.value })} /></div>
+          </div>
+          <Button onClick={() => save.mutate({ key: "homeHero", value: homeHero })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer le hero</Button>
+        </CardContent>
+      </Card>
+
+      {/* À propos — citation & mission */}
+      <Card className="border-border/40 shadow-sm">
+        <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Quote className="h-5 w-5 text-primary" /> À propos — citation & mission</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-2"><label className={label}>Citation du fondateur</label>
+            <textarea value={aboutContent.founderQuote} onChange={(e) => setAboutContent({ ...aboutContent, founderQuote: e.target.value })} rows={3} className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" /></div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid gap-2"><label className={label}>Mention (au-dessus)</label><Input value={aboutContent.founderVision} onChange={(e) => setAboutContent({ ...aboutContent, founderVision: e.target.value })} /></div>
+            <div className="grid gap-2"><label className={label}>Nom du fondateur</label><Input value={aboutContent.founderName} onChange={(e) => setAboutContent({ ...aboutContent, founderName: e.target.value })} /></div>
+            <div className="grid gap-2"><label className={label}>Fonction</label><Input value={aboutContent.founderRole} onChange={(e) => setAboutContent({ ...aboutContent, founderRole: e.target.value })} /></div>
+          </div>
+          <div className="h-px bg-border/60" />
+          <p className="text-[11px] text-muted-foreground">Les 3 missions affichées sur « À propos ».</p>
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="grid sm:grid-cols-2 gap-4">
+              <div className="grid gap-2"><label className={label}>Mission {n} — titre</label><Input value={aboutContent[`mission${n}Title`]} onChange={(e) => setAboutContent({ ...aboutContent, [`mission${n}Title`]: e.target.value })} /></div>
+              <div className="grid gap-2"><label className={label}>Mission {n} — description</label><Input value={aboutContent[`mission${n}Desc`]} onChange={(e) => setAboutContent({ ...aboutContent, [`mission${n}Desc`]: e.target.value })} /></div>
+            </div>
+          ))}
+          <Button onClick={() => save.mutate({ key: "aboutContent", value: aboutContent })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les textes</Button>
+        </CardContent>
+      </Card>
+
+      {/* Frise historique (À propos + accueil) */}
+      <Card className="border-border/40 shadow-sm">
+        <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Network className="h-5 w-5 text-primary" /> Frise historique</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-[11px] text-muted-foreground">Étapes affichées sur « À propos » et l'accueil (année + titre + description).</p>
+          {milestones.map((m, i) => (
+            <div key={i} className="grid grid-cols-12 gap-3 items-start rounded-xl border border-border/50 p-3">
+              <div className="col-span-4 sm:col-span-2 grid gap-1"><label className={label}>Année</label><Input value={m.year} onChange={(e) => updateMs(i, "year", e.target.value)} /></div>
+              <div className="col-span-8 sm:col-span-9 grid gap-2">
+                <Input value={m.title} onChange={(e) => updateMs(i, "title", e.target.value)} placeholder="Titre de l'étape" />
+                <Input value={m.desc} onChange={(e) => updateMs(i, "desc", e.target.value)} placeholder="Description" />
+              </div>
+              <div className="col-span-12 sm:col-span-1 flex sm:justify-center">
+                <Button type="button" variant="ghost" size="icon" onClick={() => removeMs(i)} disabled={milestones.length <= 1} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={addMs} className="w-fit rounded-full gap-2"><Plus className="h-4 w-4" /> Ajouter une étape</Button>
+          <div><Button onClick={saveMs} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer la frise</Button></div>
         </CardContent>
       </Card>
 

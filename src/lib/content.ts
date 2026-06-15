@@ -194,6 +194,9 @@ export interface SiteSettings {
     growthLabel?: string; growthValue?: string;
   };
   presidentQuote?: { quote?: string; name?: string; role?: string; bgImage?: string; bgColor?: string };
+  homeHero?: { badge?: string; title1?: string; title2?: string; leadPre?: string; leadMembers?: string; leadPost?: string; ctaProducts?: string; ctaJoin?: string };
+  aboutContent?: { founderVision?: string; founderQuote?: string; founderName?: string; founderRole?: string; mission1Title?: string; mission1Desc?: string; mission2Title?: string; mission2Desc?: string; mission3Title?: string; mission3Desc?: string };
+  milestones?: { year: string; title: string; desc: string }[];
 }
 
 const fallbackSettings: SiteSettings = {

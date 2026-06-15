@@ -183,10 +183,6 @@ const Adhesion = () => {
                 <ul className="space-y-3">
                   <li className="flex items-start gap-3 text-sm">
                     <FileText className="h-4 w-4 text-primary mt-1" />
-                    <span>{t("adhesion.doc1")}</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-sm">
-                    <FileText className="h-4 w-4 text-primary mt-1" />
                     <span>{t("adhesion.doc2")}</span>
                   </li>
                   <li className="flex items-start gap-3 text-sm">
