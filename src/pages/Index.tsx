@@ -6,7 +6,7 @@ import { SEO } from "@/components/SEO";
 import { useReveal, useCounter } from "@/hooks/useReveal";
 import { cn } from "@/lib/utils";
 import { STATS as DEFAULT_STATS, MILESTONES } from "@/data/site";
-import { useArticles } from "@/lib/content";
+import { useArticles, useSettings } from "@/lib/content";
 import { api } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 
@@ -126,6 +126,16 @@ const Index = () => {
   const { data: NEWS = [] } = useArticles();
   const { t } = useTranslation();
   const tCat = (c: string) => t(`newsPage.categories.${c}`, { defaultValue: c });
+  const { data: settings } = useSettings();
+  const why = settings?.whyUs;
+  const pca = settings?.presidentQuote;
+  const pcaName = pca?.name || "Ahmadou BAKAYOKO";
+  const pcaInitials = pcaName.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  const pcaBgStyle = pca?.bgImage
+    ? { backgroundImage: `url(${pca.bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }
+    : pca?.bgColor
+    ? { backgroundColor: pca.bgColor }
+    : undefined;
 
   useEffect(() => {
     // Utilise le client API centralisé (URL configurable, compatible prod).
@@ -289,13 +299,13 @@ const Index = () => {
         <div className="container">
           <div className="grid lg:grid-cols-2 gap-20 items-center">
             <div>
-              <span className="text-xs font-bold uppercase tracking-[0.2em] text-accent">{t("home.whyKicker")}</span>
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-accent">{why?.kicker || t("home.whyKicker")}</span>
               <div className="h-1 w-12 bg-accent mt-4 mb-8" />
               <h2 className="font-display text-5xl md:text-6xl font-bold leading-tight mb-8">
-                {t("home.whyTitle1")}<em className="text-primary italic not-italic">{t("home.whyTitleEm")}</em>
+                {why?.titleStart || t("home.whyTitle1")}<em className="text-primary italic not-italic">{why?.titleEm || t("home.whyTitleEm")}</em>
               </h2>
               <p className="text-lg text-muted-foreground leading-relaxed mb-12 max-w-lg">
-                {t("home.whyLead")}
+                {why?.lead || t("home.whyLead")}
               </p>
 
               <div className="space-y-10">
@@ -304,8 +314,8 @@ const Index = () => {
                     <ShieldCheck className="h-6 w-6" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-lg mb-2">{t("home.whyFeat1Title")}</h4>
-                    <p className="text-muted-foreground text-sm leading-relaxed">{t("home.whyFeat1Desc")}</p>
+                    <h4 className="font-bold text-lg mb-2">{why?.feat1Title || t("home.whyFeat1Title")}</h4>
+                    <p className="text-muted-foreground text-sm leading-relaxed">{why?.feat1Desc || t("home.whyFeat1Desc")}</p>
                   </div>
                 </div>
                 <div className="flex gap-6 group">
@@ -313,8 +323,8 @@ const Index = () => {
                     <TrendingUp className="h-6 w-6" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-lg mb-2">{t("home.whyFeat2Title")}</h4>
-                    <p className="text-muted-foreground text-sm leading-relaxed">{t("home.whyFeat2Desc")}</p>
+                    <h4 className="font-bold text-lg mb-2">{why?.feat2Title || t("home.whyFeat2Title")}</h4>
+                    <p className="text-muted-foreground text-sm leading-relaxed">{why?.feat2Desc || t("home.whyFeat2Desc")}</p>
                   </div>
                 </div>
               </div>
@@ -329,19 +339,19 @@ const Index = () => {
 
                 <div className="grid grid-cols-2 gap-6 mb-10">
                   <div className="p-6 rounded-3xl bg-primary/5 border border-primary/10">
-                    <div className="text-3xl font-display font-bold text-primary mb-1">7 335</div>
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t("home.whyActiveMembers")}</div>
+                    <div className="text-3xl font-display font-bold text-primary mb-1">{why?.stat1Value || "7 335"}</div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{why?.stat1Label || t("home.whyActiveMembers")}</div>
                   </div>
                   <div className="p-6 rounded-3xl bg-accent/5 border border-accent/10 text-right">
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">{t("home.whyFoundedIn")}</div>
-                    <div className="text-3xl font-display font-bold text-accent">2006</div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">{why?.stat2Label || t("home.whyFoundedIn")}</div>
+                    <div className="text-3xl font-display font-bold text-accent">{why?.stat2Value || "2006"}</div>
                   </div>
                 </div>
 
                 <div className="space-y-6">
                   <div className="flex justify-between items-end mb-2">
-                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("home.whyFundsGrowth")}</span>
-                    <span className="text-primary font-bold">{t("home.whyPerYear")}</span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{why?.growthLabel || t("home.whyFundsGrowth")}</span>
+                    <span className="text-primary font-bold">{why?.growthValue || t("home.whyPerYear")}</span>
                   </div>
                   <div className="flex items-end gap-3 h-48 pt-10">
                     {[30, 45, 60, 55, 75, 90, 85, 100].map((h, i) => (
@@ -361,7 +371,8 @@ const Index = () => {
       </section>
 
       {/* PCA QUOTE */}
-      <section ref={quoteRef} className="reveal relative py-20 md:py-28 bg-primary-dark text-white overflow-hidden">
+      <section ref={quoteRef} className="reveal relative py-20 md:py-28 bg-primary-dark text-white overflow-hidden" style={pcaBgStyle}>
+        {pca?.bgImage && <div className="absolute inset-0 bg-primary-dark/70" aria-hidden />}
         <div className="absolute inset-0 grid-pattern-light opacity-40" aria-hidden />
         <div className="absolute top-10 left-10 text-accent opacity-30" aria-hidden>
           <Quote className="h-32 w-32 -scale-x-100" />
@@ -369,13 +380,13 @@ const Index = () => {
         <div className="relative container max-w-4xl text-center">
           <Quote className="mx-auto h-10 w-10 text-accent" />
           <blockquote className="mt-6 font-display text-3xl md:text-4xl xl:text-5xl font-bold italic leading-tight text-balance">
-            « {t("home.quote")} »
+            « {pca?.quote || t("home.quote")} »
           </blockquote>
           <div className="mt-10 flex items-center justify-center gap-4">
-            <div className="grid h-14 w-14 place-items-center rounded-full bg-gradient-gold text-accent-foreground font-bold">AB</div>
+            <div className="grid h-14 w-14 place-items-center rounded-full bg-gradient-gold text-accent-foreground font-bold">{pcaInitials}</div>
             <div className="text-left">
-              <div className="font-semibold text-white">Ahmadou BAKAYOKO</div>
-              <div className="text-sm text-white/70">{t("home.quoteRole")}</div>
+              <div className="font-semibold text-white">{pcaName}</div>
+              <div className="text-sm text-white/70">{pca?.role || t("home.quoteRole")}</div>
             </div>
           </div>
         </div>

@@ -187,6 +187,13 @@ export interface SiteSettings {
   splash?: { enabled: boolean; image: string; link?: string };
   whatsapp?: { enabled: boolean; phone: string; message?: string };
   chatbot?: { enabled: boolean; url: string };
+  whyUs?: {
+    kicker?: string; titleStart?: string; titleEm?: string; lead?: string;
+    feat1Title?: string; feat1Desc?: string; feat2Title?: string; feat2Desc?: string;
+    stat1Value?: string; stat1Label?: string; stat2Value?: string; stat2Label?: string;
+    growthLabel?: string; growthValue?: string;
+  };
+  presidentQuote?: { quote?: string; name?: string; role?: string; bgImage?: string; bgColor?: string };
 }
 
 const fallbackSettings: SiteSettings = {

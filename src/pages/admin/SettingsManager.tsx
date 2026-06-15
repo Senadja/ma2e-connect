@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle } from "lucide-react";
+import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 interface StatItem { value: number; label: string; suffix: string }
 interface OrgChart { level1Name: string; level2Name: string; departments: string[] }
@@ -21,6 +22,8 @@ interface Settings {
   splash?: { enabled: boolean; image: string; link: string };
   whatsapp?: { enabled: boolean; phone: string; message: string };
   chatbot?: { enabled: boolean; url: string };
+  whyUs?: Record<string, string>;
+  presidentQuote?: { quote?: string; name?: string; role?: string; bgImage?: string; bgColor?: string };
 }
 
 const DEFAULT_STATS: StatItem[] = [
@@ -45,6 +48,7 @@ const DEFAULT_ORG_UNITS: OrgUnit[] = [
 
 export const SettingsManager = () => {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const { data } = useQuery({ queryKey: ["settings"], queryFn: () => api<Settings>("/settings") });
 
   const [flashInfos, setFlashInfos] = useState<{ enabled: boolean; speed: number; items: { text: string; url: string }[] }>({ enabled: true, speed: 25, items: [{ text: "", url: "" }] });
@@ -56,6 +60,32 @@ export const SettingsManager = () => {
   const [org, setOrg] = useState<OrgChart>(DEFAULT_ORG);
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>(DEFAULT_ORG_UNITS);
   const [splash, setSplash] = useState({ enabled: false, image: "/images/splash-accueil.png", link: "" });
+  const whyDefaults: Record<string, string> = {
+    kicker: t("home.whyKicker"), titleStart: t("home.whyTitle1"), titleEm: t("home.whyTitleEm"), lead: t("home.whyLead"),
+    feat1Title: t("home.whyFeat1Title"), feat1Desc: t("home.whyFeat1Desc"),
+    feat2Title: t("home.whyFeat2Title"), feat2Desc: t("home.whyFeat2Desc"),
+    stat1Value: "7 335", stat1Label: t("home.whyActiveMembers"),
+    stat2Value: "2006", stat2Label: t("home.whyFoundedIn"),
+    growthLabel: t("home.whyFundsGrowth"), growthValue: t("home.whyPerYear"),
+  };
+  const [whyUs, setWhyUs] = useState<Record<string, string>>(whyDefaults);
+  const [president, setPresident] = useState({ quote: t("home.quote"), name: "Ahmadou BAKAYOKO", role: t("home.quoteRole"), bgImage: "", bgColor: "" });
+  const [uploadingBg, setUploadingBg] = useState(false);
+  const bgRef = useRef<HTMLInputElement>(null);
+  const uploadBg = async (file: File) => {
+    setUploadingBg(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { path } = await api<{ path: string }>("/uploads", { method: "POST", auth: true, isForm: true, body: fd });
+      setPresident((p) => ({ ...p, bgImage: path }));
+      toast.success("Image téléversée.");
+    } catch (e: any) {
+      toast.error(e?.message || "Téléversement impossible.");
+    } finally {
+      setUploadingBg(false);
+    }
+  };
   const [smtp, setSmtp] = useState({ enabled: false, host: "", port: 587, user: "", pass: "", secure: false, from: "", to: "" });
 
   // SMTP : lu via l'endpoint sécurisé (contient un mot de passe, jamais exposé publiquement).
@@ -86,6 +116,11 @@ export const SettingsManager = () => {
     if (data.splash) setSplash({ enabled: !!data.splash.enabled, image: data.splash.image || "/images/splash-accueil.png", link: data.splash.link || "" });
     if (data.whatsapp) setWhatsapp({ enabled: !!data.whatsapp.enabled, phone: data.whatsapp.phone || "", message: data.whatsapp.message || "" });
     if (data.chatbot) setChatbot({ enabled: !!data.chatbot.enabled, url: data.chatbot.url || "" });
+    if (data.whyUs) setWhyUs((w) => ({ ...w, ...data.whyUs }));
+    if (data.presidentQuote) {
+      const pq = data.presidentQuote;
+      setPresident((p) => ({ quote: pq.quote ?? p.quote, name: pq.name ?? p.name, role: pq.role ?? p.role, bgImage: pq.bgImage ?? p.bgImage, bgColor: pq.bgColor ?? p.bgColor }));
+    }
   }, [data]);
 
   const updateDept = (i: number, val: string) =>
@@ -338,6 +373,68 @@ export const SettingsManager = () => {
             <p className="text-[11px] text-muted-foreground">La page doit autoriser l'intégration en iframe.</p>
             <Button onClick={() => save.mutate({ key: "chatbot", value: chatbot })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer l'assistant</Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Pourquoi nous choisir (accueil) */}
+      <Card className="border-border/40 shadow-sm">
+        <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> « Pourquoi nous choisir » (accueil)</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-[11px] text-muted-foreground">Textes et chiffres de la section « Pourquoi nous choisir » de la page d'accueil.</p>
+          <div className="grid gap-2"><label className={label}>Sur-titre</label><Input value={whyUs.kicker} onChange={(e) => setWhyUs({ ...whyUs, kicker: e.target.value })} /></div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid gap-2"><label className={label}>Titre (début)</label><Input value={whyUs.titleStart} onChange={(e) => setWhyUs({ ...whyUs, titleStart: e.target.value })} /></div>
+            <div className="grid gap-2"><label className={label}>Titre (partie colorée)</label><Input value={whyUs.titleEm} onChange={(e) => setWhyUs({ ...whyUs, titleEm: e.target.value })} /></div>
+          </div>
+          <div className="grid gap-2"><label className={label}>Accroche</label><Input value={whyUs.lead} onChange={(e) => setWhyUs({ ...whyUs, lead: e.target.value })} /></div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid gap-2"><label className={label}>Atout 1 — titre</label><Input value={whyUs.feat1Title} onChange={(e) => setWhyUs({ ...whyUs, feat1Title: e.target.value })} /></div>
+            <div className="grid gap-2"><label className={label}>Atout 1 — description</label><Input value={whyUs.feat1Desc} onChange={(e) => setWhyUs({ ...whyUs, feat1Desc: e.target.value })} /></div>
+            <div className="grid gap-2"><label className={label}>Atout 2 — titre</label><Input value={whyUs.feat2Title} onChange={(e) => setWhyUs({ ...whyUs, feat2Title: e.target.value })} /></div>
+            <div className="grid gap-2"><label className={label}>Atout 2 — description</label><Input value={whyUs.feat2Desc} onChange={(e) => setWhyUs({ ...whyUs, feat2Desc: e.target.value })} /></div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid gap-2"><label className={label}>Chiffre 1</label><Input value={whyUs.stat1Value} onChange={(e) => setWhyUs({ ...whyUs, stat1Value: e.target.value })} /></div>
+            <div className="grid gap-2"><label className={label}>Libellé 1</label><Input value={whyUs.stat1Label} onChange={(e) => setWhyUs({ ...whyUs, stat1Label: e.target.value })} /></div>
+            <div className="grid gap-2"><label className={label}>Chiffre 2</label><Input value={whyUs.stat2Value} onChange={(e) => setWhyUs({ ...whyUs, stat2Value: e.target.value })} /></div>
+            <div className="grid gap-2"><label className={label}>Libellé 2</label><Input value={whyUs.stat2Label} onChange={(e) => setWhyUs({ ...whyUs, stat2Label: e.target.value })} /></div>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid gap-2"><label className={label}>Libellé croissance</label><Input value={whyUs.growthLabel} onChange={(e) => setWhyUs({ ...whyUs, growthLabel: e.target.value })} /></div>
+            <div className="grid gap-2"><label className={label}>Valeur croissance</label><Input value={whyUs.growthValue} onChange={(e) => setWhyUs({ ...whyUs, growthValue: e.target.value })} /></div>
+          </div>
+          <Button onClick={() => save.mutate({ key: "whyUs", value: whyUs })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer la section</Button>
+        </CardContent>
+      </Card>
+
+      {/* Bloc Président (accueil) */}
+      <Card className="border-border/40 shadow-sm">
+        <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Quote className="h-5 w-5 text-primary" /> Bloc Président (accueil)</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-2"><label className={label}>Citation</label>
+            <textarea value={president.quote} onChange={(e) => setPresident({ ...president, quote: e.target.value })} rows={3} className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" /></div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid gap-2"><label className={label}>Nom</label><Input value={president.name} onChange={(e) => setPresident({ ...president, name: e.target.value })} /></div>
+            <div className="grid gap-2"><label className={label}>Fonction</label><Input value={president.role} onChange={(e) => setPresident({ ...president, role: e.target.value })} /></div>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4 items-end">
+            <div className="grid gap-2"><label className={label}>Couleur de fond</label>
+              <div className="flex items-center gap-2">
+                <input type="color" value={president.bgColor || "#0a2540"} onChange={(e) => setPresident({ ...president, bgColor: e.target.value, bgImage: "" })} className="h-10 w-12 shrink-0 rounded border border-input" />
+                <Input value={president.bgColor} onChange={(e) => setPresident({ ...president, bgColor: e.target.value })} placeholder="vide = couleur par défaut" />
+              </div>
+            </div>
+            <div className="grid gap-2"><label className={label}>Image de fond (prioritaire)</label>
+              <div className="flex items-center gap-2">
+                <input ref={bgRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadBg(f); e.target.value = ""; }} />
+                <Button type="button" variant="outline" size="sm" disabled={uploadingBg} onClick={() => bgRef.current?.click()} className="rounded-full gap-2"><Upload className="h-4 w-4" /> {uploadingBg ? "Envoi…" : "Téléverser"}</Button>
+                {president.bgImage && <button type="button" onClick={() => setPresident({ ...president, bgImage: "" })} className="text-xs text-muted-foreground hover:text-destructive">Retirer</button>}
+              </div>
+            </div>
+          </div>
+          {president.bgImage && <img src={president.bgImage} alt="" className="max-h-32 w-auto rounded-lg border border-border" />}
+          <p className="text-[11px] text-muted-foreground">Si une image est définie, elle prime sur la couleur (un voile sombre garde le texte lisible).</p>
+          <Button onClick={() => save.mutate({ key: "presidentQuote", value: president })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer le bloc</Button>
         </CardContent>
       </Card>
 
