@@ -12,7 +12,7 @@ interface OrgChart { level1Name: string; level2Name: string; departments: string
 interface OrgUnit { name: string; note: string }
 interface Settings {
   flashBanner?: { enabled: boolean; text: string; link: string };
-  flashInfos?: { enabled: boolean; items: { text: string; url: string }[] };
+  flashInfos?: { enabled: boolean; speed?: number; items: { text: string; url: string }[] };
   contact?: { address: string; phone: string; email: string };
   social?: { facebook: string; linkedin: string; twitter: string };
   stats?: StatItem[];
@@ -47,7 +47,7 @@ export const SettingsManager = () => {
   const queryClient = useQueryClient();
   const { data } = useQuery({ queryKey: ["settings"], queryFn: () => api<Settings>("/settings") });
 
-  const [flashInfos, setFlashInfos] = useState<{ enabled: boolean; items: { text: string; url: string }[] }>({ enabled: true, items: [{ text: "", url: "" }] });
+  const [flashInfos, setFlashInfos] = useState<{ enabled: boolean; speed: number; items: { text: string; url: string }[] }>({ enabled: true, speed: 25, items: [{ text: "", url: "" }] });
   const [whatsapp, setWhatsapp] = useState({ enabled: false, phone: "", message: "" });
   const [chatbot, setChatbot] = useState({ enabled: false, url: "" });
   const [contact, setContact] = useState({ address: "", phone: "", email: "" });
@@ -70,9 +70,9 @@ export const SettingsManager = () => {
   useEffect(() => {
     if (!data) return;
     if (data.flashInfos && Array.isArray(data.flashInfos.items)) {
-      setFlashInfos({ enabled: !!data.flashInfos.enabled, items: data.flashInfos.items.length ? data.flashInfos.items.map((it) => ({ text: it.text || "", url: it.url || "" })) : [{ text: "", url: "" }] });
+      setFlashInfos({ enabled: !!data.flashInfos.enabled, speed: Number(data.flashInfos.speed) || 25, items: data.flashInfos.items.length ? data.flashInfos.items.map((it) => ({ text: it.text || "", url: it.url || "" })) : [{ text: "", url: "" }] });
     } else if (data.flashBanner?.text) {
-      setFlashInfos({ enabled: !!data.flashBanner.enabled, items: [{ text: data.flashBanner.text, url: data.flashBanner.link || "" }] });
+      setFlashInfos({ enabled: !!data.flashBanner.enabled, speed: 25, items: [{ text: data.flashBanner.text, url: data.flashBanner.link || "" }] });
     }
     if (data.contact) setContact({ address: data.contact.address || "", phone: data.contact.phone || "", email: data.contact.email || "" });
     if (data.social) setSocial({ facebook: data.social.facebook || "", linkedin: data.social.linkedin || "", twitter: data.social.twitter || "" });
@@ -116,7 +116,7 @@ export const SettingsManager = () => {
   const removeInfo = (i: number) => setFlashInfos((f) => ({ ...f, items: f.items.filter((_, idx) => idx !== i) }));
   const saveInfos = () => {
     const items = flashInfos.items.map((it) => ({ text: it.text.trim(), url: it.url.trim() })).filter((it) => it.text);
-    save.mutate({ key: "flashInfos", value: { enabled: flashInfos.enabled, items } });
+    save.mutate({ key: "flashInfos", value: { enabled: flashInfos.enabled, speed: flashInfos.speed, items } });
   };
 
   const updateStat = (i: number, field: keyof StatItem, val: string) =>
@@ -148,7 +148,11 @@ export const SettingsManager = () => {
           </label>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-[11px] text-muted-foreground">Plusieurs messages possibles : ils défilent automatiquement dans le bandeau en haut du site. URL optionnelle par message (page interne « /adhesion » ou lien « https://… »).</p>
+          <p className="text-[11px] text-muted-foreground">Plusieurs messages possibles : ils défilent en continu dans le bandeau en haut du site. URL optionnelle par message (page interne « /adhesion » ou lien « https://… »).</p>
+          <div className="grid gap-2 max-w-xs">
+            <label className={label}>Vitesse (secondes par défilement — plus petit = plus rapide)</label>
+            <Input type="number" min={5} max={120} value={flashInfos.speed} onChange={(e) => setFlashInfos({ ...flashInfos, speed: Number(e.target.value) || 25 })} />
+          </div>
           {flashInfos.items.map((it, i) => (
             <div key={i} className="grid gap-2 rounded-xl border border-border/50 p-3">
               <Input value={it.text} onChange={(e) => updateInfo(i, "text", e.target.value)} placeholder="Message de l'info…" />
