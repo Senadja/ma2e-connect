@@ -56,11 +56,10 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
-    environment:
-      API_DOMAIN: ${API_DOMAIN}
+    # La passerelle (openresty) en amont termine le TLS et nous proxifie en HTTP.
+    # Caddy n'écoute donc qu'en HTTP (:80), publié sur le port hôte 3182 que la passerelle vise.
     ports:
-      - "80:80"
-      - "443:443"
+      - "3182:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

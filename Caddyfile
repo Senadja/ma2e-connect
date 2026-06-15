@@ -1,9 +1,9 @@
-# Reverse proxy + HTTPS automatique (Let's Encrypt) pour l'API MA2E.
-# {$API_DOMAIN} est fourni par docker-compose (ex. 188-165-77-237.sslip.io).
-# Caddy obtient et renouvelle le certificat tout seul (nécessite que 80/443
-# soient joignables depuis Internet).
+# Reverse proxy HTTP simple pour l'API MA2E.
+# Le serveur est derrière une passerelle (openresty) qui ne nous laisse pas
+# joindre 80/443 : c'est CETTE passerelle qui termine le TLS et nous proxifie.
+# Caddy ne fait donc PAS de HTTPS ici — il écoute en HTTP sur :80 (publié en 3182).
 
-{$API_DOMAIN} {
+:80 {
 	encode gzip
 
 	# Tout (/api/* et /documents/uploads/*) est servi par le backend Node.
