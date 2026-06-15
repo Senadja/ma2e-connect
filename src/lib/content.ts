@@ -183,6 +183,7 @@ export interface SiteSettings {
   social?: { facebook: string; linkedin: string; twitter: string };
   orgChart?: OrgChart;
   orgUnits?: OrgUnit[];
+  splash?: { enabled: boolean; image: string; link?: string };
 }
 
 const fallbackSettings: SiteSettings = {

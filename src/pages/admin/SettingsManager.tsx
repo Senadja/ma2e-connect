@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users } from "lucide-react";
+import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
 interface StatItem { value: number; label: string; suffix: string }
@@ -17,6 +17,7 @@ interface Settings {
   stats?: StatItem[];
   orgChart?: OrgChart;
   orgUnits?: OrgUnit[];
+  splash?: { enabled: boolean; image: string; link: string };
 }
 
 // Pages du site proposées pour le lien du bandeau (évite de taper une URL à la main).
@@ -40,10 +41,10 @@ const PAGE_LINKS = [
 const KNOWN_LINKS = PAGE_LINKS.map((p) => p.value).filter((v) => v && v !== "__custom__");
 
 const DEFAULT_STATS: StatItem[] = [
-  { value: 7335, label: "Adhérents", suffix: "" },
+  { value: 8430, label: "Adhérents", suffix: "" },
   { value: 9, label: "Produits", suffix: "" },
   { value: 14, label: "Années d'activités", suffix: "" },
-  { value: 2.4, label: "Mds FCFA de crédits", suffix: "" },
+  { value: 2.9, label: "Mds FCFA de crédits", suffix: "" },
 ];
 
 const DEFAULT_ORG: OrgChart = {
@@ -69,6 +70,7 @@ export const SettingsManager = () => {
   const [stats, setStats] = useState<StatItem[]>(DEFAULT_STATS);
   const [org, setOrg] = useState<OrgChart>(DEFAULT_ORG);
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>(DEFAULT_ORG_UNITS);
+  const [splash, setSplash] = useState({ enabled: false, image: "/images/splash-accueil.png", link: "" });
   const [smtp, setSmtp] = useState({ enabled: false, host: "", port: 587, user: "", pass: "", secure: false, from: "", to: "" });
 
   // SMTP : lu via l'endpoint sécurisé (contient un mot de passe, jamais exposé publiquement).
@@ -92,6 +94,7 @@ export const SettingsManager = () => {
       departments: Array.isArray(data.orgChart.departments) && data.orgChart.departments.length ? data.orgChart.departments : DEFAULT_ORG.departments,
     });
     if (Array.isArray(data.orgUnits) && data.orgUnits.length) setOrgUnits(data.orgUnits.map((u) => ({ name: u.name || "", note: u.note || "" })));
+    if (data.splash) setSplash({ enabled: !!data.splash.enabled, image: data.splash.image || "/images/splash-accueil.png", link: data.splash.link || "" });
   }, [data]);
 
   const updateDept = (i: number, val: string) =>
@@ -288,6 +291,30 @@ export const SettingsManager = () => {
           ))}
           <Button type="button" variant="outline" size="sm" onClick={addUnit} className="w-fit rounded-full gap-2"><Plus className="h-4 w-4" /> Ajouter un organe</Button>
           <div><Button onClick={saveUnits} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les organes</Button></div>
+        </CardContent>
+      </Card>
+
+      {/* Splash / Pop-up d'accueil */}
+      <Card className="border-border/40 shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg font-bold flex items-center gap-2"><ImageIcon className="h-5 w-5 text-primary" /> Splash / Pop-up d'accueil</CardTitle>
+          <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+            <input type="checkbox" checked={splash.enabled} onChange={(e) => setSplash({ ...splash, enabled: e.target.checked })} className="h-4 w-4 accent-primary" />
+            Activé
+          </label>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-[11px] text-muted-foreground">Image affichée une fois par session au 1er chargement du site. Désactivée : aucune pop-up.</p>
+          <div className="grid gap-2">
+            <label className={label}>Image (chemin ou URL)</label>
+            <Input value={splash.image} onChange={(e) => setSplash({ ...splash, image: e.target.value })} placeholder="/images/splash-accueil.png" />
+          </div>
+          <div className="grid gap-2">
+            <label className={label}>Lien au clic (optionnel)</label>
+            <Input value={splash.link} onChange={(e) => setSplash({ ...splash, link: e.target.value })} placeholder="/adhesion ou https://…" />
+          </div>
+          {splash.image && <img src={splash.image} alt="" className="max-h-40 w-auto rounded-lg border border-border" />}
+          <Button onClick={() => save.mutate({ key: "splash", value: splash })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer la pop-up</Button>
         </CardContent>
       </Card>
 

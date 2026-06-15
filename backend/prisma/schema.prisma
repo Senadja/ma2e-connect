@@ -85,6 +85,7 @@ model MediaFile {
   path      String
   size      String?
   year      String?
+  published Boolean  @default(true) // visible sur la médiathèque publique ; les uploads ad hoc arrivent à false
   createdAt DateTime @default(now())
 }
 

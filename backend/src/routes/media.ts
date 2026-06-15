@@ -24,15 +24,21 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 15 * 1024 * 1024 } });
 
-// GET public — liste des documents de la médiathèque.
+// GET public — uniquement les documents PUBLIÉS de la médiathèque.
 mediaRouter.get('/', async (req, res) => {
   const category = req.query.category as string | undefined;
-  const where = category ? { category } : {};
+  const where = { published: true, ...(category ? { category } : {}) };
   const media = await prisma.mediaFile.findMany({ where, orderBy: { createdAt: 'desc' } });
   res.json(media);
 });
 
 mediaRouter.use(requireAuth, requirePermission('media:write'));
+
+// GET admin — tous les fichiers (publiés ou non) pour la gestion.
+mediaRouter.get('/all', async (_req, res) => {
+  const media = await prisma.mediaFile.findMany({ orderBy: { createdAt: 'desc' } });
+  res.json(media);
+});
 
 const metaSchema = z.object({
   title: z.string().min(1),
@@ -55,9 +61,21 @@ mediaRouter.post('/', upload.single('file'), async (req, res) => {
       year: parsed.data.year,
       size: sizeKo,
       path: `/documents/uploads/${req.file.filename}`,
+      published: false, // un nouvel upload n'est pas public tant que l'admin ne le publie pas
     },
   });
   res.status(201).json(media);
+});
+
+// Publier / masquer un fichier.
+mediaRouter.patch('/:id', async (req, res) => {
+  const parsed = z.object({ published: z.boolean() }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Valeur invalide' });
+  const media = await prisma.mediaFile
+    .update({ where: { id: req.params.id }, data: { published: parsed.data.published } })
+    .catch(() => null);
+  if (!media) return res.status(404).json({ error: 'Fichier introuvable' });
+  res.json(media);
 });
 
 mediaRouter.delete('/:id', async (req, res) => {

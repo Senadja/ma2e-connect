@@ -117,7 +117,7 @@ export const SAVINGS = [
 export const CREDITS = [
   { id: 'ordinaire', name: 'Crédit Ordinaire', duree: 'Jusqu\'à 60 mois', taux: '8% / an', montant: 'Jusqu\'à 30 M FCFA', conditions: 'Adhérent depuis 6 mois', image: '/images/products/Fiche_Produit_CREDIT ORDINAIRE.jpg', form: '/documents/formulaires/Formulaire_DEMANDE DE CREDIT ORDINAIRE 2026.docx' },
   { id: 'expresse', name: 'Crédit Expresse', duree: 'Jusqu\'à 24 mois', taux: '9% / an', montant: 'Jusqu\'à 5 M FCFA', conditions: 'Décaissement sous 48h', image: '/images/products/Fiche_Produit_CREDIT EXPRESS.jpg', form: '/documents/formulaires/Formulaire_DEMANDE DE CREDIT EXPRESS NOUVEAU.docx' },
-  { id: 'scolaire', name: 'Crédit Scolaire', duree: 'Jusqu\'à 10 mois', taux: '5% / an', montant: 'Jusqu\'à 3 M FCFA', conditions: 'Spécial Rentrée', image: '/images/products/Fiche_Produit_CREDIT SCOLAIRE copie.jpg', form: '/documents/formulaires/Formulaire_DEMANDE DE CREDIT ORDINAIRE 2026.docx' },
+  { id: 'scolaire', name: 'Crédit Scolaire', duree: '12 mois', taux: '6% / an', montant: 'Jusqu\'à 3 M FCFA', conditions: 'Spécial Rentrée', image: '/images/products/Fiche_Produit_CREDIT SCOLAIRE copie.jpg', form: '/documents/formulaires/Formulaire_DEMANDE DE CREDIT SCOLAIRE.docx' },
   { id: 'immobilier', name: 'Crédit Immobilier', duree: 'Jusqu\'à 15 ans', taux: '6,5% / an', montant: 'Jusqu\'à 50 M FCFA', conditions: 'Apport personnel 10%', image: '/images/products/Fiche_Produit_CREDIT IMMOBILIER copie.jpg', form: '/documents/formulaires/Formulaire_DEMANDE DE CREDIT ORDINAIRE 2026.docx' },
 ];
 
@@ -169,10 +169,10 @@ export const SETTINGS_DEFAULTS: Record<string, unknown> = {
     twitter: '',
   },
   stats: [
-    { value: 7335, label: 'Adhérents', suffix: '' },
+    { value: 8430, label: 'Adhérents', suffix: '' },
     { value: 9, label: 'Produits', suffix: '' },
     { value: 14, label: "Années d'activités", suffix: '' },
-    { value: 2.4, label: 'Mds FCFA de crédits', suffix: '' },
+    { value: 2.9, label: 'Mds FCFA de crédits', suffix: '' },
   ],
   smtp: {
     enabled: false,

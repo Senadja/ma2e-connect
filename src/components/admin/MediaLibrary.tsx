@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Upload, File, Search, Trash2, Download } from "lucide-react";
+import { Upload, File, Search, Trash2, Download, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +16,7 @@ export interface MediaFile {
   type: "image" | "pdf" | "other";
   size: string;
   date: string;
+  published: boolean;
 }
 
 interface ApiMedia {
@@ -26,6 +27,7 @@ interface ApiMedia {
   size?: string;
   year?: string;
   createdAt: string;
+  published: boolean;
 }
 
 interface MediaLibraryProps {
@@ -47,6 +49,7 @@ function mapMedia(m: ApiMedia): MediaFile {
     type,
     size: m.size || "",
     date: m.year || new Date(m.createdAt).toLocaleDateString("fr-FR"),
+    published: m.published,
   };
 }
 
@@ -58,13 +61,20 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
 
   const { data: files = [] } = useQuery({
     queryKey: ["media"],
-    queryFn: async () => (await api<ApiMedia[]>("/media")).map(mapMedia),
+    queryFn: async () => (await api<ApiMedia[]>("/media/all", { auth: true })).map(mapMedia),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api(`/media/${id}`, { method: "DELETE", auth: true }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["media"] }); toast.success("Fichier supprimé."); },
     onError: (e: any) => toast.error(e?.message || "Suppression impossible."),
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: ({ id, published }: { id: string; published: boolean }) =>
+      api(`/media/${id}`, { method: "PATCH", auth: true, body: { published } }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["media"] }); toast.success("Visibilité mise à jour."); },
+    onError: (e: any) => toast.error(e?.message || "Mise à jour impossible."),
   });
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -122,6 +132,7 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
         </div>
         <h4 className="font-bold text-lg">Déposez vos fichiers ici</h4>
         <p className="text-sm text-muted-foreground mt-1">Images (JPG, PNG, WebP) ou documents (PDF) jusqu'à 15 MB.</p>
+        <p className="text-xs text-muted-foreground mt-1">Les nouveaux fichiers sont « Masqués » par défaut — cliquez sur l'œil pour les publier sur la médiathèque.</p>
         {uploading && <p className="text-primary font-bold mt-4 animate-pulse italic">Téléversement en cours...</p>}
       </div>
 
@@ -136,6 +147,9 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
             onClick={() => onSelect?.(file)}
           >
             <div className="aspect-square bg-secondary/50 flex items-center justify-center relative">
+              <span className={cn("absolute top-2 left-2 z-10 rounded-full px-2 py-0.5 text-[10px] font-bold", file.published ? "bg-primary text-white" : "bg-muted text-muted-foreground border border-border")}>
+                {file.published ? "Publié" : "Masqué"}
+              </span>
               {file.type === "image" ? (
                 <img src={file.url} alt={file.name} className="h-full w-full object-cover" />
               ) : (
@@ -143,6 +157,15 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
               )}
 
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="h-8 w-8 rounded-full"
+                  title={file.published ? "Masquer du public" : "Publier"}
+                  onClick={(e) => { e.stopPropagation(); publishMutation.mutate({ id: file.id, published: !file.published }); }}
+                >
+                  {file.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
                 {file.url && file.url !== "#" && (
                   <Button asChild size="icon" variant="secondary" className="h-8 w-8 rounded-full" onClick={(e) => e.stopPropagation()}>
                     <a href={file.url} download target="_blank" rel="noreferrer"><Download className="h-4 w-4" /></a>
