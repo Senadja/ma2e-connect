@@ -3,11 +3,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://188-165-77-237.sslip.io/api/:path*"
+      "destination": "https://srv-ma2e.tail4cac84.ts.net/api/:path*"
     },
     {
       "source": "/documents/uploads/:path*",
-      "destination": "https://188-165-77-237.sslip.io/documents/uploads/:path*"
+      "destination": "https://srv-ma2e.tail4cac84.ts.net/documents/uploads/:path*"
     },
     {
       "source": "/(.*)",
