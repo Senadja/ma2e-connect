@@ -4,17 +4,21 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2 } from "lucide-react";
+import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, MessageCircle, Users } from "lucide-react";
 import { toast } from "sonner";
 
 interface StatItem { value: number; label: string; suffix: string }
 interface OrgChart { level1Name: string; level2Name: string; departments: string[] }
+interface OrgUnit { name: string; note: string }
 interface Settings {
   flashBanner?: { enabled: boolean; text: string; link: string };
   contact?: { address: string; phone: string; email: string };
   social?: { facebook: string; linkedin: string; twitter: string };
   stats?: StatItem[];
   orgChart?: OrgChart;
+  orgUnits?: OrgUnit[];
+  whatsapp?: { enabled: boolean; phone: string; message: string };
+  chatbot?: { enabled: boolean; url: string };
 }
 
 // Pages du site proposées pour le lien du bandeau (évite de taper une URL à la main).
@@ -50,6 +54,13 @@ const DEFAULT_ORG: OrgChart = {
   departments: ["Opérations", "Finances", "Crédit & Risque"],
 };
 
+const DEFAULT_ORG_UNITS: OrgUnit[] = [
+  { name: "Conseil d'Administration", note: "Président · 2 vice-présidents · 13 administrateurs" },
+  { name: "Comité de Crédit", note: "Président · 1 vice-président · 1 secrétaire · 10 membres" },
+  { name: "Conseil de Surveillance", note: "Président · 1 vice-président · 1 secrétaire · 6 membres" },
+  { name: "Comité Éthique et Déontologie", note: "Président · 2 membres" },
+];
+
 export const SettingsManager = () => {
   const queryClient = useQueryClient();
   const { data } = useQuery({ queryKey: ["settings"], queryFn: () => api<Settings>("/settings") });
@@ -59,6 +70,9 @@ export const SettingsManager = () => {
   const [social, setSocial] = useState({ facebook: "", linkedin: "", twitter: "" });
   const [stats, setStats] = useState<StatItem[]>(DEFAULT_STATS);
   const [org, setOrg] = useState<OrgChart>(DEFAULT_ORG);
+  const [orgUnits, setOrgUnits] = useState<OrgUnit[]>(DEFAULT_ORG_UNITS);
+  const [whatsapp, setWhatsapp] = useState({ enabled: false, phone: "", message: "" });
+  const [chatbot, setChatbot] = useState({ enabled: false, url: "" });
   const [smtp, setSmtp] = useState({ enabled: false, host: "", port: 587, user: "", pass: "", secure: false, from: "", to: "" });
 
   // SMTP : lu via l'endpoint sécurisé (contient un mot de passe, jamais exposé publiquement).
@@ -81,6 +95,9 @@ export const SettingsManager = () => {
       level2Name: data.orgChart.level2Name || DEFAULT_ORG.level2Name,
       departments: Array.isArray(data.orgChart.departments) && data.orgChart.departments.length ? data.orgChart.departments : DEFAULT_ORG.departments,
     });
+    if (Array.isArray(data.orgUnits) && data.orgUnits.length) setOrgUnits(data.orgUnits.map((u) => ({ name: u.name || "", note: u.note || "" })));
+    if (data.whatsapp) setWhatsapp({ enabled: !!data.whatsapp.enabled, phone: data.whatsapp.phone || "", message: data.whatsapp.message || "" });
+    if (data.chatbot) setChatbot({ enabled: !!data.chatbot.enabled, url: data.chatbot.url || "" });
   }, [data]);
 
   const updateDept = (i: number, val: string) =>
@@ -94,6 +111,15 @@ export const SettingsManager = () => {
       return;
     }
     save.mutate({ key: "orgChart", value: cleaned });
+  };
+
+  const updateUnit = (i: number, field: keyof OrgUnit, val: string) =>
+    setOrgUnits((u) => u.map((it, idx) => (idx === i ? { ...it, [field]: val } : it)));
+  const addUnit = () => setOrgUnits((u) => [...u, { name: "", note: "" }]);
+  const removeUnit = (i: number) => setOrgUnits((u) => u.filter((_, idx) => idx !== i));
+  const saveUnits = () => {
+    const cleaned = orgUnits.map((u) => ({ name: u.name.trim(), note: u.note.trim() })).filter((u) => u.name);
+    save.mutate({ key: "orgUnits", value: cleaned });
   };
 
   const linkSelectValue = !flash.link ? "" : KNOWN_LINKS.includes(flash.link) ? flash.link : "__custom__";
@@ -243,6 +269,61 @@ export const SettingsManager = () => {
           </div>
           <p className="text-[11px] text-muted-foreground">Affiché dans la section « Organisation » de la page À propos. Les libellés de rôle (« Organe délibérant »…) restent traduits automatiquement.</p>
           <Button onClick={saveOrg} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer l'organigramme</Button>
+        </CardContent>
+      </Card>
+
+      {/* Organes & effectifs (page À propos) */}
+      <Card className="border-border/40 shadow-sm">
+        <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Users className="h-5 w-5 text-primary" /> Organes & effectifs</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-[11px] text-muted-foreground">Organes affichés sur « À propos » (CA, CC, CS, CED…). Le texte « effectif » s'affiche à côté du titre ; les responsables avec photo se gèrent dans « Équipe &amp; gouvernance » (le nom de l'organe doit être identique des deux côtés).</p>
+          {orgUnits.map((u, i) => (
+            <div key={i} className="grid grid-cols-12 gap-3 items-end">
+              <div className="col-span-5 grid gap-1">
+                <label className={label}>Organe</label>
+                <Input value={u.name} onChange={(e) => updateUnit(i, "name", e.target.value)} placeholder="Conseil d'Administration" />
+              </div>
+              <div className="col-span-6 grid gap-1">
+                <label className={label}>Effectif / composition</label>
+                <Input value={u.note} onChange={(e) => updateUnit(i, "note", e.target.value)} placeholder="Président · 2 VP · 13 administrateurs" />
+              </div>
+              <div className="col-span-1 flex justify-center pb-1">
+                <Button type="button" variant="ghost" size="icon" onClick={() => removeUnit(i)} disabled={orgUnits.length <= 1} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={addUnit} className="w-fit rounded-full gap-2"><Plus className="h-4 w-4" /> Ajouter un organe</Button>
+          <div><Button onClick={saveUnits} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les organes</Button></div>
+        </CardContent>
+      </Card>
+
+      {/* Contact rapide & Assistant (widget flottant) */}
+      <Card className="border-border/40 shadow-sm">
+        <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><MessageCircle className="h-5 w-5 text-primary" /> Contact rapide &amp; Assistant</CardTitle></CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-3 rounded-xl border border-border/50 p-4">
+            <label className="flex items-center justify-between text-sm font-semibold cursor-pointer">
+              <span>Bouton WhatsApp flottant</span>
+              <input type="checkbox" checked={whatsapp.enabled} onChange={(e) => setWhatsapp({ ...whatsapp, enabled: e.target.checked })} className="h-4 w-4 accent-primary" />
+            </label>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid gap-2"><label className={label}>Numéro (format international)</label>
+                <Input value={whatsapp.phone} onChange={(e) => setWhatsapp({ ...whatsapp, phone: e.target.value })} placeholder="2250787137512" /></div>
+              <div className="grid gap-2"><label className={label}>Message pré-rempli</label>
+                <Input value={whatsapp.message} onChange={(e) => setWhatsapp({ ...whatsapp, message: e.target.value })} placeholder="Bonjour AYA, je suis sociétaire MA2E." /></div>
+            </div>
+            <Button onClick={() => save.mutate({ key: "whatsapp", value: whatsapp })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer WhatsApp</Button>
+          </div>
+          <div className="space-y-3 rounded-xl border border-border/50 p-4">
+            <label className="flex items-center justify-between text-sm font-semibold cursor-pointer">
+              <span>Assistant / chatbot (bulle flottante)</span>
+              <input type="checkbox" checked={chatbot.enabled} onChange={(e) => setChatbot({ ...chatbot, enabled: e.target.checked })} className="h-4 w-4 accent-primary" />
+            </label>
+            <div className="grid gap-2"><label className={label}>URL du chatbot (affichée en fenêtre intégrée)</label>
+              <Input value={chatbot.url} onChange={(e) => setChatbot({ ...chatbot, url: e.target.value })} placeholder="https://…/chat" /></div>
+            <p className="text-[11px] text-muted-foreground">La page doit autoriser l'intégration en iframe. Sinon, on basculera vers une reconstruction native.</p>
+            <Button onClick={() => save.mutate({ key: "chatbot", value: chatbot })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer l'assistant</Button>
+          </div>
         </CardContent>
       </Card>
 

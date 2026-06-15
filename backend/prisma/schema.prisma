@@ -121,7 +121,8 @@ model TeamMember {
   name      String
   role      String
   initials  String
-  category  String   @default("Gouvernance") // Gouvernance | Direction
+  photo     String?  // chemin /documents/uploads/… (repli sur les initiales si absent)
+  category  String   @default("Gouvernance") // organe (CA, CC, CS, CED) ou Direction
   order     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

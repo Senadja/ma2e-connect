@@ -149,17 +149,19 @@ export function usePartners() {
   });
 }
 
+export interface PublicTeamMember { name: string; role: string; initials: string; photo?: string; category?: string }
+
 export function useTeam() {
   return useQuery({
     queryKey: ["public", "team"],
-    queryFn: async () => {
+    queryFn: async (): Promise<PublicTeamMember[]> => {
       try {
-        return await api<Array<{ name: string; role: string; initials: string }>>("/team");
+        return await api<PublicTeamMember[]>("/team");
       } catch {
-        return TEAM;
+        return TEAM as PublicTeamMember[];
       }
     },
-    initialData: TEAM,
+    initialData: TEAM as PublicTeamMember[],
   });
 }
 
@@ -170,11 +172,19 @@ export interface OrgChart {
   departments: string[];
 }
 
+export interface OrgUnit {
+  name: string;
+  note?: string;
+}
+
 export interface SiteSettings {
   flashBanner?: { enabled: boolean; text: string; link?: string };
   contact?: { address: string; phone: string; email: string };
   social?: { facebook: string; linkedin: string; twitter: string };
   orgChart?: OrgChart;
+  orgUnits?: OrgUnit[];
+  whatsapp?: { enabled: boolean; phone: string; message?: string };
+  chatbot?: { enabled: boolean; url: string };
 }
 
 const fallbackSettings: SiteSettings = {

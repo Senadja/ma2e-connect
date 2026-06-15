@@ -16,6 +16,7 @@ const schema = z.object({
   name: z.string().min(1),
   role: z.string().min(1),
   initials: z.string().min(1).max(4),
+  photo: z.string().optional(),
   category: z.string().default('Gouvernance'),
   order: z.number().int().default(0),
 });

@@ -42,6 +42,22 @@ const About = () => {
     { icon: ShieldCheck, title: t("about.mission3Title"), desc: t("about.mission3Desc") },
   ];
 
+  // Organes (CA/CC/CS/CED) éditables via le CMS — repli sur la composition officielle.
+  const DEFAULT_ORG_UNITS = [
+    { name: "Conseil d'Administration", note: "Président · 2 vice-présidents · 13 administrateurs" },
+    { name: "Comité de Crédit", note: "Président · 1 vice-président · 1 secrétaire · 10 membres" },
+    { name: "Conseil de Surveillance", note: "Président · 1 vice-président · 1 secrétaire · 6 membres" },
+    { name: "Comité Éthique et Déontologie", note: "Président · 2 membres" },
+  ];
+  const orgUnits = settings?.orgUnits?.length ? settings.orgUnits : DEFAULT_ORG_UNITS;
+  const orgUnitNames = orgUnits.map((u) => u.name);
+  const catOf = (m: { category?: string }) => m.category || "Gouvernance";
+  const extraCats = Array.from(new Set(TEAM.map(catOf))).filter((c) => !orgUnitNames.includes(c));
+  const orgGroups = [
+    ...orgUnits.map((u) => ({ name: u.name, note: u.note, members: TEAM.filter((m) => catOf(m) === u.name) })),
+    ...extraCats.map((cat) => ({ name: cat, note: undefined as string | undefined, members: TEAM.filter((m) => catOf(m) === cat) })),
+  ];
+
   return (
     <Layout>
       <PageHero
@@ -185,14 +201,32 @@ const About = () => {
             <span className="text-sm font-mono uppercase tracking-wider text-primary">{t("about.govKicker")}</span>
             <h2 className="mt-2 font-display text-4xl md:text-5xl font-bold">{t("about.govTitle")}</h2>
           </div>
-          <div ref={r4} className="reveal grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {TEAM.map((member) => (
-              <div key={member.name} className="rounded-2xl bg-card border border-border p-6 text-center hover:shadow-elegant transition-smooth">
-                <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-gradient-primary text-white font-display text-2xl font-bold">
-                  {member.initials}
+          <div ref={r4} className="reveal space-y-12">
+            {orgGroups.map((group) => (
+              <div key={group.name}>
+                <div className="mb-6 flex flex-wrap items-baseline justify-between gap-2 border-b border-border/60 pb-3">
+                  <h3 className="font-display text-2xl font-bold text-primary-dark">{group.name}</h3>
+                  {group.note && <span className="text-sm font-semibold text-muted-foreground">{group.note}</span>}
                 </div>
-                <div className="mt-5 font-display text-lg font-bold">{member.name}</div>
-                <div className="text-sm text-muted-foreground">{member.role}</div>
+                {group.members.length > 0 ? (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {group.members.map((member) => (
+                      <div key={member.name} className="rounded-2xl bg-card border border-border p-6 text-center hover:shadow-elegant transition-smooth">
+                        {member.photo ? (
+                          <img src={member.photo} alt={member.name} className="mx-auto h-24 w-24 rounded-full object-cover ring-2 ring-primary/10" />
+                        ) : (
+                          <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-gradient-primary text-white font-display text-2xl font-bold">
+                            {member.initials}
+                          </div>
+                        )}
+                        <div className="mt-5 font-display text-lg font-bold">{member.name}</div>
+                        <div className="text-sm text-muted-foreground">{member.role}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm italic text-muted-foreground">Composition à venir.</p>
+                )}
               </div>
             ))}
           </div>
