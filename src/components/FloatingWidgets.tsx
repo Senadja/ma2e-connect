@@ -3,6 +3,7 @@ import { useSettings } from "@/lib/content";
 import { X } from "lucide-react";
 
 const AYA_AVATAR = "/images/aya-avatar.png";
+const CHAT_SEEN_KEY = "ma2e-chat-seen";
 
 // Icône WhatsApp officielle (glyphe Simple Icons — lucide n'a pas de logo de marque).
 const WhatsAppIcon = ({ className }: { className?: string }) => (
@@ -16,6 +17,13 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 export const FloatingWidgets = () => {
   const { data: settings } = useSettings();
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatSeen, setChatSeen] = useState(() => {
+    try {
+      return sessionStorage.getItem(CHAT_SEEN_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
 
   const wa = settings?.whatsapp;
   const bot = settings?.chatbot;
@@ -27,6 +35,20 @@ export const FloatingWidgets = () => {
   const waHref = waEnabled
     ? `https://wa.me/${wa!.phone.replace(/\D/g, "")}?text=${encodeURIComponent(wa!.message || "")}`
     : "#";
+
+  const toggleChat = () => {
+    setChatOpen((o) => !o);
+    if (!chatSeen) {
+      setChatSeen(true);
+      try {
+        sessionStorage.setItem(CHAT_SEEN_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+    }
+  };
+
+  const showNudge = botEnabled && !chatOpen && !chatSeen;
 
   return (
     <>
@@ -56,19 +78,34 @@ export const FloatingWidgets = () => {
           </a>
         )}
         {botEnabled && (
-          <button
-            onClick={() => setChatOpen((o) => !o)}
-            aria-label={chatOpen ? "Fermer l'assistant" : "Ouvrir l'assistant AYA"}
-            className="h-14 w-14 overflow-hidden rounded-full shadow-elegant ring-2 ring-white transition-transform hover:scale-110"
-          >
-            {chatOpen ? (
-              <span className="grid h-full w-full place-items-center bg-primary text-primary-foreground">
-                <X className="h-6 w-6" />
-              </span>
-            ) : (
-              <img src={AYA_AVATAR} alt="" className="h-full w-full object-cover" />
+          <div className={`relative ${showNudge ? "animate-chat-nudge" : ""}`}>
+            {/* Bulle d'invite (incite au clic), disparaît une fois le chat ouvert */}
+            {showNudge && (
+              <div className="pointer-events-none absolute right-16 top-1/2 hidden -translate-y-1/2 whitespace-nowrap rounded-full bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-elegant ring-1 ring-border sm:block animate-fade-in">
+                Une question ? 💬
+              </div>
             )}
-          </button>
+            <button
+              onClick={toggleChat}
+              aria-label={chatOpen ? "Fermer l'assistant" : "Ouvrir l'assistant AYA"}
+              className="h-14 w-14 overflow-hidden rounded-full shadow-elegant ring-2 ring-white transition-transform hover:scale-110"
+            >
+              {chatOpen ? (
+                <span className="grid h-full w-full place-items-center bg-primary text-primary-foreground">
+                  <X className="h-6 w-6" />
+                </span>
+              ) : (
+                <img src={AYA_AVATAR} alt="" className="h-full w-full object-cover" />
+              )}
+            </button>
+            {/* Badge de notification animé */}
+            {showNudge && (
+              <span className="pointer-events-none absolute -right-1 -top-1 flex h-5 w-5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
+                <span className="relative inline-flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">1</span>
+              </span>
+            )}
+          </div>
         )}
       </div>
     </>

@@ -183,6 +183,18 @@
   .animate-marquee {
     animation: ma2e-marquee linear infinite;
   }
+
+  /* Petit rebond d'attention pour le bouton du chatbot (incite au clic). */
+  @keyframes chat-nudge {
+    0%, 55%, 100% { transform: translateY(0); }
+    65% { transform: translateY(-7px); }
+    75% { transform: translateY(0); }
+    85% { transform: translateY(-4px); }
+    95% { transform: translateY(0); }
+  }
+  .animate-chat-nudge {
+    animation: chat-nudge 3s ease-in-out infinite;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
