@@ -4,6 +4,7 @@ import { Footer } from "./Footer";
 import { FlashBanner } from "./FlashBanner";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { SplashModal } from "@/components/SplashModal";
+import { FloatingWidgets } from "@/components/FloatingWidgets";
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const [mobileMenuOpen, setMobileOpen] = useState(false);
@@ -15,6 +16,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
       <main className="flex-1 pb-20 lg:pb-0">{children}</main>
       <Footer />
       <SplashModal />
+      <FloatingWidgets />
       <MobileBottomNav onMenuClick={() => setMobileOpen(true)} />
     </div>
   );

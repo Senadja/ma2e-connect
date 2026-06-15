@@ -179,11 +179,14 @@ export interface OrgUnit {
 
 export interface SiteSettings {
   flashBanner?: { enabled: boolean; text: string; link?: string };
+  flashInfos?: { enabled: boolean; items: { text: string; url?: string }[] };
   contact?: { address: string; phone: string; email: string };
   social?: { facebook: string; linkedin: string; twitter: string };
   orgChart?: OrgChart;
   orgUnits?: OrgUnit[];
   splash?: { enabled: boolean; image: string; link?: string };
+  whatsapp?: { enabled: boolean; phone: string; message?: string };
+  chatbot?: { enabled: boolean; url: string };
 }
 
 const fallbackSettings: SiteSettings = {

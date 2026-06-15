@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon } from "lucide-react";
+import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface StatItem { value: number; label: string; suffix: string }
@@ -12,33 +12,16 @@ interface OrgChart { level1Name: string; level2Name: string; departments: string
 interface OrgUnit { name: string; note: string }
 interface Settings {
   flashBanner?: { enabled: boolean; text: string; link: string };
+  flashInfos?: { enabled: boolean; items: { text: string; url: string }[] };
   contact?: { address: string; phone: string; email: string };
   social?: { facebook: string; linkedin: string; twitter: string };
   stats?: StatItem[];
   orgChart?: OrgChart;
   orgUnits?: OrgUnit[];
   splash?: { enabled: boolean; image: string; link: string };
+  whatsapp?: { enabled: boolean; phone: string; message: string };
+  chatbot?: { enabled: boolean; url: string };
 }
-
-// Pages du site proposées pour le lien du bandeau (évite de taper une URL à la main).
-const PAGE_LINKS = [
-  { label: "Aucun lien", value: "" },
-  { label: "Accueil", value: "/" },
-  { label: "Adhésion", value: "/adhesion" },
-  { label: "À propos", value: "/a-propos" },
-  { label: "Produits", value: "/produits" },
-  { label: "Épargne", value: "/produits/epargne" },
-  { label: "Crédits", value: "/produits/credits" },
-  { label: "Immobilier", value: "/produits/immobilier" },
-  { label: "Actualités", value: "/actualites" },
-  { label: "FAQ", value: "/faq" },
-  { label: "Médiathèque", value: "/mediatheque" },
-  { label: "Partenaires", value: "/partenaires" },
-  { label: "Contact", value: "/contact" },
-  { label: "Espace E-MA2E", value: "/espace-ema2e" },
-  { label: "Autre (URL personnalisée)…", value: "__custom__" },
-];
-const KNOWN_LINKS = PAGE_LINKS.map((p) => p.value).filter((v) => v && v !== "__custom__");
 
 const DEFAULT_STATS: StatItem[] = [
   { value: 8430, label: "Adhérents", suffix: "" },
@@ -64,7 +47,9 @@ export const SettingsManager = () => {
   const queryClient = useQueryClient();
   const { data } = useQuery({ queryKey: ["settings"], queryFn: () => api<Settings>("/settings") });
 
-  const [flash, setFlash] = useState({ enabled: true, text: "", link: "" });
+  const [flashInfos, setFlashInfos] = useState<{ enabled: boolean; items: { text: string; url: string }[] }>({ enabled: true, items: [{ text: "", url: "" }] });
+  const [whatsapp, setWhatsapp] = useState({ enabled: false, phone: "", message: "" });
+  const [chatbot, setChatbot] = useState({ enabled: false, url: "" });
   const [contact, setContact] = useState({ address: "", phone: "", email: "" });
   const [social, setSocial] = useState({ facebook: "", linkedin: "", twitter: "" });
   const [stats, setStats] = useState<StatItem[]>(DEFAULT_STATS);
@@ -84,7 +69,11 @@ export const SettingsManager = () => {
 
   useEffect(() => {
     if (!data) return;
-    if (data.flashBanner) setFlash({ enabled: !!data.flashBanner.enabled, text: data.flashBanner.text || "", link: data.flashBanner.link || "" });
+    if (data.flashInfos && Array.isArray(data.flashInfos.items)) {
+      setFlashInfos({ enabled: !!data.flashInfos.enabled, items: data.flashInfos.items.length ? data.flashInfos.items.map((it) => ({ text: it.text || "", url: it.url || "" })) : [{ text: "", url: "" }] });
+    } else if (data.flashBanner?.text) {
+      setFlashInfos({ enabled: !!data.flashBanner.enabled, items: [{ text: data.flashBanner.text, url: data.flashBanner.link || "" }] });
+    }
     if (data.contact) setContact({ address: data.contact.address || "", phone: data.contact.phone || "", email: data.contact.email || "" });
     if (data.social) setSocial({ facebook: data.social.facebook || "", linkedin: data.social.linkedin || "", twitter: data.social.twitter || "" });
     if (Array.isArray(data.stats) && data.stats.length) setStats(data.stats);
@@ -95,6 +84,8 @@ export const SettingsManager = () => {
     });
     if (Array.isArray(data.orgUnits) && data.orgUnits.length) setOrgUnits(data.orgUnits.map((u) => ({ name: u.name || "", note: u.note || "" })));
     if (data.splash) setSplash({ enabled: !!data.splash.enabled, image: data.splash.image || "/images/splash-accueil.png", link: data.splash.link || "" });
+    if (data.whatsapp) setWhatsapp({ enabled: !!data.whatsapp.enabled, phone: data.whatsapp.phone || "", message: data.whatsapp.message || "" });
+    if (data.chatbot) setChatbot({ enabled: !!data.chatbot.enabled, url: data.chatbot.url || "" });
   }, [data]);
 
   const updateDept = (i: number, val: string) =>
@@ -119,7 +110,15 @@ export const SettingsManager = () => {
     save.mutate({ key: "orgUnits", value: cleaned });
   };
 
-  const linkSelectValue = !flash.link ? "" : KNOWN_LINKS.includes(flash.link) ? flash.link : "__custom__";
+  const updateInfo = (i: number, field: "text" | "url", val: string) =>
+    setFlashInfos((f) => ({ ...f, items: f.items.map((it, idx) => (idx === i ? { ...it, [field]: val } : it)) }));
+  const addInfo = () => setFlashInfos((f) => ({ ...f, items: [...f.items, { text: "", url: "" }] }));
+  const removeInfo = (i: number) => setFlashInfos((f) => ({ ...f, items: f.items.filter((_, idx) => idx !== i) }));
+  const saveInfos = () => {
+    const items = flashInfos.items.map((it) => ({ text: it.text.trim(), url: it.url.trim() })).filter((it) => it.text);
+    save.mutate({ key: "flashInfos", value: { enabled: flashInfos.enabled, items } });
+  };
+
   const updateStat = (i: number, field: keyof StatItem, val: string) =>
     setStats((s) => s.map((it, idx) => (idx === i ? { ...it, [field]: field === "value" ? Number(val) || 0 : val } : it)));
 
@@ -139,38 +138,28 @@ export const SettingsManager = () => {
         <p className="text-muted-foreground">Modifiez les éléments globaux sans toucher au code.</p>
       </div>
 
-      {/* Bandeau Flash */}
+      {/* Flash infos (bandeau) */}
       <Card className="border-border/40 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg font-bold flex items-center gap-2"><Megaphone className="h-5 w-5 text-primary" /> Bandeau d'information</CardTitle>
+          <CardTitle className="text-lg font-bold flex items-center gap-2"><Megaphone className="h-5 w-5 text-primary" /> Flash infos (bandeau)</CardTitle>
           <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-            <input type="checkbox" checked={flash.enabled} onChange={(e) => setFlash({ ...flash, enabled: e.target.checked })} className="h-4 w-4 accent-primary" />
+            <input type="checkbox" checked={flashInfos.enabled} onChange={(e) => setFlashInfos({ ...flashInfos, enabled: e.target.checked })} className="h-4 w-4 accent-primary" />
             Affiché
           </label>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-2"><label className={label}>Texte</label>
-            <Input value={flash.text} onChange={(e) => setFlash({ ...flash, text: e.target.value })} placeholder="Message du bandeau…" /></div>
-          <div className="grid gap-2">
-            <label className={label}>Lien au clic (optionnel)</label>
-            <select
-              value={linkSelectValue}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v === "__custom__") setFlash({ ...flash, link: KNOWN_LINKS.includes(flash.link) || !flash.link ? "https://" : flash.link });
-                else setFlash({ ...flash, link: v });
-              }}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-            >
-              {PAGE_LINKS.map((p) => (
-                <option key={p.value} value={p.value}>{p.label}</option>
-              ))}
-            </select>
-            {linkSelectValue === "__custom__" && (
-              <Input value={flash.link} onChange={(e) => setFlash({ ...flash, link: e.target.value })} placeholder="https://… ou /chemin" />
-            )}
-          </div>
-          <Button onClick={() => save.mutate({ key: "flashBanner", value: flash })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer le bandeau</Button>
+          <p className="text-[11px] text-muted-foreground">Plusieurs messages possibles : ils défilent automatiquement dans le bandeau en haut du site. URL optionnelle par message (page interne « /adhesion » ou lien « https://… »).</p>
+          {flashInfos.items.map((it, i) => (
+            <div key={i} className="grid gap-2 rounded-xl border border-border/50 p-3">
+              <Input value={it.text} onChange={(e) => updateInfo(i, "text", e.target.value)} placeholder="Message de l'info…" />
+              <div className="flex gap-2">
+                <Input value={it.url} onChange={(e) => updateInfo(i, "url", e.target.value)} placeholder="URL au clic (optionnel) — /adhesion ou https://…" />
+                <Button type="button" variant="ghost" size="icon" onClick={() => removeInfo(i)} disabled={flashInfos.items.length <= 1} className="shrink-0 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={addInfo} className="w-fit rounded-full gap-2"><Plus className="h-4 w-4" /> Ajouter une info</Button>
+          <div><Button onClick={saveInfos} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les flash infos</Button></div>
         </CardContent>
       </Card>
 
@@ -315,6 +304,36 @@ export const SettingsManager = () => {
           </div>
           {splash.image && <img src={splash.image} alt="" className="max-h-40 w-auto rounded-lg border border-border" />}
           <Button onClick={() => save.mutate({ key: "splash", value: splash })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer la pop-up</Button>
+        </CardContent>
+      </Card>
+
+      {/* Contact rapide & Assistant (widget flottant) */}
+      <Card className="border-border/40 shadow-sm">
+        <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><MessageCircle className="h-5 w-5 text-primary" /> Contact rapide &amp; Assistant</CardTitle></CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-3 rounded-xl border border-border/50 p-4">
+            <label className="flex items-center justify-between text-sm font-semibold cursor-pointer">
+              <span>Bouton WhatsApp flottant</span>
+              <input type="checkbox" checked={whatsapp.enabled} onChange={(e) => setWhatsapp({ ...whatsapp, enabled: e.target.checked })} className="h-4 w-4 accent-primary" />
+            </label>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid gap-2"><label className={label}>Numéro (format international)</label>
+                <Input value={whatsapp.phone} onChange={(e) => setWhatsapp({ ...whatsapp, phone: e.target.value })} placeholder="2250787137512" /></div>
+              <div className="grid gap-2"><label className={label}>Message pré-rempli</label>
+                <Input value={whatsapp.message} onChange={(e) => setWhatsapp({ ...whatsapp, message: e.target.value })} placeholder="Bonjour AYA, je suis sociétaire MA2E." /></div>
+            </div>
+            <Button onClick={() => save.mutate({ key: "whatsapp", value: whatsapp })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer WhatsApp</Button>
+          </div>
+          <div className="space-y-3 rounded-xl border border-border/50 p-4">
+            <label className="flex items-center justify-between text-sm font-semibold cursor-pointer">
+              <span>Assistant / chatbot (bulle flottante)</span>
+              <input type="checkbox" checked={chatbot.enabled} onChange={(e) => setChatbot({ ...chatbot, enabled: e.target.checked })} className="h-4 w-4 accent-primary" />
+            </label>
+            <div className="grid gap-2"><label className={label}>URL du chatbot (affichée en fenêtre intégrée)</label>
+              <Input value={chatbot.url} onChange={(e) => setChatbot({ ...chatbot, url: e.target.value })} placeholder="https://…/chat" /></div>
+            <p className="text-[11px] text-muted-foreground">La page doit autoriser l'intégration en iframe.</p>
+            <Button onClick={() => save.mutate({ key: "chatbot", value: chatbot })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer l'assistant</Button>
+          </div>
         </CardContent>
       </Card>
 
