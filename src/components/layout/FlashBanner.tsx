@@ -57,7 +57,7 @@ export const FlashBanner = () => {
   return (
     <div data-flash-banner className="relative z-40 bg-gradient-gold text-accent-foreground">
       <div className="flex items-center gap-2 py-2.5 pl-4 text-sm">
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden min-w-0">
           <div
             className="flex w-max animate-marquee hover:[animation-play-state:paused]"
             style={{ animationDuration: `${speed}s` }}

@@ -81,7 +81,7 @@
   * {
     @apply border-border;
   }
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; overflow-x: clip; }
   body {
     @apply bg-background text-foreground font-body antialiased;
     font-feature-settings: "ss01", "cv01";
