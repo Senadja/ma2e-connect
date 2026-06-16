@@ -67,12 +67,21 @@ mediaRouter.post('/', upload.single('file'), async (req, res) => {
   res.status(201).json(media);
 });
 
-// Publier / masquer un fichier.
+// Mettre à jour un fichier : publier / masquer et/ou modifier les métadonnées.
+const patchSchema = z.object({
+  title: z.string().min(1).optional(),
+  category: z.string().min(1).optional(),
+  desc: z.string().optional(),
+  year: z.string().optional(),
+  published: z.boolean().optional(),
+});
+
 mediaRouter.patch('/:id', async (req, res) => {
-  const parsed = z.object({ published: z.boolean() }).safeParse(req.body);
+  const parsed = patchSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Valeur invalide' });
+  if (Object.keys(parsed.data).length === 0) return res.status(400).json({ error: 'Aucune donnée à mettre à jour' });
   const media = await prisma.mediaFile
-    .update({ where: { id: req.params.id }, data: { published: parsed.data.published } })
+    .update({ where: { id: req.params.id }, data: parsed.data })
     .catch(() => null);
   if (!media) return res.status(404).json({ error: 'Fichier introuvable' });
   res.json(media);

@@ -1,10 +1,15 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Upload, File, Search, Trash2, Download, Eye, EyeOff } from "lucide-react";
+import { Upload, File, Search, Trash2, Download, Eye, EyeOff, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MEDIA_CATEGORIES } from "@/data/institutional";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -17,12 +22,16 @@ export interface MediaFile {
   size: string;
   date: string;
   published: boolean;
+  category?: string;
+  desc?: string;
+  year?: string;
 }
 
 interface ApiMedia {
   id: string;
   title: string;
   category: string;
+  desc?: string;
   path: string;
   size?: string;
   year?: string;
@@ -50,6 +59,9 @@ function mapMedia(m: ApiMedia): MediaFile {
     size: m.size || "",
     date: m.year || new Date(m.createdAt).toLocaleDateString("fr-FR"),
     published: m.published,
+    category: m.category,
+    desc: m.desc ?? "",
+    year: m.year ?? "",
   };
 }
 
@@ -58,6 +70,9 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "image" | "pdf">("all");
   const [uploading, setUploading] = useState(false);
+  const [uploadCategory, setUploadCategory] = useState<string>(MEDIA_CATEGORIES[0]);
+  const [editing, setEditing] = useState<MediaFile | null>(null);
+  const [form, setForm] = useState({ title: "", category: "", desc: "", year: "" });
 
   const { data: files = [] } = useQuery({
     queryKey: ["media"],
@@ -77,6 +92,18 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
     onError: (e: any) => toast.error(e?.message || "Mise à jour impossible."),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, string> }) =>
+      api(`/media/${id}`, { method: "PATCH", auth: true, body: data }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["media"] }); setEditing(null); toast.success("Document mis à jour."); },
+    onError: (e: any) => toast.error(e?.message || "Mise à jour impossible."),
+  });
+
+  const openEdit = (file: MediaFile) => {
+    setForm({ title: file.name, category: file.category || MEDIA_CATEGORIES[0], desc: file.desc || "", year: file.year || "" });
+    setEditing(file);
+  };
+
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     setUploading(true);
     try {
@@ -84,7 +111,7 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
         const fd = new FormData();
         fd.append("file", file);
         fd.append("title", file.name.replace(/\.[^.]+$/, ""));
-        fd.append("category", "Téléversements");
+        fd.append("category", uploadCategory);
         await api("/media", { method: "POST", auth: true, isForm: true, body: fd });
       }
       queryClient.invalidateQueries({ queryKey: ["media"] });
@@ -94,7 +121,7 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
     } finally {
       setUploading(false);
     }
-  }, [queryClient]);
+  }, [queryClient, uploadCategory]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
@@ -116,6 +143,19 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
             </Button>
           ))}
         </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl border bg-secondary/20 p-3">
+        <Label className="text-sm font-medium whitespace-nowrap">Catégorie des nouveaux fichiers :</Label>
+        <Select value={uploadCategory} onValueChange={setUploadCategory}>
+          <SelectTrigger className="w-full sm:w-64"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {MEDIA_CATEGORIES.map((c) => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground sm:ml-2">Vous pourrez renommer et reclasser chaque fichier après le dépôt.</p>
       </div>
 
       <div
@@ -166,6 +206,15 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
                 >
                   {file.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="h-8 w-8 rounded-full"
+                  title="Renommer / reclasser"
+                  onClick={(e) => { e.stopPropagation(); openEdit(file); }}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
                 {file.url && file.url !== "#" && (
                   <Button asChild size="icon" variant="secondary" className="h-8 w-8 rounded-full" onClick={(e) => e.stopPropagation()}>
                     <a href={file.url} download target="_blank" rel="noreferrer"><Download className="h-4 w-4" /></a>
@@ -183,6 +232,11 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
             </div>
             <CardContent className="p-3">
               <p className="text-xs font-bold truncate" title={file.name}>{file.name}</p>
+              {file.category && (
+                <span className="mt-1 inline-block rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent-foreground truncate max-w-full" title={file.category}>
+                  {file.category}
+                </span>
+              )}
               <div className="flex justify-between items-center mt-1">
                 <span className="text-[10px] text-muted-foreground uppercase">{file.type}</span>
                 <span className="text-[10px] text-muted-foreground">{file.size}</span>
@@ -195,6 +249,48 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
       {filteredFiles.length === 0 && (
         <div className="py-20 text-center text-muted-foreground">Aucun fichier ne correspond à votre recherche.</div>
       )}
+
+      <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier le document</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="media-title">Titre</Label>
+              <Input id="media-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Catégorie</Label>
+              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                <SelectTrigger><SelectValue placeholder="Choisir une catégorie" /></SelectTrigger>
+                <SelectContent>
+                  {MEDIA_CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="media-desc">Description</Label>
+              <Textarea id="media-desc" rows={3} value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder="Courte description affichée sur la médiathèque publique." />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="media-year">Année</Label>
+              <Input id="media-year" value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} placeholder="2026" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)}>Annuler</Button>
+            <Button
+              disabled={!form.title.trim() || !form.category || updateMutation.isPending}
+              onClick={() => editing && updateMutation.mutate({ id: editing.id, data: form })}
+            >
+              {updateMutation.isPending ? "Enregistrement…" : "Enregistrer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
