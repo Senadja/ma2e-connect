@@ -8,5 +8,5 @@
     "rootDir": "prisma",
     "outDir": "dist-seed"
   },
-  "include": ["prisma/seed.ts", "prisma/seed-data.ts"]
+  "include": ["prisma/seed.ts", "prisma/seed-data.ts", "prisma/import-actualites.ts"]
 }
