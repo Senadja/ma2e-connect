@@ -1,6 +1,5 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
-import LanguageDetector from "i18next-browser-languagedetector";
 
 // Internationalisation FR/EN (react-i18next).
 // Les chaînes de l'interface (shell, pages) vivent ici, par namespace de section.
@@ -696,19 +695,17 @@ export const resources = {
   },
 } as const;
 
+// Rendu TOUJOURS en français : c'est la langue source. La traduction vers EN/AR
+// est assurée par le widget Google Website Translate (cf. lib/translate.ts), qui
+// traduit l'ensemble du DOM, y compris le contenu dynamique chargé depuis l'API.
 i18n
-  .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources,
+    lng: "fr",
     fallbackLng: "fr",
-    supportedLngs: ["fr", "en"],
+    supportedLngs: ["fr"],
     interpolation: { escapeValue: false },
-    detection: {
-      order: ["localStorage", "navigator", "htmlTag"],
-      lookupLocalStorage: "ma2e-lang",
-      caches: ["localStorage"],
-    },
   });
 
 // Tient l'attribut <html lang> à jour (accessibilité + SEO).

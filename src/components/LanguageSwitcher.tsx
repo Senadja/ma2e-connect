@@ -1,28 +1,26 @@
-import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { getCurrentLang, setLang, type Lang } from "@/lib/translate";
 
-// Bascule FR / EN. `dark` adapte les couleurs sur fond transparent (hero).
+// Sélecteur FR / EN / AR. La traduction est assurée par Google Website Translate
+// (cf. lib/translate.ts) : on écrit le cookie googtrans et la page se recharge.
+// `dark` adapte les couleurs sur fond transparent (hero).
 export const LanguageSwitcher = ({ dark = false }: { dark?: boolean }) => {
-  const { i18n, t } = useTranslation();
-  const current = i18n.language?.startsWith("en") ? "en" : "fr";
-
-  const change = (lng: "fr" | "en") => {
-    if (lng !== current) i18n.changeLanguage(lng);
-  };
+  const current = getCurrentLang();
 
   return (
     <div
       className={cn(
-        "inline-flex items-center rounded-full border p-0.5 text-xs font-bold",
+        "inline-flex items-center rounded-full border p-0.5 text-xs font-bold notranslate",
         dark ? "border-white/20" : "border-border"
       )}
       role="group"
-      aria-label={t("common.chooseLanguage")}
+      aria-label="Choix de la langue"
+      translate="no"
     >
-      {(["fr", "en"] as const).map((lng) => (
+      {(["fr", "en", "ar"] as const).map((lng: Lang) => (
         <button
           key={lng}
-          onClick={() => change(lng)}
+          onClick={() => setLang(lng)}
           aria-pressed={current === lng}
           className={cn(
             "px-2.5 py-1 rounded-full uppercase transition-colors",
