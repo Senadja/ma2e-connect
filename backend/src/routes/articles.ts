@@ -7,9 +7,9 @@ import { slugify } from '../lib/slug';
 export const articlesRouter = Router();
 
 const blockSchema = z.object({
-  type: z.enum(['p', 'h2', 'quote', 'list']),
+  type: z.enum(['p', 'h2', 'quote', 'list', 'gallery']),
   text: z.string().optional(),
-  items: z.array(z.string()).optional(),
+  items: z.array(z.string()).optional(), // 'list' = puces texte ; 'gallery' = chemins d'images
 });
 
 const articleSchema = z.object({

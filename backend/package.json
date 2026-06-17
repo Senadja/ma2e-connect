@@ -8,6 +8,7 @@
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "seed": "ts-node --transpile-only prisma/seed.ts",
+    "import:actualites": "ts-node --transpile-only prisma/import-actualites.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

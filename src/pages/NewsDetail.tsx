@@ -1,14 +1,50 @@
 import { useState } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Calendar, Check, ChevronRight, Clock, Copy, Facebook, Linkedin, Share2, Twitter, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Check, ChevronLeft, ChevronRight, Clock, Copy, Facebook, Linkedin, Share2, Twitter, User, X } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { type NewsArticle } from "@/data/site";
 import { useArticle, useArticles } from "@/lib/content";
 import { toast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 
+// Galerie de photos avec visionneuse plein écran (lightbox).
+const Gallery = ({ images }: { images: string[] }) => {
+  const [active, setActive] = useState<number | null>(null);
+  if (!images.length) return null;
+  const close = () => setActive(null);
+  const show = (i: number) => setActive((i + images.length) % images.length);
+  return (
+    <div className="my-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {images.map((src, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setActive(i)}
+            className="group relative aspect-square overflow-hidden rounded-xl bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <img src={src} alt={`Photo ${i + 1}`} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+          </button>
+        ))}
+      </div>
+
+      {active !== null && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4" onClick={close} role="dialog" aria-modal="true">
+          <button onClick={close} className="absolute top-4 right-4 text-white/80 hover:text-white" aria-label="Fermer"><X className="h-8 w-8" /></button>
+          <button onClick={(e) => { e.stopPropagation(); show(active - 1); }} className="absolute left-2 md:left-6 text-white/80 hover:text-white" aria-label="Précédente"><ChevronLeft className="h-10 w-10" /></button>
+          <img src={images[active]} alt={`Photo ${active + 1}`} className="max-h-[88vh] max-w-[92vw] rounded-lg object-contain" onClick={(e) => e.stopPropagation()} />
+          <button onClick={(e) => { e.stopPropagation(); show(active + 1); }} className="absolute right-2 md:right-6 text-white/80 hover:text-white" aria-label="Suivante"><ChevronRight className="h-10 w-10" /></button>
+          <span className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-white/70">{active + 1} / {images.length}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ContentBlock = ({ block }: { block: NewsArticle["content"][number] }) => {
   switch (block.type) {
+    case "gallery":
+      return <Gallery images={block.items || []} />;
     case "h2":
       return <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground mt-10 mb-4">{block.text}</h2>;
     case "quote":

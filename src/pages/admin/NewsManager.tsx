@@ -36,7 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
-interface Block { type: "p" | "h2" | "quote" | "list"; text?: string; items?: string[] }
+interface Block { type: "p" | "h2" | "quote" | "list" | "gallery"; text?: string; items?: string[] }
 interface ApiArticle {
   id: string;
   slug: string;
@@ -51,8 +51,10 @@ interface ApiArticle {
 }
 
 // Conversion naïve éditeur <-> blocs (l'éditeur de blocs riche viendra en 2e passe).
+// Les blocs « gallery » sont gérés à part (section Galerie), pas dans l'éditeur texte.
 const blocksToText = (blocks: Block[] = []) =>
-  blocks.map((b) => (b.type === "list" ? (b.items || []).join("\n") : b.text || "")).join("\n\n");
+  blocks.filter((b) => b.type !== "gallery").map((b) => (b.type === "list" ? (b.items || []).join("\n") : b.text || "")).join("\n\n");
+const extractGallery = (blocks: Block[] = []) => blocks.find((b) => b.type === "gallery")?.items || [];
 const textToBlocks = (text: string): Block[] =>
   text
     .split(/\n{2,}|<br\s*\/?>(?:\s*<br\s*\/?>)*/i)
@@ -75,6 +77,9 @@ export const NewsManager = () => {
   const [image, setImage] = useState("");
   const [imgUploading, setImgUploading] = useState(false);
   const newsImgRef = useRef<HTMLInputElement>(null);
+  const [gallery, setGallery] = useState<string[]>([]);
+  const [galUploading, setGalUploading] = useState(false);
+  const galRef = useRef<HTMLInputElement>(null);
 
   const uploadNewsImage = async (file: File) => {
     setImgUploading(true);
@@ -88,6 +93,25 @@ export const NewsManager = () => {
       toast.error(e?.message || "Échec du téléversement.");
     } finally {
       setImgUploading(false);
+    }
+  };
+
+  const uploadGalleryImages = async (files: FileList) => {
+    setGalUploading(true);
+    try {
+      const paths: string[] = [];
+      for (const file of Array.from(files)) {
+        const fd = new FormData();
+        fd.append("file", file);
+        const { path } = await api<{ path: string }>("/uploads", { method: "POST", auth: true, isForm: true, body: fd });
+        paths.push(path);
+      }
+      setGallery((g) => [...g, ...paths]);
+      toast.success(`${paths.length} photo(s) ajoutée(s) à la galerie.`);
+    } catch (e: any) {
+      toast.error(e?.message || "Échec du téléversement.");
+    } finally {
+      setGalUploading(false);
     }
   };
 
@@ -125,6 +149,7 @@ export const NewsManager = () => {
     setCategory(article.category);
     setStatus(article.status || "draft");
     setImage(article.image || "");
+    setGallery(extractGallery(article.content));
     setIsEditing(true);
   };
 
@@ -136,6 +161,7 @@ export const NewsManager = () => {
     setCategory("Actualités");
     setStatus("draft");
     setImage("");
+    setGallery([]);
     setIsEditing(true);
   };
 
@@ -143,11 +169,13 @@ export const NewsManager = () => {
     if (!title.trim()) { toast.error("Le titre est requis."); return; }
     const finalStatus = publish ? "published" : "draft";
     setStatus(finalStatus);
+    const blocks = textToBlocks(content);
+    const finalContent: Block[] = gallery.length ? [...blocks, { type: "gallery", items: gallery }] : blocks;
     saveMutation.mutate({
       title,
       excerpt: excerpt || title,
       category,
-      content: textToBlocks(content),
+      content: finalContent,
       image: image || "",
       status: finalStatus,
     });
@@ -235,6 +263,39 @@ export const NewsManager = () => {
                     Retirer l'image
                   </button>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/40 shadow-sm rounded-2xl bg-secondary/10">
+              <CardHeader>
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                  <ImageIcon className="h-5 w-5 text-primary" /> Galerie photos
+                  <span className="text-xs font-normal text-muted-foreground">(optionnel)</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">Ces photos s'affichent en grille dans l'article (avec visionneuse plein écran). Idéal pour un reportage d'événement.</p>
+                {gallery.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    {gallery.map((src, i) => (
+                      <div key={i} className="group relative aspect-square overflow-hidden rounded-lg border border-border">
+                        <img src={src} alt={`Galerie ${i + 1}`} className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setGallery((g) => g.filter((_, j) => j !== i))}
+                          className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                          aria-label="Retirer la photo"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Button type="button" variant="outline" className="rounded-full" disabled={galUploading} onClick={() => galRef.current?.click()}>
+                  <Plus className="h-4 w-4 mr-2" /> {galUploading ? "Envoi…" : "Ajouter des photos"}
+                </Button>
+                <input ref={galRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { if (e.target.files?.length) uploadGalleryImages(e.target.files); e.target.value = ""; }} />
               </CardContent>
             </Card>
           </div>
