@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Calendar, Check, ChevronLeft, ChevronRight, Clock, Copy, Facebook, Linkedin, Share2, Twitter, User, X } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
-import { type NewsArticle } from "@/data/site";
+import { type NewsArticle, EBANKING_URL } from "@/data/site";
 import { useArticle, useArticles } from "@/lib/content";
 import { toast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
@@ -182,7 +182,7 @@ const NewsDetail = () => {
             <div className="rounded-2xl bg-gradient-primary text-primary-foreground p-6">
               <h3 className="font-display text-lg font-bold">{t("common.espaceEma2e")}</h3>
               <p className="text-sm text-primary-foreground/80 mt-2">{t("newsDetail.ema2eText")}</p>
-              <a href="/espace-ema2e" className="mt-4 inline-flex items-center gap-2 rounded-full bg-accent text-accent-foreground px-4 py-2 text-sm font-semibold hover:brightness-110 transition-smooth">
+              <a href={EBANKING_URL} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-full bg-accent text-accent-foreground px-4 py-2 text-sm font-semibold hover:brightness-110 transition-smooth">
                 {t("newsDetail.login")} <ArrowRight className="h-3.5 w-3.5" />
               </a>
             </div>

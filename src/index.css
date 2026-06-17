@@ -207,12 +207,15 @@
 
 /* ----- Google Website Translate : on masque l'UI native (on pilote via notre sélecteur) ----- */
 #google_translate_element { display: none !important; }
-/* Bandeau supérieur + cadres injectés par Google */
+/* Bandeau, cadres et indicateur de chargement injectés par Google (anti-flicker au changement de page) */
 .goog-te-banner-frame,
 .goog-te-banner-frame.skiptranslate,
-iframe.skiptranslate { display: none !important; visibility: hidden !important; }
-/* Google décale le body vers le bas pour son bandeau : on annule ce décalage */
-body { top: 0 !important; position: static !important; }
+iframe.skiptranslate,
+.skiptranslate,
+.VIpgJd-ZVi9od-aZ2wEe-wOHMyf,
+.VIpgJd-ZVi9od-l4eHX-hSRGPd { display: none !important; visibility: hidden !important; }
+/* Google décale le body/html vers le bas pour son bandeau : on annule ce décalage */
+html, body { top: 0 !important; position: static !important; }
 /* Gadget, infobulles et popup de survol */
 .goog-te-gadget { height: 0; overflow: hidden; font-size: 0 !important; }
 .goog-tooltip, .goog-tooltip:hover { display: none !important; }

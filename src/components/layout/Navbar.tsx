@@ -4,7 +4,7 @@ import { ChevronDown, Menu, X, ArrowRight, Smartphone, ShieldCheck, HelpCircle }
 import { useTranslation } from "react-i18next";
 import { Logo } from "../Logo";
 import { LanguageSwitcher } from "../LanguageSwitcher";
-import { NAV_LINKS } from "@/data/site";
+import { NAV_LINKS, EBANKING_URL } from "@/data/site";
 import { cn } from "@/lib/utils";
 
 // Correspondance href → clé de traduction (évite de modifier NAV_LINKS).
@@ -144,13 +144,15 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
           >
             {t("common.accessAdmin")}
           </Link>
-          <Link
-            to="/espace-ema2e"
+          <a
+            href={EBANKING_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-2.5 text-sm font-bold text-accent-foreground shadow-gold hover:scale-[1.03] transition-bounce"
           >
             {t("common.espaceEma2e")}
             <ArrowRight className="h-4 w-4" />
-          </Link>
+          </a>
         </div>
 
         <button
@@ -205,9 +207,9 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
             <div className="flex justify-center">
               <LanguageSwitcher />
             </div>
-            <Link to="/espace-ema2e" className="flex items-center justify-center gap-3 rounded-2xl bg-primary h-16 text-lg font-bold text-white shadow-xl shadow-primary/20">
+            <a href={EBANKING_URL} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-3 rounded-2xl bg-primary h-16 text-lg font-bold text-white shadow-xl shadow-primary/20">
               <Smartphone className="h-6 w-6" /> {t("common.espaceEma2e")}
-            </Link>
+            </a>
             <div className="grid grid-cols-2 gap-4">
               <Link to="/faq" className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-secondary text-xs font-bold text-muted-foreground">
                 <HelpCircle className="h-5 w-5 text-primary" /> {t("common.faq")}

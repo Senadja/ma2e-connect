@@ -14,6 +14,20 @@ const LOGO_MAP: Record<string, string> = {
   "CNPS": "/images/partners/cnps.jpeg",
 };
 
+// Sociétés membres (groupe Eranove & affiliés) — logos officiels transmis par le client.
+const MEMBER_COMPANIES: { name: string; logo: string }[] = [
+  { name: "Eranove", logo: "/images/partners/membres/eranove.svg" },
+  { name: "CIPREL", logo: "/images/partners/membres/ciprel.png" },
+  { name: "ATINKOU", logo: "/images/partners/membres/atinkou.png" },
+  { name: "Awale", logo: "/images/partners/membres/awale.png" },
+  { name: "GS2E", logo: "/images/partners/membres/gs2e.png" },
+  { name: "SGA2E", logo: "/images/partners/membres/sga2e.png" },
+  { name: "Smart Energy", logo: "/images/partners/membres/smart-energy.png" },
+  { name: "SIVE", logo: "/images/partners/membres/sive.png" },
+  { name: "Eranove Academy", logo: "/images/partners/membres/eranove-academy.png" },
+  { name: "Fondation Eranove", logo: "/images/partners/membres/fondation-eranove.svg" },
+];
+
 const Partners = () => {
   const { t } = useTranslation();
   const { data: PARTNERS = [] } = usePartners();
@@ -63,6 +77,27 @@ const Partners = () => {
             </div>
           </div>
         ))}
+
+        {/* Sociétés membres — mur de logos */}
+        <div>
+          <div className="flex items-center gap-3 mb-8">
+            <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">
+              <Building2 className="h-5 w-5" />
+            </div>
+            <h2 className="font-display text-2xl md:text-3xl">Sociétés membres</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+            {MEMBER_COMPANIES.map((c) => (
+              <div
+                key={c.name}
+                title={c.name}
+                className="flex h-32 items-center justify-center rounded-2xl border bg-card p-6 shadow-sm transition-smooth hover:-translate-y-1 hover:shadow-lg hover:border-accent/40"
+              >
+                <img src={c.logo} alt={c.name} loading="lazy" className="max-h-full max-w-full object-contain" />
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
     </Layout>
   );

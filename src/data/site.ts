@@ -23,6 +23,10 @@ export const NAV_LINKS = [
   { label: "Contact", href: "/contact" },
 ] as const;
 
+// Espace client e-banking (bouton « Espace MA2E ») et application mobile (footer).
+export const EBANKING_URL = "https://ebanking.ma2e.ci/";
+export const PLAYSTORE_URL = "https://play.google.com/store/apps/details?id=com.cagecfi.pmobile_mama2e_client&hl=fr&pli=1";
+
 export const STATS = [
   { value: 8430, label: "Adhérents", suffix: "" },
   { value: 9, label: "Produits", suffix: "" },

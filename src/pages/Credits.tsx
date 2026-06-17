@@ -4,6 +4,7 @@ import { SEO } from "@/components/SEO";
 import { ProductRequestForm } from "@/components/forms/ProductRequestForm";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useProducts } from "@/lib/content";
+import { EBANKING_URL } from "@/data/site";
 import { useTranslation } from "react-i18next";
 import { Download, Clock, Percent, Coins, ShieldCheck, Info } from "lucide-react";
 
@@ -101,7 +102,7 @@ const Credits = () => {
                 <h4 className="font-bold text-primary mb-2 text-sm uppercase">{t("products.creditSimulator")}</h4>
                 <p className="text-xs text-muted-foreground mb-4">{t("products.creditSimulatorText")}</p>
                 <Button variant="outline" className="w-full rounded-full text-xs font-bold" asChild>
-                  <a href="/espace-ema2e">{t("products.accessEma2e")}</a>
+                  <a href={EBANKING_URL} target="_blank" rel="noopener noreferrer">{t("products.accessEma2e")}</a>
                 </Button>
               </div>
             </div>
