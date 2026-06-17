@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { getCurrentLang, setLang, type Lang } from "@/lib/translate";
 
-// Sélecteur FR / EN / AR. La traduction est assurée par Google Website Translate
+// Sélecteur FR / EN. La traduction est assurée par Google Website Translate
 // (cf. lib/translate.ts) : on écrit le cookie googtrans et la page se recharge.
 // `dark` adapte les couleurs sur fond transparent (hero).
 export const LanguageSwitcher = ({ dark = false }: { dark?: boolean }) => {
@@ -17,7 +17,7 @@ export const LanguageSwitcher = ({ dark = false }: { dark?: boolean }) => {
       aria-label="Choix de la langue"
       translate="no"
     >
-      {(["fr", "en", "ar"] as const).map((lng: Lang) => (
+      {(["fr", "en"] as const).map((lng: Lang) => (
         <button
           key={lng}
           onClick={() => setLang(lng)}
