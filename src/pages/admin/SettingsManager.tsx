@@ -4,10 +4,11 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload } from "lucide-react";
+import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload, Languages } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { MILESTONES } from "@/data/site";
+import { DEFAULT_LANGUAGES, LANGUAGE_PRESETS, BASE_LANG, type Language } from "@/lib/translate";
 
 interface StatItem { value: number; label: string; suffix: string }
 interface OrgChart { level1Name: string; level2Name: string; departments: string[] }
@@ -28,6 +29,7 @@ interface Settings {
   homeHero?: Record<string, string>;
   aboutContent?: Record<string, string>;
   milestones?: { year: string; title: string; desc: string }[];
+  languages?: { code: string; label: string }[];
 }
 
 const DEFAULT_STATS: StatItem[] = [
@@ -113,6 +115,22 @@ export const SettingsManager = () => {
   const addMs = () => setMilestones((ms) => [...ms, { year: "", title: "", desc: "" }]);
   const removeMs = (i: number) => setMilestones((ms) => ms.filter((_, idx) => idx !== i));
   const saveMs = () => save.mutate({ key: "milestones", value: milestones.map((m) => ({ year: m.year.trim(), title: m.title.trim(), desc: m.desc.trim() })).filter((m) => m.year || m.title) });
+
+  const [languages, setLanguages] = useState<Language[]>(DEFAULT_LANGUAGES);
+  const [addCode, setAddCode] = useState("");
+  const addLanguage = () => {
+    const preset = LANGUAGE_PRESETS.find((p) => p.code === addCode);
+    if (!preset || languages.some((l) => l.code === preset.code)) return;
+    setLanguages((ls) => [...ls, preset]);
+    setAddCode("");
+  };
+  const removeLanguage = (code: string) => setLanguages((ls) => ls.filter((l) => l.code !== code));
+  const saveLanguages = () => {
+    const base = LANGUAGE_PRESETS.find((p) => p.code === BASE_LANG)!; // langue source toujours en tête
+    const rest = languages.filter((l) => l.code !== BASE_LANG);
+    save.mutate({ key: "languages", value: [base, ...rest] });
+  };
+
   const [smtp, setSmtp] = useState({ enabled: false, host: "", port: 587, user: "", pass: "", secure: false, from: "", to: "" });
 
   // SMTP : lu via l'endpoint sécurisé (contient un mot de passe, jamais exposé publiquement).
@@ -151,6 +169,7 @@ export const SettingsManager = () => {
     if (data.homeHero) setHomeHero((h) => ({ ...h, ...data.homeHero }));
     if (data.aboutContent) setAboutContent((a) => ({ ...a, ...data.aboutContent }));
     if (Array.isArray(data.milestones) && data.milestones.length) setMilestones(data.milestones.map((m) => ({ year: m.year || "", title: m.title || "", desc: m.desc || "" })));
+    if (Array.isArray(data.languages) && data.languages.length) setLanguages(data.languages.map((l) => ({ code: l.code, label: l.label })));
   }, [data]);
 
   const updateDept = (i: number, val: string) =>
@@ -202,6 +221,37 @@ export const SettingsManager = () => {
         <h2 className="text-3xl font-display font-bold text-primary-dark">Paramètres du site</h2>
         <p className="text-muted-foreground">Modifiez les éléments globaux sans toucher au code.</p>
       </div>
+
+      {/* Langues du site */}
+      <Card className="border-border/40 shadow-sm">
+        <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Languages className="h-5 w-5 text-primary" /> Langues du site</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-[11px] text-muted-foreground">Le français est la langue source (non supprimable). Avec 2 langues, le sélecteur s'affiche en bascule ; au-delà, il passe automatiquement en menu déroulant. La traduction est assurée par Google.</p>
+          <div className="flex flex-wrap gap-2">
+            {languages.map((l) => (
+              <span key={l.code} className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/30 pl-3 pr-1.5 py-1 text-sm">
+                <span className="font-semibold">{l.label}</span>
+                <span className="text-[10px] uppercase text-muted-foreground">{l.code}</span>
+                {l.code !== BASE_LANG && (
+                  <button type="button" onClick={() => removeLanguage(l.code)} className="h-5 w-5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive flex items-center justify-center" aria-label={`Retirer ${l.label}`}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={addCode} onChange={(e) => setAddCode(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+              <option value="">Ajouter une langue…</option>
+              {LANGUAGE_PRESETS.filter((p) => !languages.some((l) => l.code === p.code)).map((p) => (
+                <option key={p.code} value={p.code}>{p.label} ({p.code})</option>
+              ))}
+            </select>
+            <Button type="button" variant="outline" size="sm" onClick={addLanguage} disabled={!addCode} className="rounded-full gap-2"><Plus className="h-4 w-4" /> Ajouter</Button>
+          </div>
+          <div><Button onClick={saveLanguages} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les langues</Button></div>
+        </CardContent>
+      </Card>
 
       {/* Flash infos (bandeau) */}
       <Card className="border-border/40 shadow-sm">
