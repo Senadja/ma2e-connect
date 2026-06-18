@@ -52,23 +52,54 @@ export const AdminLayout = () => {
     return <Navigate to="/admin/login" replace />;
   }
 
-  const navItems = [
-    { to: "/admin/dashboard", icon: LayoutDashboard, label: "Tableau de bord" },
-    { to: "/admin/news", icon: Newspaper, label: "Actualités", perm: "news:write" },
-    { to: "/admin/products", icon: Briefcase, label: "Produits & Offres", perm: "products:write" },
-    { to: "/admin/faq", icon: HelpCircle, label: "FAQ", perm: "faq:write" },
-    { to: "/admin/applications", icon: FileText, label: "Demandes & Formulaires", perm: "applications:manage" },
-    { to: "/admin/contact", icon: Inbox, label: "Messages de contact", perm: "contact:manage" },
-    { to: "/admin/media", icon: Database, label: "Médiathèque", perm: "media:write" },
-    { to: "/admin/partners", icon: Handshake, label: "Partenaires", perm: "partners:write" },
-    { to: "/admin/team", icon: UsersRound, label: "Équipe & gouvernance", perm: "team:write" },
-    { to: "/admin/users", icon: Users, label: "Utilisateurs", perm: "users:manage" },
-    { to: "/admin/audit", icon: History, label: "Journal d'activité", perm: "users:manage" },
-    { to: "/admin/settings", icon: Settings, label: "Paramètres", perm: "settings:write" },
+  // Menu regroupé par thème pour s'y retrouver plus vite.
+  const navGroups: { title: string | null; items: { to: string; icon: any; label: string; perm?: string }[] }[] = [
+    { title: null, items: [
+      { to: "/admin/dashboard", icon: LayoutDashboard, label: "Tableau de bord" },
+    ] },
+    { title: "Contenu & pages", items: [
+      { to: "/admin/settings", icon: Settings, label: "Paramètres du site", perm: "settings:write" },
+      { to: "/admin/news", icon: Newspaper, label: "Actualités", perm: "news:write" },
+      { to: "/admin/media", icon: Database, label: "Médiathèque", perm: "media:write" },
+      { to: "/admin/faq", icon: HelpCircle, label: "FAQ", perm: "faq:write" },
+    ] },
+    { title: "Offres & adhésions", items: [
+      { to: "/admin/products", icon: Briefcase, label: "Produits & Offres", perm: "products:write" },
+      { to: "/admin/applications", icon: FileText, label: "Demandes & Formulaires", perm: "applications:manage" },
+      { to: "/admin/contact", icon: Inbox, label: "Messages de contact", perm: "contact:manage" },
+    ] },
+    { title: "Institution", items: [
+      { to: "/admin/team", icon: UsersRound, label: "Équipe & gouvernance", perm: "team:write" },
+      { to: "/admin/partners", icon: Handshake, label: "Partenaires", perm: "partners:write" },
+    ] },
+    { title: "Administration", items: [
+      { to: "/admin/users", icon: Users, label: "Utilisateurs", perm: "users:manage" },
+      { to: "/admin/audit", icon: History, label: "Journal d'activité", perm: "users:manage" },
+    ] },
   ];
 
-  // Menu adaptatif : on n'affiche que ce que l'utilisateur a le droit de gérer.
-  const filteredNavItems = navItems.filter(item => !item.perm || can(item.perm));
+  // Menu adaptatif : on n'affiche que ce que l'utilisateur a le droit de gérer (et on masque les groupes vides).
+  const visibleGroups = navGroups
+    .map((g) => ({ ...g, items: g.items.filter((item) => !item.perm || can(item.perm)) }))
+    .filter((g) => g.items.length > 0);
+
+  const renderGroups = (isCollapsed: boolean) =>
+    visibleGroups.map((group, gi) => (
+      <div key={group.title ?? gi} className="space-y-1">
+        {group.title && !isCollapsed && (
+          <p className="px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">{group.title}</p>
+        )}
+        {group.title && isCollapsed && gi > 0 && <div className="mx-2 my-2 border-t border-border/50" />}
+        {group.items.map((item) => (
+          <SidebarLink
+            key={item.to}
+            {...item}
+            active={location.pathname === item.to}
+            collapsed={isCollapsed}
+          />
+        ))}
+      </div>
+    ));
 
   return (
     <div className="min-h-screen bg-secondary/20 flex">
@@ -86,14 +117,7 @@ export const AdminLayout = () => {
         </div>
 
         <nav className="flex-1 overflow-y-auto p-4 space-y-2 mt-4 [scrollbar-width:thin]">
-          {filteredNavItems.map((item) => (
-            <SidebarLink
-              key={item.to}
-              {...item}
-              active={location.pathname === item.to}
-              collapsed={collapsed}
-            />
-          ))}
+          {renderGroups(collapsed)}
         </nav>
 
         <div className="p-4 border-t border-border/50">
@@ -159,14 +183,7 @@ export const AdminLayout = () => {
               </Button>
             </div>
             <nav className="flex-1 overflow-y-auto space-y-2 [scrollbar-width:thin]">
-              {filteredNavItems.map((item) => (
-                <SidebarLink 
-                  key={item.to} 
-                  {...item} 
-                  active={location.pathname === item.to} 
-                  collapsed={false} 
-                />
-              ))}
+              {renderGroups(false)}
             </nav>
             <button
               onClick={logout}
