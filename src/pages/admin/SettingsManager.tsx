@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload, Languages } from "lucide-react";
+import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload, Languages, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { MILESTONES } from "@/data/site";
@@ -133,6 +133,21 @@ export const SettingsManager = () => {
   };
 
   const [smtp, setSmtp] = useState({ enabled: false, host: "", port: 587, user: "", pass: "", secure: false, from: "", to: "" });
+  const [testTo, setTestTo] = useState("");
+  const [testing, setTesting] = useState(false);
+  const sendSmtpTest = async () => {
+    const to = testTo.trim();
+    if (!to) { toast.error("Renseignez l'adresse de réception du test."); return; }
+    setTesting(true);
+    try {
+      await api("/settings/smtp/test", { method: "POST", auth: true, body: { ...smtp, to } });
+      toast.success(`E-mail de test envoyé à ${to}. Vérifiez la boîte (pensez aux indésirables).`);
+    } catch (e: any) {
+      toast.error(e?.message || "Envoi du test impossible.", { duration: 9000 });
+    } finally {
+      setTesting(false);
+    }
+  };
 
   // SMTP : lu via l'endpoint sécurisé (contient un mot de passe, jamais exposé publiquement).
   const { data: smtpData } = useQuery({
@@ -653,6 +668,15 @@ export const SettingsManager = () => {
                 Connexion sécurisée (SSL/TLS — généralement port 465)
               </label>
               <Button onClick={() => save.mutate({ key: "smtp", value: smtp })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer le SMTP</Button>
+
+              <div className="rounded-xl border border-dashed border-primary/30 p-4 space-y-3">
+                <p className="text-sm font-semibold flex items-center gap-2"><Send className="h-4 w-4 text-primary" /> Tester l'envoi</p>
+                <p className="text-[11px] text-muted-foreground">Envoie un e-mail de test avec les valeurs ci-dessus (pas besoin d'enregistrer d'abord). En cas d'échec, le message d'erreur indique la cause : <em>timeout</em> = port bloqué côté serveur, <em>authentification refusée</em> = identifiant/mot de passe, etc.</p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input type="email" value={testTo} onChange={(e) => setTestTo(e.target.value)} placeholder="adresse-de-reception@exemple.com" />
+                  <Button type="button" variant="outline" disabled={testing} onClick={sendSmtpTest} className="rounded-full gap-2 shrink-0"><Send className="h-4 w-4" /> {testing ? "Envoi…" : "Envoyer un test"}</Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
