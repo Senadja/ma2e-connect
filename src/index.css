@@ -25,10 +25,10 @@
     --popover: 0 0% 100%;
     --popover-foreground: 150 16% 14%;
 
-    --primary: 154 58% 24%;           /* #1A6147 deep forest green */
+    --primary: 143 64% 31%;           /* vert MA2E (logo) calibré pour contraste AA */
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 154 50% 34%;
-    --primary-dark: 150 53% 11%;      /* #0D2B1F */
+    --primary-glow: 143 68% 41%;      /* #22B159 vert vif du logo */
+    --primary-dark: 143 58% 12%;      /* vert foncé dérivé */
 
     --secondary: 140 20% 92%;
     --secondary-foreground: 150 16% 14%;
@@ -45,7 +45,7 @@
 
     --border: 140 15% 88%;
     --input: 140 15% 88%;
-    --ring: 154 58% 24%;
+    --ring: 143 64% 31%;
 
     --radius: 0.75rem;
 

@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Suspense, lazy, type ComponentType } from "react";
 import { AdminLayout } from "./components/layout/AdminLayout";
+import { BrandTheme } from "./components/BrandTheme";
 import { MatomoTracker } from "./components/MatomoTracker";
 import { ScrollToHash } from "./components/ScrollToHash";
 import { RouteSEO } from "./components/RouteSEO";
@@ -83,6 +84,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <HelmetProvider>
       <TooltipProvider>
+        <BrandTheme />
         <Toaster />
         <Sonner />
         <BrowserRouter>

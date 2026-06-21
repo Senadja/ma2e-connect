@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload, Languages, Send } from "lucide-react";
+import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload, Languages, Send, Palette, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { MILESTONES } from "@/data/site";
 import { DEFAULT_LANGUAGES, LANGUAGE_PRESETS, BASE_LANG, type Language } from "@/lib/translate";
+import { DEFAULT_BRAND_HEX, applyBrandColor } from "@/lib/brandColor";
 
 interface StatItem { value: number; label: string; suffix: string }
 interface OrgChart { level1Name: string; level2Name: string; departments: string[] }
@@ -31,6 +32,7 @@ interface Settings {
   aboutContent?: Record<string, string>;
   milestones?: { year: string; title: string; desc: string }[];
   languages?: { code: string; label: string }[];
+  branding?: { primary?: string };
 }
 
 const DEFAULT_STATS: StatItem[] = [
@@ -132,6 +134,20 @@ export const SettingsManager = () => {
     save.mutate({ key: "languages", value: [base, ...rest] });
   };
 
+  // Couleur de marque : aperçu en direct, puis enregistrement (on rafraîchit aussi le cache public).
+  const [branding, setBranding] = useState({ primary: DEFAULT_BRAND_HEX });
+  const previewBrand = (hex: string) => {
+    setBranding({ primary: hex });
+    if (/^#?[0-9a-fA-F]{6}$/.test(hex.trim())) applyBrandColor(hex);
+  };
+  const refreshPublic = () => queryClient.invalidateQueries({ queryKey: ["public", "settings"] });
+  const saveBranding = () => save.mutate({ key: "branding", value: branding }, { onSuccess: refreshPublic });
+  const resetBranding = () => {
+    setBranding({ primary: DEFAULT_BRAND_HEX });
+    applyBrandColor(DEFAULT_BRAND_HEX);
+    save.mutate({ key: "branding", value: { primary: DEFAULT_BRAND_HEX } }, { onSuccess: refreshPublic });
+  };
+
   const [smtp, setSmtp] = useState({ enabled: false, host: "", port: 587, user: "", pass: "", secure: false, from: "", to: "" });
   const [testTo, setTestTo] = useState("");
   const [testing, setTesting] = useState(false);
@@ -186,6 +202,7 @@ export const SettingsManager = () => {
     if (data.aboutContent) setAboutContent((a) => ({ ...a, ...data.aboutContent }));
     if (Array.isArray(data.milestones) && data.milestones.length) setMilestones(data.milestones.map((m) => ({ year: m.year || "", title: m.title || "", desc: m.desc || "" })));
     if (Array.isArray(data.languages) && data.languages.length) setLanguages(data.languages.map((l) => ({ code: l.code, label: l.label })));
+    if (data.branding?.primary) setBranding({ primary: data.branding.primary });
   }, [data]);
 
   const updateDept = (i: number, val: string) =>
@@ -479,6 +496,28 @@ export const SettingsManager = () => {
 
         {/* ============================ GÉNÉRAL ============================ */}
         <TabsContent value="general" className="space-y-6 mt-0">
+
+          {/* Couleur de marque */}
+          <Card className="border-border/40 shadow-sm">
+            <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Palette className="h-5 w-5 text-primary" /> Couleur de marque</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-[11px] text-muted-foreground">Vert principal du site (boutons, liens, titres colorés, dégradés). L'aperçu s'applique <strong>en direct</strong> ; rechargez la page pour annuler sans enregistrer. Les nuances claire (halo) et foncée sont calculées automatiquement pour rester lisibles.</p>
+              <div className="flex flex-wrap items-end gap-4">
+                <input type="color" value={branding.primary} onChange={(e) => previewBrand(e.target.value)} className="h-12 w-16 shrink-0 rounded border border-input cursor-pointer" aria-label="Choisir la couleur de marque" />
+                <div className="grid gap-2 w-40">
+                  <label className={label}>Code couleur</label>
+                  <Input value={branding.primary} onChange={(e) => previewBrand(e.target.value)} placeholder={DEFAULT_BRAND_HEX} />
+                </div>
+                <div className="flex-1 min-w-[160px] rounded-xl p-4 text-white text-sm font-semibold shadow-sm" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))" }}>
+                  Aperçu du vert MA2E
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={saveBranding} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer la couleur</Button>
+                <Button type="button" variant="outline" onClick={resetBranding} className="rounded-full gap-2"><RotateCcw className="h-4 w-4" /> Réinitialiser au vert officiel</Button>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Flash infos (bandeau) */}
           <Card className="border-border/40 shadow-sm">
