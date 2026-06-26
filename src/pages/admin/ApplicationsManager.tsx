@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { generateAdhesionPdf } from "@/lib/adhesionPdf";
 
 // Type renvoyé par l'API backend.
 interface ApiApplication {
@@ -77,14 +78,25 @@ const fmtDateTime = (iso?: string | null) =>
 const DATA_LABELS: Record<string, string> = {
   amount: "Montant",
   message: "Message",
+  nomMere: "Nom de la mère",
+  situationMatrimoniale: "Situation matrimoniale",
   dateDeNaissance: "Date de naissance",
   lieuDeNaissance: "Lieu de naissance",
   adresse: "Adresse",
+  societe: "Société",
+  categorie: "Catégorie",
   service: "Service",
   direction: "Direction",
+  exploitation: "Exploitation",
   site: "Site d'affectation",
   dateEmbauche: "Date d'embauche",
   typeAdherent: "Statut adhérent",
+  personneAPrevenir: "Personne à prévenir",
+  contactPrevenir: "Contact (personne à prévenir)",
+  ayantsDroit: "Ayant(s) droit",
+  contactAyantsDroit: "Contact (ayant droit)",
+  intentionAdhesion: "Intention — droit d'adhésion (6 000 F)",
+  intentionPart: "Intention — part sociale (8 000 F)",
 };
 
 // Causes de refus pré-définies (cases à cocher) — accélèrent la saisie de l'admin.
@@ -442,7 +454,7 @@ export const ApplicationsManager = () => {
                         {dataEntries.map(([k, v]) => (
                           <div key={k} className="flex justify-between gap-4">
                             <dt className="text-muted-foreground shrink-0">{DATA_LABELS[k] || k}</dt>
-                            <dd className="font-medium text-right break-words">{String(v)}</dd>
+                            <dd className="font-medium text-right break-words">{typeof v === "boolean" ? (v ? "Oui" : "Non") : String(v)}</dd>
                           </div>
                         ))}
                       </dl>
@@ -515,6 +527,14 @@ export const ApplicationsManager = () => {
                   {/* Traitement du dossier */}
                   <div className="pt-6 border-t space-y-4">
                     <div className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Traitement du dossier</div>
+                    {selectedApp.category === "Adhésion" && (
+                      <Button
+                        onClick={() => generateAdhesionPdf(selectedApp)}
+                        className="w-full rounded-xl h-11 gap-2 bg-primary hover:bg-primary-dark text-white"
+                      >
+                        <Download className="h-4 w-4" /> Télécharger le formulaire (PDF)
+                      </Button>
+                    )}
                     <div className="grid grid-cols-2 gap-3">
                       <Button
                         disabled={statusMutation.isPending || selectedApp.status === "approved"}
