@@ -197,6 +197,71 @@
   }
 }
 
+/* ----- Organigramme (page À propos) : arbre CSS avec connecteurs ----- */
+.org-tree { display: inline-block; text-align: center; }
+.org-tree ul { list-style: none; margin: 0; padding: 0; }
+
+/* Niveaux supérieurs : disposition horizontale + barre de liaison */
+.org-tree ul.org-h { position: relative; display: flex; justify-content: center; padding-top: 1.5rem; }
+.org-tree ul.org-h > li {
+  position: relative;
+  padding: 1.5rem 0.6rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.org-tree ul.org-h > li::before,
+.org-tree ul.org-h > li::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 50%;
+  width: 50%;
+  height: 1.5rem;
+  border-top: 2px solid hsl(var(--border));
+}
+.org-tree ul.org-h > li::after {
+  right: auto;
+  left: 50%;
+  border-left: 2px solid hsl(var(--border));
+}
+.org-tree ul.org-h > li:only-child { padding-top: 0; }
+.org-tree ul.org-h > li:only-child::before,
+.org-tree ul.org-h > li:only-child::after { display: none; }
+.org-tree ul.org-h > li:first-child::before,
+.org-tree ul.org-h > li:last-child::after { border: 0; }
+.org-tree ul.org-h > li:last-child::before { border-right: 2px solid hsl(var(--border)); }
+/* descente du parent vers la barre de liaison */
+.org-tree li > ul.org-h::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 0;
+  height: 1.5rem;
+  border-left: 2px solid hsl(var(--border));
+}
+
+/* Sous-niveaux profonds : liste verticale indentée (colonnes type organigramme) */
+.org-tree ul.org-v {
+  position: relative;
+  margin: 0.6rem auto 0;
+  padding-left: 1rem;
+  text-align: left;
+  border-left: 2px solid hsl(var(--border));
+  display: inline-block;
+}
+.org-tree ul.org-v > li { position: relative; padding: 0.3rem 0; }
+.org-tree ul.org-v > li::before {
+  content: "";
+  position: absolute;
+  top: 1.05rem;
+  left: -1rem;
+  width: 0.85rem;
+  height: 2px;
+  background: hsl(var(--border));
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

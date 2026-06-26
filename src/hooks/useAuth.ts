@@ -39,7 +39,7 @@ export const useAuth = create<AuthState>()(
       can: (permission) => {
         const u = get().user;
         if (!u) return false;
-        return u.role === 'admin' || (u.permissions || []).includes(permission);
+        return u.role?.toLowerCase() === 'admin' || (u.permissions || []).includes(permission);
       },
     }),
     { name: 'auth-storage' }

@@ -2,9 +2,9 @@ import { Layout } from "@/components/layout/Layout";
 import { PageHero } from "@/components/PageHero";
 import { useReveal, useCounter } from "@/hooks/useReveal";
 import { MILESTONES, STATS } from "@/data/site";
-import { useTeam, useSettings } from "@/lib/content";
+import { useSettings, DEFAULT_ORG_TREE, type OrgNode } from "@/lib/content";
 import { useTranslation } from "react-i18next";
-import { Quote, ShieldCheck, Wallet, Briefcase, Users, Award, TrendingUp, Coins, Landmark, Building2, Settings2 } from "lucide-react";
+import { Quote, ShieldCheck, Wallet, Briefcase, Users, Award, TrendingUp, Coins } from "lucide-react";
 
 const StatItem = ({ stat, icon: Icon }: { stat: typeof STATS[number]; icon: any }) => {
   const { ref, value } = useCounter<HTMLDivElement>(stat.value);
@@ -19,48 +19,159 @@ const StatItem = ({ stat, icon: Icon }: { stat: typeof STATS[number]; icon: any 
   );
 };
 
+// Carte d'un poste / organe — le style dépend de la profondeur dans l'arbre.
+const OrgCard = ({ node, depth }: { node: OrgNode; depth: number }) => {
+  if (depth === 0) {
+    return (
+      <div className="inline-block rounded-2xl bg-gradient-primary text-primary-foreground px-7 py-5 shadow-elegant transition-transform hover:-translate-y-0.5">
+        <div className="font-display text-lg md:text-xl font-bold">{node.name}</div>
+        {node.role && <div className="text-xs text-white/70 mt-0.5">{node.role}</div>}
+      </div>
+    );
+  }
+  if (depth >= 4) {
+    return (
+      <div className="inline-block rounded-lg bg-card border border-border px-3 py-2 text-left shadow-sm transition-colors hover:border-primary/40">
+        <span className="text-sm font-semibold">{node.name}</span>
+        {node.role && <span className="block text-[11px] text-muted-foreground">{node.role}</span>}
+      </div>
+    );
+  }
+  return (
+    <div className={`inline-block rounded-xl bg-card px-5 py-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-elegant ${depth === 1 ? "border-2 border-primary/20" : "border border-border"}`}>
+      <div className="font-display font-bold text-sm md:text-base">{node.name}</div>
+      {node.role && <div className="text-[11px] text-muted-foreground mt-0.5">{node.role}</div>}
+    </div>
+  );
+};
+
+// Branche récursive : disposition horizontale en haut, liste verticale dès qu'on descend en profondeur.
+const OrgBranch = ({ node, depth }: { node: OrgNode; depth: number }) => {
+  const kids = node.children ?? [];
+  const vertical = depth >= 3;
+  return (
+    <li>
+      <OrgCard node={node} depth={depth} />
+      {kids.length > 0 && (
+        <ul className={vertical ? "org-v" : "org-h"}>
+          {kids.map((child, i) => (
+            <OrgBranch key={`${child.name}-${i}`} node={child} depth={depth + 1} />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+};
+
+const OrgChartView = ({ root }: { root: OrgNode }) => (
+  <div className="overflow-x-auto pb-2 text-center">
+    <div className="org-tree">
+      <ul>
+        <OrgBranch node={root} depth={0} />
+      </ul>
+    </div>
+  </div>
+);
+
+// Organes de gouvernance (composition officielle MEMBRES DES ORGANES 2026) — repli ; éditable au CMS.
+const DEFAULT_ORG_UNITS = [
+  { name: "Conseil d'Administration", note: "16 membres", members: [
+    { name: "Jean Christian TURKSON", role: "Président", company: "CIE" },
+    { name: "DEGNY Guy Florent", role: "1er Vice-Président", company: "SODECI" },
+    { name: "SOUMAHORO Namory Hamed", role: "2ème Vice-Président", company: "CIE" },
+    { name: "DODO Olivier", role: "Administrateur", company: "GS2E" },
+    { name: "N'DRI Léandre", role: "Administrateur", company: "CIE" },
+    { name: "BITTY AYE Marie", role: "Administrateur", company: "CIE" },
+    { name: "OUATTARA Mamadou", role: "Administrateur", company: "CIE" },
+    { name: "KONATE Kadidia", role: "Administrateur", company: "SODECI" },
+    { name: "COULIBALY Damasse", role: "Administrateur", company: "SODECI" },
+    { name: "DJIBENOU Antoine", role: "Administrateur", company: "GS2E" },
+    { name: "COULIBALY épse DIOP Aminata", role: "Administrateur", company: "CIPREL" },
+    { name: "OURAGA Maxime", role: "Administrateur", company: "CIE - Fraternité" },
+    { name: "KOUADIO Koffi N'Da", role: "Administrateur", company: "CIE - SYNACIE" },
+    { name: "BAKO Solange épse OUATTARA", role: "Administrateur", company: "CIE - AXE" },
+    { name: "KOUAO Marc Russel", role: "Administrateur", company: "SODECI - SYNASOD" },
+    { name: "NIOULE épse NAHOUNOU A. C. Désirée", role: "Administrateur", company: "SODECI - SYNATRASE" },
+  ] },
+  { name: "Comité de Crédit", note: "13 membres", members: [
+    { name: "TRA BI Boris", role: "Président", company: "CIE" },
+    { name: "KOUASSI Prisca épse KOUGNON", role: "Vice-Président", company: "SODECI" },
+    { name: "OBLE KOIZAN Roseline", role: "Secrétaire", company: "CIE" },
+    { name: "DOUKPA Viviane épse GBAGBO", role: "Membre", company: "GS2E" },
+    { name: "DOBO Ange", role: "Membre", company: "CIE" },
+    { name: "SIDIBE Salimatou", role: "Membre", company: "CIE" },
+    { name: "BALLO Podo Noël", role: "Membre", company: "GS2E" },
+    { name: "BAKAYOKO Awa", role: "Membre", company: "CIE" },
+    { name: "ZABRE Léocadie Laure", role: "Membre", company: "CIE" },
+    { name: "ADINGRA Adeline Antoinette épse AMIA", role: "Membre", company: "SODECI" },
+    { name: "KOFFI N'GUESSAN Nadège épse ADINGRA", role: "Membre", company: "SODECI" },
+    { name: "BILE épse BOKO Euphrasie", role: "Membre", company: "SODECI" },
+    { name: "YORO Romain", role: "Membre", company: "CIPREL" },
+  ] },
+  { name: "Conseil de Surveillance", note: "9 membres", members: [
+    { name: "REGNIER-ONDOMAT Stéphane Antoine", role: "Président", company: "GS2E" },
+    { name: "SOGAN Prudencio", role: "Vice-Président", company: "CIPREL" },
+    { name: "ZAMA Johan", role: "Secrétaire", company: "SODECI" },
+    { name: "COULIBALY Kalwahanan", role: "Membre", company: "CIE" },
+    { name: "DJELOU Djelou Fabrice", role: "Membre", company: "CIE" },
+    { name: "TOURE Asseta épse ASSIFFOUA", role: "Membre", company: "SODECI" },
+    { name: "DOUA Gisèle épse KEBE", role: "Membre", company: "SODECI" },
+    { name: "BOHIAN BAMBA Mah", role: "Membre", company: "CIE" },
+    { name: "BOUYS Alexandre", role: "Membre", company: "CIE" },
+  ] },
+  { name: "Comité d'Éthique et de Déontologie", note: "3 membres", members: [
+    { name: "LATTA Hervé", role: "Président", company: "GS2E" },
+    { name: "FOFANA Daouda", role: "Membre", company: "SODECI" },
+    { name: "ANOUGBA Simplice", role: "Membre", company: "CIE" },
+  ] },
+];
+
+// Personnel de la MA2E (annuaire officiel) — repli ; éditable au CMS. Photos fournies : DG, DAGF, RSI.
+const DEFAULT_PERSONNEL = [
+  { name: "GOUEDAN Franck Olivier", role: "Directeur Général", photo: "/images/team/dg.jpg" },
+  { name: "KONE Madoussou Yari épse Sombo", role: "Directrice Administration Gestion Finance", photo: "/images/team/dagf.jpg" },
+  { name: "TOURE Adama", role: "Responsable des Systèmes d'Information", photo: "/images/team/rsi.jpg" },
+  { name: "KOISSI Aya Philomène épse Kouamé", role: "Responsable Audit Interne et QSE" },
+  { name: "DJEDJERO Natacha", role: "Contrôleur Interne" },
+  { name: "AKPOUE Affouet Rosabelle", role: "Responsable Exploitation" },
+  { name: "TRAORE Ismaël", role: "Responsable Financier" },
+  { name: "N'ZI Obodji Micheline", role: "Responsable Administratif" },
+  { name: "ASSI Amon Anna Patricia", role: "Gestionnaire de Portefeuille" },
+  { name: "KOUASSI Affoua Elisabeth", role: "Gestionnaire de Portefeuille" },
+  { name: "M'BEDJI Guie Banou Tresore", role: "Gestionnaire de Portefeuille" },
+  { name: "ZEZE Amenan Marie Sophie Ange", role: "Gestionnaire de Portefeuille" },
+  { name: "GOUA Jean Moïse", role: "Comptable" },
+  { name: "BONOUMAN Effossy Marie Esther", role: "Caissière" },
+  { name: "DEGNI Achiket Patricia Laure", role: "Secrétaire de Direction" },
+  { name: "KONE Siriki", role: "Chauffeur-Coursier" },
+  { name: "OKAIGNE Achi Abel", role: "Chauffeur DG" },
+  { name: "KONAN François Léopold", role: "Chauffeur DAGF" },
+];
+
 const About = () => {
   const { t } = useTranslation();
   const r1 = useReveal(); const r2 = useReveal(); const r3 = useReveal(); const r4 = useReveal();
-  const { data: TEAM = [] } = useTeam();
   const { data: settings } = useSettings();
   const about = settings?.aboutContent;
+  const founderName = about?.founderName || "Marcel ZADI KESSY";
+  const founderInitials = founderName.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   const milestones = settings?.milestones?.length
     ? settings.milestones
     : MILESTONES.map((m) => ({ year: m.year, title: t(`about.milestones.${m.year}.title`, { defaultValue: m.title }), desc: t(`about.milestones.${m.year}.desc`, { defaultValue: m.desc }) }));
   const statIcons = [Users, Award, TrendingUp, Coins];
 
-  // Organigramme : valeurs du CMS si présentes, sinon repli sur les libellés i18n.
-  const org = settings?.orgChart;
-  const level1Name = org?.level1Name || t("about.level1Name");
-  const level2Name = org?.level2Name || t("about.level2Name");
-  const deptNames =
-    org?.departments && org.departments.length > 0
-      ? org.departments
-      : [t("about.dept1"), t("about.dept2"), t("about.dept3")];
-  const deptIcons = [Settings2, Wallet, ShieldCheck, Briefcase, Coins, Users];
-  const orgDepts = deptNames.map((name, i) => ({ icon: deptIcons[i % deptIcons.length], name }));
+  // Organigramme (section « Organisation ») : arbre éditable au CMS, repli sur l'encadrement officiel.
+  const orgTree = settings?.orgTree ?? DEFAULT_ORG_TREE;
   const missions = [
     { icon: Wallet, title: about?.mission1Title || t("about.mission1Title"), desc: about?.mission1Desc || t("about.mission1Desc") },
     { icon: Briefcase, title: about?.mission2Title || t("about.mission2Title"), desc: about?.mission2Desc || t("about.mission2Desc") },
     { icon: ShieldCheck, title: about?.mission3Title || t("about.mission3Title"), desc: about?.mission3Desc || t("about.mission3Desc") },
   ];
 
-  // Organes (CA/CC/CS/CED) éditables via le CMS — repli sur la composition officielle.
-  const DEFAULT_ORG_UNITS = [
-    { name: "Conseil d'Administration", note: "Président · 2 vice-présidents · 13 administrateurs" },
-    { name: "Comité de Crédit", note: "Président · 1 vice-président · 1 secrétaire · 10 membres" },
-    { name: "Conseil de Surveillance", note: "Président · 1 vice-président · 1 secrétaire · 6 membres" },
-    { name: "Comité Éthique et Déontologie", note: "Président · 2 membres" },
-  ];
+  // Organes de gouvernance (CA/CC/CS/CED) — composition officielle (CR 26/06/2026), éditable au CMS.
   const orgUnits = settings?.orgUnits?.length ? settings.orgUnits : DEFAULT_ORG_UNITS;
-  const orgUnitNames = orgUnits.map((u) => u.name);
-  const catOf = (m: { category?: string }) => m.category || "Gouvernance";
-  const extraCats = Array.from(new Set(TEAM.map(catOf))).filter((c) => !orgUnitNames.includes(c));
-  const orgGroups = [
-    ...orgUnits.map((u) => ({ name: u.name, note: u.note, members: TEAM.filter((m) => catOf(m) === u.name) })),
-    ...extraCats.map((cat) => ({ name: cat, note: undefined as string | undefined, members: TEAM.filter((m) => catOf(m) === cat) })),
-  ];
+  // Personnel de la MA2E — cartes avec photo, éditable au CMS.
+  const personnel = settings?.personnel?.length ? settings.personnel : DEFAULT_PERSONNEL;
 
   return (
     <Layout>
@@ -69,16 +180,27 @@ const About = () => {
         subtitle={t("about.heroSubtitle")}
         breadcrumb={[{ label: t("nav.home"), href: "/" }, { label: t("nav.about") }]}
       />
-      {/* Founder quote */}
+      {/* Vision du fondateur */}
       <section className="py-12 md:py-20">
-        <div className="container max-w-4xl px-4 md:px-6">
-          <div ref={r1} className="reveal rounded-2xl md:rounded-3xl bg-gradient-primary text-primary-foreground p-8 md:p-14 shadow-elegant relative overflow-hidden text-center md:text-left">
+        <div className="container max-w-5xl px-4 md:px-6">
+          <div ref={r1} className="reveal flex flex-col md:flex-row items-center gap-8 md:gap-12 rounded-2xl md:rounded-3xl bg-gradient-primary text-primary-foreground p-8 md:p-12 shadow-elegant relative overflow-hidden">
             <Quote className="absolute top-4 right-4 md:top-6 md:right-6 h-12 w-12 md:h-20 md:w-20 text-white/10" />
-            <span className="text-[10px] md:text-xs font-mono uppercase tracking-widest text-accent">{about?.founderVision || t("about.founderVision")}</span>
-            <blockquote className="mt-4 font-display text-xl md:text-3xl italic leading-tight text-balance">
-              « {about?.founderQuote || t("about.founderQuote")} »
-            </blockquote>
-            <div className="mt-6 text-sm md:text-base font-semibold">{about?.founderName || "Marcel ZADI KESSY"} <span className="font-normal text-white/70 block md:inline">— {about?.founderRole || t("about.founder")}</span></div>
+            <div className="shrink-0">
+              {about?.founderPhoto ? (
+                <img src={about.founderPhoto} alt={founderName} className="h-40 w-40 md:h-52 md:w-52 rounded-2xl object-cover ring-4 ring-white/15 shadow-lg" />
+              ) : (
+                <div className="h-40 w-40 md:h-52 md:w-52 rounded-2xl bg-white/10 ring-4 ring-white/15 grid place-items-center" aria-hidden>
+                  <span className="font-display text-5xl font-bold text-white/80">{founderInitials}</span>
+                </div>
+              )}
+            </div>
+            <div className="relative flex-1 text-center md:text-left">
+              <span className="text-[10px] md:text-xs font-mono uppercase tracking-widest text-accent">{about?.founderVision || t("about.founderVision")}</span>
+              <blockquote className="mt-4 font-display text-xl md:text-3xl italic leading-tight text-balance">
+                « {about?.founderQuote || t("about.founderQuote")} »
+              </blockquote>
+              <div className="mt-6 text-sm md:text-base font-semibold">{founderName} <span className="font-normal text-white/70 block md:inline">— {about?.founderRole || t("about.founder")}</span></div>
+            </div>
           </div>
         </div>
       </section>
@@ -136,69 +258,17 @@ const About = () => {
 
       {/* Org chart */}
       <section id="organisation" className="scroll-mt-28 py-20 bg-gradient-to-b from-background to-secondary/30">
-        <div className="container max-w-5xl">
+        <div className="container max-w-6xl">
           <div className="max-w-2xl mb-14">
             <span className="text-sm font-mono uppercase tracking-wider text-primary">{t("about.orgKicker")}</span>
             <h2 className="mt-2 font-display text-4xl md:text-5xl font-bold">{t("about.orgTitle")}</h2>
           </div>
 
-          <div className="flex flex-col items-center">
-            {/* Niveau 1 — Conseil d'Administration */}
-            <div className="w-full max-w-sm">
-              <div className="group relative overflow-hidden rounded-2xl bg-gradient-primary text-primary-foreground p-7 text-center shadow-elegant transition-transform hover:-translate-y-1">
-                <div className="absolute inset-0 grid-pattern-light opacity-40" aria-hidden />
-                <div className="relative">
-                  <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
-                    <Landmark className="h-8 w-8" />
-                  </div>
-                  <div className="text-[11px] font-mono uppercase tracking-[0.2em] text-white/70">{t("about.level1")}</div>
-                  <div className="mt-1 font-display text-xl font-bold">{level1Name}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* connecteur vertical */}
-            <div className="h-12 w-px bg-gradient-to-b from-primary/50 to-border" />
-
-            {/* Niveau 2 — Direction Générale */}
-            <div className="w-full max-w-sm">
-              <div className="group relative rounded-2xl bg-card border-2 border-primary/20 p-7 text-center shadow-sm transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-elegant">
-                <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-primary/10 text-primary">
-                  <Building2 className="h-8 w-8" />
-                </div>
-                <div className="text-[11px] font-mono uppercase tracking-[0.2em] text-muted-foreground">{t("about.level2")}</div>
-                <div className="mt-1 font-display text-xl font-bold">{level2Name}</div>
-              </div>
-            </div>
-
-            {/* connecteur vers les directions */}
-            <div className="h-12 w-px bg-border" />
-
-            {/* Niveau 3 — Directions opérationnelles */}
-            <div className="relative w-full">
-              {/* tronc horizontal reliant les 3 directions (desktop) */}
-              <div className="hidden sm:block absolute left-1/2 top-0 h-px w-2/3 -translate-x-1/2 bg-border" />
-              <div className="grid sm:grid-cols-3 gap-5 sm:pt-10">
-                {orgDepts.map(({ icon: Icon, name }) => (
-                  <div key={name} className="relative">
-                    {/* tige verticale reliant chaque direction au tronc (desktop) */}
-                    <div className="hidden sm:block absolute left-1/2 -top-10 h-10 w-px -translate-x-1/2 bg-border" />
-                    <div className="group h-full rounded-2xl bg-card border border-border p-6 text-center transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-elegant">
-                      <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-xl bg-secondary text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                        <Icon className="h-6 w-6" />
-                      </div>
-                      <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground mb-1">{t("about.deptLabel")}</div>
-                      <div className="font-display font-bold">{name}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <OrgChartView root={orgTree} />
         </div>
       </section>
 
-      {/* Team */}
+      {/* Organes de gouvernance — tableaux */}
       <section className="py-20 bg-secondary/40">
         <div className="container">
           <div className="max-w-2xl mb-12">
@@ -206,33 +276,64 @@ const About = () => {
             <h2 className="mt-2 font-display text-4xl md:text-5xl font-bold">{t("about.govTitle")}</h2>
           </div>
           <div ref={r4} className="reveal space-y-12">
-            {orgGroups.map((group) => (
-              <div key={group.name}>
-                <div className="mb-6 flex flex-wrap items-baseline justify-between gap-2 border-b border-border/60 pb-3">
-                  <h3 className="font-display text-2xl font-bold text-primary-dark">{group.name}</h3>
-                  {group.note && <span className="text-sm font-semibold text-muted-foreground">{group.note}</span>}
+            {orgUnits.map((unit) => (
+              <div key={unit.name}>
+                <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-border/60 pb-3">
+                  <h3 className="font-display text-2xl font-bold text-primary-dark">{unit.name}</h3>
+                  {unit.note && <span className="text-sm font-semibold text-muted-foreground">{unit.note}</span>}
                 </div>
-                {group.members.length > 0 ? (
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {group.members.map((member) => (
-                      <div key={member.name} className="rounded-2xl bg-card border border-border p-6 text-center hover:shadow-elegant transition-smooth">
-                        {member.photo ? (
-                          <img src={member.photo} alt={member.name} className="mx-auto h-24 w-24 rounded-full object-cover ring-2 ring-primary/10" />
-                        ) : (
-                          <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-gradient-primary text-white font-display text-2xl font-bold">
-                            {member.initials}
-                          </div>
-                        )}
-                        <div className="mt-5 font-display text-lg font-bold">{member.name}</div>
-                        <div className="text-sm text-muted-foreground">{member.role}</div>
-                      </div>
-                    ))}
+                {unit.members?.length ? (
+                  <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-secondary/40 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                          <th className="px-4 py-3 font-semibold">Nom et prénoms</th>
+                          <th className="px-4 py-3 font-semibold">Fonction</th>
+                          <th className="px-4 py-3 font-semibold">Société</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {unit.members.map((m, i) => (
+                          <tr key={i} className="border-b border-border/40 last:border-0 hover:bg-secondary/20">
+                            <td className="px-4 py-2.5 font-medium">{m.name}</td>
+                            <td className="px-4 py-2.5 text-muted-foreground">{m.role}</td>
+                            <td className="px-4 py-2.5 text-muted-foreground">{m.company}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
                   <p className="text-sm italic text-muted-foreground">Composition à venir.</p>
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Personnel de la MA2E — cartes photo */}
+      <section className="py-20">
+        <div className="container">
+          <div className="max-w-2xl mb-12">
+            <span className="text-sm font-mono uppercase tracking-wider text-primary">Notre équipe</span>
+            <h2 className="mt-2 font-display text-4xl md:text-5xl font-bold">Personnel de la MA2E</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+            {personnel.map((p) => {
+              const initials = p.name.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+              return (
+                <div key={p.name} className="rounded-2xl bg-card border border-border p-5 text-center hover:shadow-elegant transition-smooth">
+                  {p.photo ? (
+                    <img src={p.photo} alt={p.name} loading="lazy" className="mx-auto h-24 w-24 rounded-full object-cover ring-2 ring-primary/10" />
+                  ) : (
+                    <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-gradient-primary text-white font-display text-2xl font-bold">{initials}</div>
+                  )}
+                  <div className="mt-4 font-display text-base font-bold leading-tight">{p.name}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{p.role}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

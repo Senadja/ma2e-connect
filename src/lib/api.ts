@@ -20,6 +20,16 @@ export class ApiError extends Error {
   }
 }
 
+// Session expirée / token invalide : on purge le token et on notifie l'app
+// (AdminLayout écoute cet événement pour déconnecter et rediriger vers le login).
+// Évite que les lectures authentifiées du back-office échouent en silence.
+function handleUnauthorized() {
+  setToken(null);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("ma2e:unauthorized"));
+  }
+}
+
 type Options = {
   method?: string;
   body?: unknown;
@@ -50,10 +60,28 @@ export async function api<T = unknown>(path: string, opts: Options = {}): Promis
   if (res.status === 204) return undefined as T;
 
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data: unknown = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      // Le serveur a renvoyé une réponse non-JSON (page d'erreur HTML, 413
+      // fichier trop volumineux, timeout du proxy…). On ne propage pas le
+      // cryptique « Unexpected token … is not valid JSON ».
+      if (res.status === 401 && auth) handleUnauthorized();
+      throw new ApiError(
+        res.status === 413
+          ? "Fichier trop volumineux."
+          : "Le serveur a renvoyé une réponse inattendue. Réessayez.",
+        res.status || 500
+      );
+    }
+  }
 
   if (!res.ok) {
-    throw new ApiError(data?.error || "Une erreur est survenue", res.status);
+    if (res.status === 401 && auth) handleUnauthorized();
+    const message = (data as { error?: string } | null)?.error;
+    throw new ApiError(message || "Une erreur est survenue", res.status);
   }
   return data as T;
 }

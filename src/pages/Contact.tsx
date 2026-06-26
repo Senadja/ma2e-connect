@@ -5,9 +5,12 @@ import { MapPin, Phone, Mail, Clock, Send, ChevronDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { useSettings } from "@/lib/content";
 
 const Contact = () => {
   const { t } = useTranslation();
+  const { data: settings } = useSettings();
+  const c = settings?.contact;
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showDcp, setShowDcp] = useState(false);
@@ -62,29 +65,29 @@ const Contact = () => {
                     <span className="grid h-10 w-10 place-items-center rounded-lg bg-accent/20 text-accent shrink-0"><MapPin className="h-5 w-5" /></span>
                     <div>
                       <div className="font-semibold">{t("contact.address")}</div>
-                      <div className="text-sm text-white/80">Avenue Houdaille, Immeuble SIDAM<br />6ème étage, Plateau<br />18 BP 1210 Abidjan 18</div>
+                      <div className="text-sm text-white/80 whitespace-pre-line">{c?.address || "Avenue Houdaille, Immeuble SIDAM, 6ème étage, Plateau, 18 BP 1210 Abidjan 18"}</div>
                     </div>
                   </li>
                   <li className="flex gap-4">
                     <span className="grid h-10 w-10 place-items-center rounded-lg bg-accent/20 text-accent shrink-0"><Phone className="h-5 w-5" /></span>
                     <div>
                       <div className="font-semibold">{t("contact.phone")}</div>
-                      <a href="tel:+22527212364887" className="text-sm text-white/80 hover:text-accent">(+225) 27 21 23 64 87</a>
+                      <a href={`tel:${(c?.phone || "+225 27 21 23 64 87").replace(/[^0-9+]/g, "")}`} className="text-sm text-white/80 hover:text-accent">{c?.phone || "(+225) 27 21 23 64 87"}</a>
                     </div>
                   </li>
                   <li className="flex gap-4">
                     <span className="grid h-10 w-10 place-items-center rounded-lg bg-accent/20 text-accent shrink-0"><Mail className="h-5 w-5" /></span>
                     <div>
                       <div className="font-semibold">{t("contact.email")}</div>
-                      <a href="mailto:contact@ma2e.ci" className="text-sm text-white/80 hover:text-accent block">contact@ma2e.ci</a>
-                      <a href="mailto:privacyMA2E@ma2e.ci" className="text-xs text-white/60 hover:text-accent">DCP : privacyMA2E@ma2e.ci</a>
+                      <a href={`mailto:${c?.email || "info@ma2e.ci"}`} className="text-sm text-white/80 hover:text-accent block">{c?.email || "info@ma2e.ci"}</a>
+                      <a href={`mailto:${c?.dcpEmail || "privacyMA2E@ma2e.ci"}`} className="text-xs text-white/60 hover:text-accent">DCP : {c?.dcpEmail || "privacyMA2E@ma2e.ci"}</a>
                     </div>
                   </li>
                   <li className="flex gap-4">
                     <span className="grid h-10 w-10 place-items-center rounded-lg bg-accent/20 text-accent shrink-0"><Clock className="h-5 w-5" /></span>
                     <div>
                       <div className="font-semibold">{t("contact.hours")}</div>
-                      <div className="text-sm text-white/80">Lun – Ven : 8h00 — 17h00<br />Sam : 9h00 — 12h00</div>
+                      <div className="text-sm text-white/80 whitespace-pre-line">{c?.hours || "Lun – Ven : 8h00 — 17h00"}</div>
                     </div>
                   </li>
                 </ul>
@@ -169,7 +172,7 @@ const Contact = () => {
                   </button>
                   {showDcp && (
                     <p className="text-xs text-muted-foreground bg-secondary/40 rounded-lg p-3 leading-relaxed">
-                      Les données collectées via ce formulaire sont utilisées exclusivement pour répondre à votre demande. Conformément à la loi ivoirienne n° 2013-450, vous disposez d'un droit d'accès, de rectification et de suppression. Contact DCP : privacyMA2E@ma2e.ci
+                      Les données collectées via ce formulaire sont utilisées exclusivement pour répondre à votre demande. Conformément à la loi ivoirienne n° 2013-450, vous disposez d'un droit d'accès, de rectification et de suppression. Contact DCP : {c?.dcpEmail || "privacyMA2E@ma2e.ci"}
                     </p>
                   )}
                 </form>

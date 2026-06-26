@@ -16,7 +16,6 @@ export const NAV_LINKS = [
     children: [
       { label: "Épargne rémunérée", href: "/produits/epargne", desc: "5 formules d'épargne" },
       { label: "Formules de crédit", href: "/produits/credits", desc: "Financez vos projets" },
-      { label: "Projet immobilier", href: "/produits/immobilier", desc: "Accédez à la propriété" },
     ],
   },
   { label: "Actualités", href: "/actualites" },
@@ -30,8 +29,8 @@ export const PLAYSTORE_URL = "https://play.google.com/store/apps/details?id=com.
 export const STATS = [
   { value: 8430, label: "Adhérents", suffix: "" },
   { value: 9, label: "Produits", suffix: "" },
-  { value: 14, label: "Années d'activités", suffix: "" },
-  { value: 2.9, label: "Mds FCFA de crédits", suffix: "" },
+  { value: 20, label: "Années d'activités", suffix: "" },
+  { value: 6.3, label: "Mds FCFA de crédits", suffix: "" },
 ];
 
 export const MILESTONES = [
@@ -43,10 +42,10 @@ export const MILESTONES = [
 
 export const SAVINGS = [
   { id: "expresse", name: "Épargne Expresse", desc: "Épargne souple et disponible à tout moment pour répondre à vos besoins quotidiens.", features: ["Versements libres", "Disponibilité immédiate", "Sans frais d'ouverture", "Taux de rendement attractif"], image: "/images/products/Fiche_Produit_EPARGNE EXPRESSE.jpg", form: "/documents/formulaires/Formulaire_DEMANDE D'EPARGNE.docx" },
-  { id: "ordinaire", name: "Épargne Ordinaire", desc: "Une formule classique pour épargner régulièrement et constituer votre capital.", features: ["Taux de 5% l'an", "Versements programmés", "Capital sécurisé", "Retraits encadrés"], image: "/images/products/Fiche_Produit_EPARGNE ORDINAIRE.jpg", form: "/documents/formulaires/Formulaire_DEMANDE D'EPARGNE.docx" },
-  { id: "logement", name: "Épargne Logement", desc: "Préparez l'acquisition de votre futur logement avec une épargne dédiée.", features: ["Taux de 4% l'an", "Accès au crédit immobilier", "Durée 3 à 10 ans", "Plafond élevé"], image: "/images/products/Fiche_Produit_EPARGNE LOGEMENT.jpg", form: "/documents/formulaires/Formulaire_DEMANDE D'EPARGNE.docx" },
-  { id: "dat", name: "Dépôt à terme simple", desc: "Bloquez votre capital sur une durée définie pour un rendement optimisé.", features: ["Taux de 6% à 7% l'an", "Durée 6 à 60 mois", "Capital protégé", "Intérêts capitalisés"], image: "/images/products/Fiche_Produit_DAT SIMPLE.jpg", form: "/documents/formulaires/Formulaire_DEMANDE DE SOUSCRIPTION DATS.docx" },
-  { id: "datv", name: "DAT à versements progressifs", desc: "Combinez sécurité et flexibilité avec des versements échelonnés.", features: ["Taux de 6% à 7% l'an", "Rendement croissant", "Engagement modéré", "Souplesse contractuelle"], image: "/images/products/Fiche_Produit_DAT à VERSEMENT PROGRESSIF.jpg", form: "/documents/formulaires/Formulaire_DEMANDE DE SOUSCRIPTION DATAVP.docx" },
+  { id: "ordinaire", name: "Épargne Ordinaire", desc: "Une formule classique pour épargner régulièrement et constituer votre capital.", features: ["Taux de 3,5% l'an", "Versements programmés ou ponctuels", "Capital sécurisé", "Retraits encadrés"], image: "/images/products/Fiche_Produit_EPARGNE ORDINAIRE.jpg", form: "/documents/formulaires/Formulaire_DEMANDE D'EPARGNE.docx" },
+  { id: "logement", name: "Épargne Logement", desc: "Préparez l'acquisition de votre futur logement avec une épargne dédiée.", features: ["Versements mensuels ou ponctuels", "Aucun frais de gestion", "Dédié à l'acquisition d'un logement", "Accès au crédit immobilier"], image: "/images/products/Fiche_Produit_EPARGNE LOGEMENT.jpg", form: "/documents/formulaires/Formulaire_DEMANDE D'EPARGNE.docx" },
+  { id: "dat", name: "Dépôt à terme simple", desc: "Bloquez votre capital sur une durée définie pour un rendement optimisé.", features: ["Taux de 3,5% à 4% l'an (barème)", "Durée à partir de 6 mois", "Dépôt minimum 100 000 F", "Capital protégé"], image: "/images/products/Fiche_Produit_DAT SIMPLE.jpg", form: "/documents/formulaires/Formulaire_DEMANDE DE SOUSCRIPTION DATS.docx" },
+  { id: "datv", name: "DAT à versements progressifs", desc: "Combinez sécurité et flexibilité avec des versements échelonnés.", features: ["Taux de 3,5% à 4% l'an", "Durée 2 à 5 ans", "Versements à partir de 5 000 F", "Rendement croissant"], image: "/images/products/Fiche_Produit_DAT à VERSEMENT PROGRESSIF.jpg", form: "/documents/formulaires/Formulaire_DEMANDE DE SOUSCRIPTION DATAVP.docx" },
 ];
 
 export const CREDITS = [

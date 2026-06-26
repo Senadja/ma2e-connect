@@ -14,9 +14,12 @@ const LOGO_MAP: Record<string, string> = {
   "CNPS": "/images/partners/cnps.jpeg",
 };
 
-// Sociétés membres (groupe Eranove & affiliés) — logos officiels transmis par le client.
+// Sociétés membres — logos officiels transmis par le client.
+// CR du 26/06/2026 : retrait du groupe Eranove (Eranove, Eranove Academy, Fondation Eranove), ajout de CIE, SODECI et MA2E.
 const MEMBER_COMPANIES: { name: string; logo: string }[] = [
-  { name: "Eranove", logo: "/images/partners/membres/eranove.svg" },
+  { name: "CIE", logo: "/images/partners/cie.webp" },
+  { name: "SODECI", logo: "/images/partners/sodeci.png" },
+  { name: "MA2E", logo: "/logo-ma2e.png" },
   { name: "CIPREL", logo: "/images/partners/membres/ciprel.png" },
   { name: "ATINKOU", logo: "/images/partners/membres/atinkou.png" },
   { name: "Awale", logo: "/images/partners/membres/awale.png" },
@@ -24,8 +27,6 @@ const MEMBER_COMPANIES: { name: string; logo: string }[] = [
   { name: "SGA2E", logo: "/images/partners/membres/sga2e.png" },
   { name: "Smart Energy", logo: "/images/partners/membres/smart-energy.png" },
   { name: "SIVE", logo: "/images/partners/membres/sive.png" },
-  { name: "Eranove Academy", logo: "/images/partners/membres/eranove-academy.png" },
-  { name: "Fondation Eranove", logo: "/images/partners/membres/fondation-eranove.svg" },
 ];
 
 const Partners = () => {

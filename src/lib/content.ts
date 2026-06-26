@@ -175,15 +175,59 @@ export interface OrgChart {
 export interface OrgUnit {
   name: string;
   note?: string;
+  members?: { name: string; role: string; company?: string }[];
 }
+
+// Nœud d'organigramme (récursif) — chaque poste/organe peut avoir des sous-éléments.
+export interface OrgNode {
+  name: string;
+  role?: string;          // sous-titre facultatif (ex. intitulé du poste)
+  children?: OrgNode[];
+}
+
+// Organigramme par défaut — encadrement, d'après l'organigramme officiel MA2E (MAJ 22/05/2026).
+// Modifiable au CMS (Paramètres › Accueil › Organigramme). Postes opérationnels volontairement masqués.
+export const DEFAULT_ORG_TREE: OrgNode = {
+  name: "Assemblée Générale",
+  children: [
+    { name: "Comité d'Éthique et de Déontologie" },
+    {
+      name: "Conseil d'Administration",
+      children: [
+        {
+          name: "Directeur Général",
+          role: "GOUEDAN Franck Olivier",
+          children: [
+            { name: "Responsable Audit Interne et QSE", role: "KOISSI Aya Philomène" },
+            { name: "Responsable des Systèmes d'Information", role: "TOURE Adama" },
+            { name: "Contrôleur Interne", role: "DJEDJERO Natacha" },
+            {
+              name: "Directeur Administration Gestion Finance",
+              role: "KONE Madoussou Yari épse Sombo",
+              children: [
+                { name: "Responsable Exploitation", role: "AKPOUE Affouet Rosabelle" },
+                { name: "Responsable Financier", role: "TRAORE Ismaël" },
+                { name: "Responsable Administratif", role: "N'ZI Obodji Micheline" },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    { name: "Comité de Crédit" },
+    { name: "Conseil de Surveillance" },
+  ],
+};
 
 export interface SiteSettings {
   flashBanner?: { enabled: boolean; text: string; link?: string };
   flashInfos?: { enabled: boolean; speed?: number; items: { text: string; url?: string }[] };
-  contact?: { address: string; phone: string; email: string };
+  contact?: { address: string; phone: string; email: string; hours?: string; dcpEmail?: string };
   social?: { facebook: string; linkedin: string; twitter: string };
   orgChart?: OrgChart;
+  orgTree?: OrgNode;
   orgUnits?: OrgUnit[];
+  personnel?: { name: string; role: string; photo?: string }[];
   splash?: { enabled: boolean; image: string; link?: string };
   whatsapp?: { enabled: boolean; phone: string; message?: string };
   chatbot?: { enabled: boolean; url: string };
@@ -195,7 +239,7 @@ export interface SiteSettings {
   };
   presidentQuote?: { quote?: string; name?: string; role?: string; bgImage?: string; bgColor?: string };
   homeHero?: { badge?: string; title1?: string; title2?: string; leadPre?: string; leadMembers?: string; leadPost?: string; ctaProducts?: string; ctaJoin?: string };
-  aboutContent?: { founderVision?: string; founderQuote?: string; founderName?: string; founderRole?: string; mission1Title?: string; mission1Desc?: string; mission2Title?: string; mission2Desc?: string; mission3Title?: string; mission3Desc?: string };
+  aboutContent?: { founderVision?: string; founderQuote?: string; founderName?: string; founderRole?: string; founderPhoto?: string; mission1Title?: string; mission1Desc?: string; mission2Title?: string; mission2Desc?: string; mission3Title?: string; mission3Desc?: string };
   milestones?: { year: string; title: string; desc: string }[];
   languages?: { code: string; label: string }[];
   branding?: { primary?: string };

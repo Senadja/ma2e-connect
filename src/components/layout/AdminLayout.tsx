@@ -48,6 +48,14 @@ export const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Session expirée (401 sur un appel authentifié) : on déconnecte proprement.
+  // Le rendu conditionnel ci-dessous redirige alors vers le login.
+  useEffect(() => {
+    const onUnauthorized = () => logout();
+    window.addEventListener("ma2e:unauthorized", onUnauthorized);
+    return () => window.removeEventListener("ma2e:unauthorized", onUnauthorized);
+  }, [logout]);
+
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />;
   }

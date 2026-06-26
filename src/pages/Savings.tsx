@@ -77,11 +77,6 @@ const Savings = () => {
                 ))}
               </ul>
 
-              <h3 className="mt-10 font-display text-xl font-bold">{t("products.accessConditions")}</h3>
-              <p className="mt-2 text-muted-foreground">
-                {t("products.accessConditionsText")}
-              </p>
-
               <div className="mt-12 p-8 rounded-2xl bg-secondary/40 border border-border">
                 <h3 className="font-display text-2xl font-bold mb-4">{t("products.needHelp")}</h3>
                 <p className="text-muted-foreground mb-6">{t("products.needHelpText")}</p>

@@ -108,10 +108,10 @@ export const NEWS = [
 
 export const SAVINGS = [
   { id: 'expresse', name: 'Épargne Expresse', desc: 'Épargne souple et disponible à tout moment pour répondre à vos besoins quotidiens.', features: ['Versements libres', 'Disponibilité immédiate', 'Sans frais d\'ouverture', 'Taux de rendement attractif'], image: '/images/products/Fiche_Produit_EPARGNE EXPRESSE.jpg', form: "/documents/formulaires/Formulaire_DEMANDE D'EPARGNE.docx" },
-  { id: 'ordinaire', name: 'Épargne Ordinaire', desc: 'Une formule classique pour épargner régulièrement et constituer votre capital.', features: ['Taux de 5% l\'an', 'Versements programmés', 'Capital sécurisé', 'Retraits encadrés'], image: '/images/products/Fiche_Produit_EPARGNE ORDINAIRE.jpg', form: "/documents/formulaires/Formulaire_DEMANDE D'EPARGNE.docx" },
-  { id: 'logement', name: 'Épargne Logement', desc: 'Préparez l\'acquisition de votre futur logement avec une épargne dédiée.', features: ['Taux de 4% l\'an', 'Accès au crédit immobilier', 'Durée 3 à 10 ans', 'Plafond élevé'], image: '/images/products/Fiche_Produit_EPARGNE LOGEMENT.jpg', form: "/documents/formulaires/Formulaire_DEMANDE D'EPARGNE.docx" },
-  { id: 'dat', name: 'Dépôt à terme simple', desc: 'Bloquez votre capital sur une durée définie pour un rendement optimisé.', features: ['Taux de 6% à 7% l\'an', 'Durée 6 à 60 mois', 'Capital protégé', 'Intérêts capitalisés'], image: '/images/products/Fiche_Produit_DAT SIMPLE.jpg', form: '/documents/formulaires/Formulaire_DEMANDE DE SOUSCRIPTION DATS.docx' },
-  { id: 'datv', name: 'DAT à versements progressifs', desc: 'Combinez sécurité et flexibilité avec des versements échelonnés.', features: ['Taux de 6% à 7% l\'an', 'Rendement croissant', 'Engagement modéré', 'Souplesse contractuelle'], image: '/images/products/Fiche_Produit_DAT à VERSEMENT PROGRESSIF.jpg', form: '/documents/formulaires/Formulaire_DEMANDE DE SOUSCRIPTION DATAVP.docx' },
+  { id: 'ordinaire', name: 'Épargne Ordinaire', desc: 'Une formule classique pour épargner régulièrement et constituer votre capital.', features: ['Taux de 3,5% l\'an', 'Versements programmés ou ponctuels', 'Capital sécurisé', 'Retraits encadrés'], image: '/images/products/Fiche_Produit_EPARGNE ORDINAIRE.jpg', form: "/documents/formulaires/Formulaire_DEMANDE D'EPARGNE.docx" },
+  { id: 'logement', name: 'Épargne Logement', desc: 'Préparez l\'acquisition de votre futur logement avec une épargne dédiée.', features: ['Versements mensuels ou ponctuels', 'Aucun frais de gestion', 'Dédié à l\'acquisition d\'un logement', 'Accès au crédit immobilier'], image: '/images/products/Fiche_Produit_EPARGNE LOGEMENT.jpg', form: "/documents/formulaires/Formulaire_DEMANDE D'EPARGNE.docx" },
+  { id: 'dat', name: 'Dépôt à terme simple', desc: 'Bloquez votre capital sur une durée définie pour un rendement optimisé.', features: ['Taux de 3,5% à 4% l\'an (barème)', 'Durée à partir de 6 mois', 'Dépôt minimum 100 000 F', 'Capital protégé'], image: '/images/products/Fiche_Produit_DAT SIMPLE.jpg', form: '/documents/formulaires/Formulaire_DEMANDE DE SOUSCRIPTION DATS.docx' },
+  { id: 'datv', name: 'DAT à versements progressifs', desc: 'Combinez sécurité et flexibilité avec des versements échelonnés.', features: ['Taux de 3,5% à 4% l\'an', 'Durée 2 à 5 ans', 'Versements à partir de 5 000 F', 'Rendement croissant'], image: '/images/products/Fiche_Produit_DAT à VERSEMENT PROGRESSIF.jpg', form: '/documents/formulaires/Formulaire_DEMANDE DE SOUSCRIPTION DATAVP.docx' },
 ];
 
 export const CREDITS = [
@@ -135,21 +135,17 @@ export const MEDIA = [
 ];
 
 export const FAQS = [
-  { category: 'Adhésion', question: 'Qui peut devenir adhérent de la MA2E ?', answer: "Tout agent en activité ou retraité des sociétés du secteur de l'eau et de l'électricité (CIE, SODECI, et structures affiliées) peut devenir adhérent." },
-  { category: 'Adhésion', question: "Quels sont les frais d'adhésion ?", answer: "L'adhésion comprend un droit unique de 5 000 FCFA et la souscription à au moins une part sociale. Les détails sont disponibles en agence." },
+  { category: 'Adhésion', question: 'Qui peut devenir adhérent de la MA2E ?', answer: "Tout agent en activité des sociétés du secteur de l'eau et de l'électricité (CIE, SODECI, et structures affiliées) peut devenir adhérent." },
+  { category: 'Adhésion', question: "Quels sont les frais d'adhésion ?", answer: "L'adhésion comprend un droit unique de 6 000 FCFA et la souscription à la part sociale. Les détails sont disponibles en agence." },
   { category: 'Adhésion', question: 'Comment soumettre ma demande d\'adhésion ?', answer: 'Téléchargez le formulaire dans la médiathèque, complétez-le et déposez-le en agence avec les pièces justificatives demandées.' },
   { category: 'Épargne', question: 'Quels sont les types d\'épargne proposés ?', answer: 'La MA2E propose 5 formules : Épargne Expresse, Ordinaire, Logement, Dépôt à terme simple et DAT à versements progressifs.' },
   { category: 'Épargne', question: 'Mon épargne est-elle disponible à tout moment ?', answer: "Cela dépend de la formule choisie. L'Épargne Expresse est disponible à tout moment, alors que les DAT sont bloqués sur la durée contractuelle." },
-  { category: 'Épargne', question: 'Quel est le rendement de l\'épargne logement ?', answer: 'Le taux varie selon la durée. Une bonification est appliquée si l\'épargne sert à un projet immobilier MA2E.' },
   { category: 'Crédit', question: 'Quelles sont les conditions pour obtenir un crédit ?', answer: 'Être adhérent depuis au moins 6 mois, être à jour de ses cotisations et présenter un dossier complet (justificatifs de revenus, projet, garanties).' },
   { category: 'Crédit', question: 'Quel est le délai de traitement d\'un dossier ?', answer: 'Crédit Expresse : 48h. Crédit Ordinaire : 7 jours ouvrés. Crédit Immobilier : 15 à 30 jours selon complexité du dossier.' },
   { category: 'Crédit', question: 'Puis-je rembourser par anticipation ?', answer: 'Oui, le remboursement anticipé est possible sans pénalité sur la plupart de nos formules.' },
-  { category: 'Immobilier', question: 'Qui peut bénéficier du programme immobilier ?', answer: 'Tout adhérent à jour, justifiant d\'une ancienneté de 24 mois minimum.' },
-  { category: 'Immobilier', question: 'Quel est l\'apport personnel requis ?', answer: '10% du coût total du logement, qui peut être couvert par votre épargne logement.' },
-  { category: 'Immobilier', question: 'Les logements sont-ils livrés clés en main ?', answer: 'Oui, tous nos logements sont livrés finis et raccordés aux réseaux.' },
   { category: 'E-MA2E', question: 'Qu\'est-ce que la plateforme E-MA2E ?', answer: 'E-MA2E est l\'espace digital permettant aux adhérents de consulter leur compte, télécharger leurs relevés et effectuer des opérations en ligne.' },
   { category: 'E-MA2E', question: 'Combien coûte l\'accès à E-MA2E ?', answer: 'L\'abonnement est de 500 FCFA par mois, prélevé directement sur votre compte.' },
-  { category: 'E-MA2E', question: 'J\'ai oublié mon mot de passe, que faire ?', answer: 'Cliquez sur « Mot de passe oublié » sur la page de connexion, ou contactez le support à contact@ma2e.ci.' },
+  { category: 'E-MA2E', question: 'J\'ai oublié mon mot de passe, que faire ?', answer: 'Cliquez sur « Mot de passe oublié » sur la page de connexion, ou contactez le support à info@ma2e.ci.' },
 ];
 
 export const SETTINGS_DEFAULTS: Record<string, unknown> = {
@@ -161,7 +157,9 @@ export const SETTINGS_DEFAULTS: Record<string, unknown> = {
   contact: {
     address: 'Avenue Houdaille, Immeuble SIDAM, 6ème étage, Plateau, Abidjan',
     phone: '(+225) 27 21 23 64 87',
-    email: 'contact@ma2e.ci',
+    email: 'info@ma2e.ci',
+    hours: 'Lun – Ven : 8h00 — 17h00',
+    dcpEmail: 'privacyMA2E@ma2e.ci',
   },
   social: {
     facebook: '',
@@ -171,8 +169,8 @@ export const SETTINGS_DEFAULTS: Record<string, unknown> = {
   stats: [
     { value: 8430, label: 'Adhérents', suffix: '' },
     { value: 9, label: 'Produits', suffix: '' },
-    { value: 14, label: "Années d'activités", suffix: '' },
-    { value: 2.9, label: 'Mds FCFA de crédits', suffix: '' },
+    { value: 20, label: "Années d'activités", suffix: '' },
+    { value: 6.3, label: 'Mds FCFA de crédits', suffix: '' },
   ],
   smtp: {
     enabled: false,
@@ -185,10 +183,37 @@ export const SETTINGS_DEFAULTS: Record<string, unknown> = {
     to: 'contact@ma2e.ci',
   },
   // Organigramme éditable (section « Organisation » de la page À propos).
-  orgChart: {
-    level1Name: "Conseil d'Administration (PCA)",
-    level2Name: 'Direction Générale',
-    departments: ['Opérations', 'Finances', 'Crédit & Risque'],
+  // Arbre récursif (encadrement), d'après l'organigramme officiel MA2E (MAJ 22/05/2026).
+  orgTree: {
+    name: 'Assemblée Générale',
+    children: [
+      { name: "Comité d'Éthique et de Déontologie" },
+      {
+        name: "Conseil d'Administration",
+        children: [
+          {
+            name: 'Directeur Général',
+            role: 'GOUEDAN Franck Olivier',
+            children: [
+              { name: 'Responsable Audit Interne et QSE', role: 'KOISSI Aya Philomène' },
+              { name: "Responsable des Systèmes d'Information", role: 'TOURE Adama' },
+              { name: 'Contrôleur Interne', role: 'DJEDJERO Natacha' },
+              {
+                name: 'Directeur Administration Gestion Finance',
+                role: 'KONE Madoussou Yari épse Sombo',
+                children: [
+                  { name: 'Responsable Exploitation', role: 'AKPOUE Affouet Rosabelle' },
+                  { name: 'Responsable Financier', role: 'TRAORE Ismaël' },
+                  { name: 'Responsable Administratif', role: "N'ZI Obodji Micheline" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      { name: 'Comité de Crédit' },
+      { name: 'Conseil de Surveillance' },
+    ],
   },
 };
 
@@ -196,8 +221,6 @@ export const PARTNERS = [
   { name: 'BCEAO', type: 'Tutelle', desc: "Banque Centrale des États de l'Afrique de l'Ouest — autorité monétaire régionale." },
   { name: 'Ministère des Finances', type: 'Tutelle', desc: 'Tutelle administrative et financière des institutions de microfinance.' },
   { name: 'APSFD-CI', type: 'Association professionnelle', desc: 'Association Professionnelle des Systèmes Financiers Décentralisés de Côte d\'Ivoire.' },
-  { name: 'CIE', type: 'Partenaire institutionnel', desc: "Compagnie Ivoirienne d'Électricité — partenaire historique." },
-  { name: 'SODECI', type: 'Partenaire institutionnel', desc: "Société de Distribution d'Eau de la Côte d'Ivoire — partenaire historique." },
   { name: 'CNPS', type: 'Partenaire', desc: 'Caisse Nationale de Prévoyance Sociale — partenaire pour les retraites complémentaires.' },
 ];
 

@@ -74,7 +74,7 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
   const [editing, setEditing] = useState<MediaFile | null>(null);
   const [form, setForm] = useState({ title: "", category: "", desc: "", year: "" });
 
-  const { data: files = [] } = useQuery({
+  const { data: files = [], isLoading, isError } = useQuery({
     queryKey: ["media"],
     queryFn: async () => (await api<ApiMedia[]>("/media/all", { auth: true })).map(mapMedia),
   });
@@ -246,7 +246,18 @@ export const MediaLibrary = ({ onSelect, selectionMode = false }: MediaLibraryPr
         ))}
       </div>
 
-      {filteredFiles.length === 0 && (
+      {isLoading && (
+        <div className="py-20 text-center text-muted-foreground">Chargement de la médiathèque…</div>
+      )}
+
+      {isError && (
+        <div className="py-20 text-center space-y-3">
+          <p className="text-destructive font-medium">Impossible de charger la médiathèque.</p>
+          <p className="text-sm text-muted-foreground">Votre session a peut-être expiré — reconnectez-vous, puis réessayez.</p>
+        </div>
+      )}
+
+      {!isLoading && !isError && filteredFiles.length === 0 && (
         <div className="py-20 text-center text-muted-foreground">Aucun fichier ne correspond à votre recherche.</div>
       )}
 

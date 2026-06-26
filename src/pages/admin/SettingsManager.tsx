@@ -5,23 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload, Languages, Send, Palette, RotateCcw } from "lucide-react";
+import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload, Languages, Send, Palette, RotateCcw, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { MILESTONES } from "@/data/site";
+import { DEFAULT_ORG_TREE, type OrgNode } from "@/lib/content";
 import { DEFAULT_LANGUAGES, LANGUAGE_PRESETS, BASE_LANG, type Language } from "@/lib/translate";
 import { DEFAULT_BRAND_HEX, applyBrandColor } from "@/lib/brandColor";
 
 interface StatItem { value: number; label: string; suffix: string }
-interface OrgChart { level1Name: string; level2Name: string; departments: string[] }
 interface OrgUnit { name: string; note: string }
 interface Settings {
   flashBanner?: { enabled: boolean; text: string; link: string };
   flashInfos?: { enabled: boolean; speed?: number; items: { text: string; url: string }[] };
-  contact?: { address: string; phone: string; email: string };
+  contact?: { address: string; phone: string; email: string; hours?: string; dcpEmail?: string };
   social?: { facebook: string; linkedin: string; twitter: string };
   stats?: StatItem[];
-  orgChart?: OrgChart;
+  orgTree?: OrgNode;
   orgUnits?: OrgUnit[];
   splash?: { enabled: boolean; image: string; link: string };
   whatsapp?: { enabled: boolean; phone: string; message: string };
@@ -38,15 +38,9 @@ interface Settings {
 const DEFAULT_STATS: StatItem[] = [
   { value: 8430, label: "Adhérents", suffix: "" },
   { value: 9, label: "Produits", suffix: "" },
-  { value: 14, label: "Années d'activités", suffix: "" },
-  { value: 2.9, label: "Mds FCFA de crédits", suffix: "" },
+  { value: 20, label: "Années d'activités", suffix: "" },
+  { value: 6.3, label: "Mds FCFA de crédits", suffix: "" },
 ];
-
-const DEFAULT_ORG: OrgChart = {
-  level1Name: "Conseil d'Administration (PCA)",
-  level2Name: "Direction Générale",
-  departments: ["Opérations", "Finances", "Crédit & Risque"],
-};
 
 const DEFAULT_ORG_UNITS: OrgUnit[] = [
   { name: "Conseil d'Administration", note: "Président · 2 vice-présidents · 13 administrateurs" },
@@ -63,10 +57,10 @@ export const SettingsManager = () => {
   const [flashInfos, setFlashInfos] = useState<{ enabled: boolean; speed: number; items: { text: string; url: string }[] }>({ enabled: true, speed: 25, items: [{ text: "", url: "" }] });
   const [whatsapp, setWhatsapp] = useState({ enabled: false, phone: "", message: "" });
   const [chatbot, setChatbot] = useState({ enabled: false, url: "" });
-  const [contact, setContact] = useState({ address: "", phone: "", email: "" });
+  const [contact, setContact] = useState({ address: "", phone: "", email: "", hours: "", dcpEmail: "" });
   const [social, setSocial] = useState({ facebook: "", linkedin: "", twitter: "" });
   const [stats, setStats] = useState<StatItem[]>(DEFAULT_STATS);
-  const [org, setOrg] = useState<OrgChart>(DEFAULT_ORG);
+  const [orgTree, setOrgTree] = useState<OrgNode>(DEFAULT_ORG_TREE);
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>(DEFAULT_ORG_UNITS);
   const [splash, setSplash] = useState({ enabled: false, image: "/images/splash-accueil.png", link: "" });
   const whyDefaults: Record<string, string> = {
@@ -78,7 +72,7 @@ export const SettingsManager = () => {
     growthLabel: t("home.whyFundsGrowth"), growthValue: t("home.whyPerYear"),
   };
   const [whyUs, setWhyUs] = useState<Record<string, string>>(whyDefaults);
-  const [president, setPresident] = useState({ quote: t("home.quote"), name: "Ahmadou BAKAYOKO", role: t("home.quoteRole"), bgImage: "", bgColor: "" });
+  const [president, setPresident] = useState({ quote: t("home.quote"), name: "", role: t("home.quoteRole"), bgImage: "", bgColor: "" });
   const [uploadingBg, setUploadingBg] = useState(false);
   const bgRef = useRef<HTMLInputElement>(null);
   const uploadBg = async (file: File) => {
@@ -181,14 +175,10 @@ export const SettingsManager = () => {
     } else if (data.flashBanner?.text) {
       setFlashInfos({ enabled: !!data.flashBanner.enabled, speed: 25, items: [{ text: data.flashBanner.text, url: data.flashBanner.link || "" }] });
     }
-    if (data.contact) setContact({ address: data.contact.address || "", phone: data.contact.phone || "", email: data.contact.email || "" });
+    if (data.contact) setContact({ address: data.contact.address || "", phone: data.contact.phone || "", email: data.contact.email || "", hours: data.contact.hours || "", dcpEmail: data.contact.dcpEmail || "" });
     if (data.social) setSocial({ facebook: data.social.facebook || "", linkedin: data.social.linkedin || "", twitter: data.social.twitter || "" });
     if (Array.isArray(data.stats) && data.stats.length) setStats(data.stats);
-    if (data.orgChart) setOrg({
-      level1Name: data.orgChart.level1Name || DEFAULT_ORG.level1Name,
-      level2Name: data.orgChart.level2Name || DEFAULT_ORG.level2Name,
-      departments: Array.isArray(data.orgChart.departments) && data.orgChart.departments.length ? data.orgChart.departments : DEFAULT_ORG.departments,
-    });
+    if (data.orgTree && data.orgTree.name) setOrgTree(data.orgTree);
     if (Array.isArray(data.orgUnits) && data.orgUnits.length) setOrgUnits(data.orgUnits.map((u) => ({ name: u.name || "", note: u.note || "" })));
     if (data.splash) setSplash({ enabled: !!data.splash.enabled, image: data.splash.image || "/images/splash-accueil.png", link: data.splash.link || "" });
     if (data.whatsapp) setWhatsapp({ enabled: !!data.whatsapp.enabled, phone: data.whatsapp.phone || "", message: data.whatsapp.message || "" });
@@ -205,17 +195,72 @@ export const SettingsManager = () => {
     if (data.branding?.primary) setBranding({ primary: data.branding.primary });
   }, [data]);
 
-  const updateDept = (i: number, val: string) =>
-    setOrg((o) => ({ ...o, departments: o.departments.map((d, idx) => (idx === i ? val : d)) }));
-  const addDept = () => setOrg((o) => ({ ...o, departments: [...o.departments, ""] }));
-  const removeDept = (i: number) => setOrg((o) => ({ ...o, departments: o.departments.filter((_, idx) => idx !== i) }));
-  const saveOrg = () => {
-    const cleaned = { ...org, departments: org.departments.map((d) => d.trim()).filter(Boolean) };
-    if (!cleaned.level1Name.trim() || !cleaned.level2Name.trim() || cleaned.departments.length === 0) {
-      toast.error("Renseignez les deux organes et au moins une direction.");
-      return;
-    }
-    save.mutate({ key: "orgChart", value: cleaned });
+  // ── Organigramme (arbre) : édition immuable par chemin ──
+  const getNode = (root: OrgNode, path: number[]) => {
+    let n = root;
+    for (const idx of path) n = (n.children || [])[idx];
+    return n;
+  };
+  const editTree = (mutate: (root: OrgNode) => void) =>
+    setOrgTree((prev) => {
+      const root = JSON.parse(JSON.stringify(prev)) as OrgNode;
+      mutate(root);
+      return root;
+    });
+  const setNodeName = (path: number[], val: string) => editTree((root) => { getNode(root, path).name = val; });
+  const addNodeChild = (path: number[]) => editTree((root) => {
+    const n = getNode(root, path);
+    n.children = [...(n.children || []), { name: "" }];
+  });
+  const removeNode = (path: number[]) => editTree((root) => {
+    const parent = getNode(root, path.slice(0, -1));
+    const i = path[path.length - 1];
+    parent.children = (parent.children || []).filter((_, idx) => idx !== i);
+    if (parent.children.length === 0) delete parent.children;
+  });
+  const moveNode = (path: number[], dir: -1 | 1) => editTree((root) => {
+    const parent = getNode(root, path.slice(0, -1));
+    const arr = parent.children || [];
+    const i = path[path.length - 1];
+    const j = i + dir;
+    if (j < 0 || j >= arr.length) return;
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  });
+  const cleanNode = (n: OrgNode): OrgNode | null => {
+    const name = (n.name || "").trim();
+    if (!name) return null;
+    const children = (n.children || []).map(cleanNode).filter(Boolean) as OrgNode[];
+    const out: OrgNode = { name };
+    if (children.length) out.children = children;
+    return out;
+  };
+  const saveTree = () => {
+    const cleaned = cleanNode(orgTree);
+    if (!cleaned) { toast.error("Renseignez au moins le nom du sommet de l'organigramme."); return; }
+    save.mutate({ key: "orgTree", value: cleaned });
+  };
+  // Rendu récursif de l'éditeur (fonction → pas de remount, le focus des champs est conservé).
+  const iconBtn = "shrink-0 text-muted-foreground hover:text-primary h-8 w-8";
+  const renderOrgNode = (node: OrgNode, path: number[]) => {
+    const isRoot = path.length === 0;
+    return (
+      <div key={path.join("-") || "root"} className="space-y-1.5">
+        <div className="flex items-center gap-1.5" style={{ marginLeft: path.length * 18 }}>
+          {!isRoot && <span className="text-muted-foreground/50 select-none">└</span>}
+          <Input
+            value={node.name}
+            onChange={(e) => setNodeName(path, e.target.value)}
+            placeholder={isRoot ? "Sommet (ex. Assemblée Générale)" : "Poste / organe"}
+            className={isRoot ? "font-semibold" : ""}
+          />
+          <Button type="button" variant="ghost" size="icon" className={iconBtn} title="Ajouter un sous-élément" onClick={() => addNodeChild(path)}><Plus className="h-4 w-4" /></Button>
+          {!isRoot && <Button type="button" variant="ghost" size="icon" className={iconBtn} title="Monter" onClick={() => moveNode(path, -1)}><ChevronUp className="h-4 w-4" /></Button>}
+          {!isRoot && <Button type="button" variant="ghost" size="icon" className={iconBtn} title="Descendre" onClick={() => moveNode(path, 1)}><ChevronDown className="h-4 w-4" /></Button>}
+          {!isRoot && <Button type="button" variant="ghost" size="icon" className={`${iconBtn} hover:text-destructive`} title="Supprimer" onClick={() => removeNode(path)}><Trash2 className="h-4 w-4" /></Button>}
+        </div>
+        {(node.children || []).map((child, i) => renderOrgNode(child, [...path, i]))}
+      </div>
+    );
   };
 
   const updateUnit = (i: number, field: keyof OrgUnit, val: string) =>
@@ -393,6 +438,10 @@ export const SettingsManager = () => {
                 <div className="grid gap-2"><label className={label}>Nom du fondateur</label><Input value={aboutContent.founderName} onChange={(e) => setAboutContent({ ...aboutContent, founderName: e.target.value })} /></div>
                 <div className="grid gap-2"><label className={label}>Fonction</label><Input value={aboutContent.founderRole} onChange={(e) => setAboutContent({ ...aboutContent, founderRole: e.target.value })} /></div>
               </div>
+              <div className="grid gap-2"><label className={label}>Photo du fondateur (chemin ou URL)</label>
+                <Input value={aboutContent.founderPhoto || ""} onChange={(e) => setAboutContent({ ...aboutContent, founderPhoto: e.target.value })} placeholder="/images/fondateur.jpg — téléversez via la Médiathèque puis collez le chemin ici" />
+                {aboutContent.founderPhoto && <img src={aboutContent.founderPhoto} alt="" className="mt-1 h-24 w-24 rounded-xl object-cover border border-border" />}
+              </div>
               <div className="h-px bg-border/60" />
               <p className="text-[11px] text-muted-foreground">Les 3 missions affichées sur « À propos ».</p>
               {[1, 2, 3].map((n) => (
@@ -431,39 +480,15 @@ export const SettingsManager = () => {
           <Card className="border-border/40 shadow-sm">
             <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Network className="h-5 w-5 text-primary" /> Organigramme</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <label className={label}>Organe délibérant (niveau 1)</label>
-                  <Input value={org.level1Name} onChange={(e) => setOrg({ ...org, level1Name: e.target.value })} placeholder="Conseil d'Administration (PCA)" />
-                </div>
-                <div className="grid gap-2">
-                  <label className={label}>Organe exécutif (niveau 2)</label>
-                  <Input value={org.level2Name} onChange={(e) => setOrg({ ...org, level2Name: e.target.value })} placeholder="Direction Générale" />
-                </div>
+              <p className="text-[11px] text-muted-foreground">
+                Structure affichée dans la section « Organisation » de la page À propos. Chaque ligne est un poste ou un organe ;
+                « <Plus className="inline h-3 w-3" /> » ajoute un sous-élément (indenté en dessous), les flèches réordonnent, la corbeille supprime.
+                Périmètre conseillé : jusqu'aux directeurs/responsables.
+              </p>
+              <div className="rounded-lg border border-border/60 bg-secondary/20 p-3 space-y-1.5">
+                {renderOrgNode(orgTree, [])}
               </div>
-              <div className="grid gap-2">
-                <label className={label}>Directions opérationnelles</label>
-                {org.departments.map((d, i) => (
-                  <div key={i} className="flex gap-2">
-                    <Input value={d} onChange={(e) => updateDept(i, e.target.value)} placeholder={`Direction ${i + 1}`} />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeDept(i)}
-                      disabled={org.departments.length <= 1}
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                <Button type="button" variant="outline" size="sm" onClick={addDept} className="w-fit rounded-full gap-2 mt-1">
-                  <Plus className="h-4 w-4" /> Ajouter une direction
-                </Button>
-              </div>
-              <p className="text-[11px] text-muted-foreground">Affiché dans la section « Organisation » de la page À propos. Les libellés de rôle (« Organe délibérant »…) restent traduits automatiquement.</p>
-              <Button onClick={saveOrg} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer l'organigramme</Button>
+              <Button onClick={saveTree} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer l'organigramme</Button>
             </CardContent>
           </Card>
 
@@ -583,6 +608,12 @@ export const SettingsManager = () => {
                   <Input value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} /></div>
                 <div className="grid gap-2"><label className={label}>Email</label>
                   <Input value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} /></div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid gap-2"><label className={label}>Horaires d'ouverture</label>
+                  <Input value={contact.hours} onChange={(e) => setContact({ ...contact, hours: e.target.value })} placeholder="Lun – Ven : 8h00 — 17h00" /></div>
+                <div className="grid gap-2"><label className={label}>Email DCP (données personnelles)</label>
+                  <Input value={contact.dcpEmail} onChange={(e) => setContact({ ...contact, dcpEmail: e.target.value })} placeholder="privacyMA2E@ma2e.ci" /></div>
               </div>
               <Button onClick={() => save.mutate({ key: "contact", value: contact })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les coordonnées</Button>
             </CardContent>

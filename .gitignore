@@ -46,3 +46,9 @@ dist-ssr
 
 # Captures issues des tests e2e
 e2e/*.png
+
+# Dossiers de travail / livrables recette — contiennent des DONNÉES PERSONNELLES
+# (scan CNI, formulaires d'adhésion remplis). Ne JAMAIS committer.
+/LOGO PARTENAIRE/
+/GALERIE (1)/
+/livrables-recette/

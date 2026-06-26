@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Wallet, Landmark, Home, ArrowRight } from "lucide-react";
+import { Wallet, Landmark, ArrowRight } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { PageHero } from "@/components/PageHero";
 import { useTranslation } from "react-i18next";
@@ -18,12 +18,6 @@ const Products = () => {
       desc: t("products.creditDesc"),
       items: ["Crédit Ordinaire", "Crédit Expresse", "Crédit Scolaire", "Crédit Immobilier"],
       gradient: "from-primary-dark to-primary",
-    },
-    {
-      icon: Home, title: t("home.prodRealEstateTitle"), to: "/produits/immobilier",
-      desc: t("products.realEstateDesc"),
-      items: ["Duplex 4 & 5 pièces", "Villas 3, 4 & 5 pièces", "Tranches successives", "Accompagnement complet"],
-      gradient: "from-accent to-accent-glow",
     },
   ];
 

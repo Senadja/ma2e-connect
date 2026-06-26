@@ -8,6 +8,7 @@ import { Logo } from "../Logo";
 export const Footer = () => {
   const { t } = useTranslation();
   const { data: settings } = useSettings();
+  const contact = settings?.contact;
   const socials = [
     { Icon: Facebook, url: settings?.social?.facebook, label: "Facebook" },
     { Icon: Linkedin, url: settings?.social?.linkedin, label: "LinkedIn" },
@@ -66,16 +67,15 @@ export const Footer = () => {
             <ul className="space-y-2 text-sm">
               <li><Link to="/produits/epargne" className="hover:text-accent transition-smooth">{t("footer.savings")}</Link></li>
               <li><Link to="/produits/credits" className="hover:text-accent transition-smooth">{t("footer.credits")}</Link></li>
-              <li><Link to="/produits/immobilier" className="hover:text-accent transition-smooth">{t("footer.realEstate")}</Link></li>
             </ul>
           </div>
 
           <div>
             <h3 className="text-white font-display text-lg mb-4">{t("footer.contact")}</h3>
             <ul className="space-y-3 text-sm">
-              <li className="flex gap-3"><MapPin className="h-4 w-4 mt-0.5 shrink-0 text-accent" /> Avenue Houdaille, Immeuble SIDAM, 6ème étage, Plateau, Abidjan</li>
-              <li className="flex gap-3"><Phone className="h-4 w-4 mt-0.5 shrink-0 text-accent" /> (+225) 27 21 23 64 87</li>
-              <li className="flex gap-3"><Mail className="h-4 w-4 mt-0.5 shrink-0 text-accent" /> contact@ma2e.ci</li>
+              <li className="flex gap-3"><MapPin className="h-4 w-4 mt-0.5 shrink-0 text-accent" /> {contact?.address || "Avenue Houdaille, Immeuble SIDAM, 6ème étage, Plateau, Abidjan"}</li>
+              <li className="flex gap-3"><Phone className="h-4 w-4 mt-0.5 shrink-0 text-accent" /> {contact?.phone || "(+225) 27 21 23 64 87"}</li>
+              <li className="flex gap-3"><Mail className="h-4 w-4 mt-0.5 shrink-0 text-accent" /> {contact?.email || "info@ma2e.ci"}</li>
             </ul>
           </div>
         </div>

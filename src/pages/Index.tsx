@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ChevronDown, Wallet, Landmark, Home, Quote, TrendingUp, Users, Award, Coins, CheckCircle2, ShieldCheck } from "lucide-react";
+import { ArrowRight, ChevronDown, Wallet, Landmark, Quote, TrendingUp, Users, Award, Coins, CheckCircle2, ShieldCheck, Info } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { SEO } from "@/components/SEO";
 import { useReveal, useCounter } from "@/hooks/useReveal";
@@ -133,7 +133,7 @@ const Index = () => {
     ? settings.milestones
     : MILESTONES.map((m) => ({ year: m.year, title: t(`about.milestones.${m.year}.title`, { defaultValue: m.title }), desc: t(`about.milestones.${m.year}.desc`, { defaultValue: m.desc }) }));
   const pca = settings?.presidentQuote;
-  const pcaName = pca?.name || "Ahmadou BAKAYOKO";
+  const pcaName = pca?.name || "";
   const pcaInitials = pcaName.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   const pcaBgStyle = pca?.bgImage
     ? { backgroundImage: `url(${pca.bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }
@@ -156,7 +156,6 @@ const Index = () => {
   const products = [
     { icon: Wallet, title: t("home.prodSavingsTitle"), desc: t("home.prodSavingsDesc"), to: "/produits/epargne" },
     { icon: Landmark, title: t("home.prodCreditTitle"), desc: t("home.prodCreditDesc"), to: "/produits/credits" },
-    { icon: Home, title: t("home.prodRealEstateTitle"), desc: t("home.prodRealEstateDesc"), to: "/produits/immobilier" },
   ];
 
   const statIcons = [Users, Award, TrendingUp, Coins];
@@ -354,7 +353,10 @@ const Index = () => {
 
                 <div className="space-y-6">
                   <div className="flex justify-between items-end mb-2">
-                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{why?.growthLabel || t("home.whyFundsGrowth")}</span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground inline-flex items-center gap-1">
+                      {why?.growthLabel || t("home.whyFundsGrowth")}
+                      <Info className="h-3.5 w-3.5 text-muted-foreground/70 cursor-help" aria-label="Plus d'informations" title="Croissance annuelle moyenne du volume d'épargne collectée auprès des sociétaires de la MA2E." />
+                    </span>
                     <span className="text-primary font-bold">{why?.growthValue || t("home.whyPerYear")}</span>
                   </div>
                   <div className="flex items-end gap-3 h-48 pt-10">
@@ -387,9 +389,9 @@ const Index = () => {
             « {pca?.quote || t("home.quote")} »
           </blockquote>
           <div className="mt-10 flex items-center justify-center gap-4">
-            <div className="grid h-14 w-14 place-items-center rounded-full bg-gradient-gold text-accent-foreground font-bold">{pcaInitials}</div>
-            <div className="text-left">
-              <div className="font-semibold text-white">{pcaName}</div>
+            {pcaName && <div className="grid h-14 w-14 place-items-center rounded-full bg-gradient-gold text-accent-foreground font-bold">{pcaInitials}</div>}
+            <div className={pcaName ? "text-left" : "text-center"}>
+              {pcaName && <div className="font-semibold text-white">{pcaName}</div>}
               <div className="text-sm text-white/70">{pca?.role || t("home.quoteRole")}</div>
             </div>
           </div>
