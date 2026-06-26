@@ -2,16 +2,45 @@
 
 > Point de re-lecture unique pour reprendre le travail après un compactage de contexte
 > ou une nouvelle session. **À mettre à jour à la fin de chaque tâche significative.**
-> Dernière mise à jour : 2026-06-11.
+> Dernière mise à jour : 2026-06-26.
 
-## Git & déploiement (état au 2026-06-12)
+## Git & déploiement (état au 2026-06-26)
 - Remote : `github.com/Senadja/ma2e-connect`.
-- `main` (`95c7767`) = **ancienne version front statique, déployée par Vercel** (`ma2e-connect.vercel.app`). **Ne pas pousser dessus** sans gérer Vercel.
-- `online-vercel-backup` + tag `vercel-prod-2026-06-12` = sauvegarde de la prod Vercel.
-- `refonte-fullstack` = nouvelle version full-stack (branche de travail courante, poussée).
-- **Cible de déploiement** : front sur **Vercel**, backend (Node + PostgreSQL) sur **serveur dédié OVH**, tout en **Docker**.
-  Identifiants serveur fournis hors-repo (NE PAS committer ; à faire tourner en clé SSH + rotation du mot de passe).
-- **À décider avant déploiement** : domaine/sous-domaine de l'API (CORS + `VITE_API_URL`), stratégie de stockage des uploads (cf. ci-dessous).
+- **`main` = branche de PRODUCTION Vercel** → `ma2e-connect.vercel.app`. On y pousse via
+  `git push origin refonte-fullstack:main` (fast-forward). À jour au commit `6dee356`.
+- **`refonte-fullstack`** = branche de travail → déployée en **preview**
+  (`ma2e-connect-git-refonte-fullstack-…vercel.app`).
+  ⚠️ **Le back-office ne marche PAS sur l'URL de preview** (origine non autorisée par le CORS du backend).
+  → Utiliser **la prod `ma2e-connect.vercel.app`** pour l'admin. (Pour débloquer le preview : ajouter son
+  origine à `CORS_ORIGIN` côté backend OVH puis redéployer le backend.)
+- **Backend** : Node + PostgreSQL sur **OVH**, exposé via **Tailscale Funnel** `srv-ma2e.tail4cac84.ts.net`.
+  Le front (Vercel) réécrit `/api` et `/documents/uploads` vers ce backend (`vercel.json`).
+- **Synchro de contenu** : produits / FAQ / partenaires / réglages sont servis **depuis la base** ; mise à jour
+  via le CMS ou l'API (`PUT /settings/:key`, `PUT /products/:id`, `DELETE /faq/:id`…). Le code (`src/data/*`,
+  `seed-data.ts`) ne sert que de **repli au 1er rendu** + source des déploiements neufs.
+
+## Recette du CR du 26/06/2026 — TRAITÉE (déployée prod + base synchronisée)
+Refonte/correctifs suite au rapport de recette EBENYX/MA2E. Tous les amendements du CR sont en ligne.
+- **Anomalies** : bug bloquant formulaire (parsing JSON tolérant, `src/lib/api.ts`) ; pop-up/chatbot/Épargne
+  Expresse intermittents → suppression du `catch → repli` dans `useSettings`/`useProducts` (React Query garde la
+  dernière valeur valide) + Épargne Expresse réactivée en base.
+- **Formulaire d'adhésion** (`Adhesion.tsx`, refonte 4 onglets) : champ **Société** (liste), Nom de la mère,
+  ayants droit, personne à prévenir ; email pro non bloquant ; téléversement **CNI recto/verso** + passeport + photo ;
+  case **intention de paiement** (6 000 F + 8 000 F) ; « Devenir sociétaire ». **PDF pré-rempli** imprimable
+  téléchargeable au back-office (`src/lib/adhesionPdf.ts`, jsPDF) — signature **physique** à la MA2E.
+- **Contenu** : taux/durées produits, stats 20 ans / 6,3 Mds, FAQ, **info@ma2e.ci**, horaires sans samedi,
+  retrait nom Bakayoko, **retrait Projet Immobilier** (programme), infobulle croissance.
+- **Institution** : Vision du fondateur (photo Marcel ZADI KESSY + mot + nom, **cadrage XY** réglable au CMS) ;
+  organigramme avec vrais noms ; **organes en tableaux** (CA/CC/CS/CED) ; **personnel en cartes photo** (cadrage
+  réglable, composant `FocalPointPicker`). Sociétés membres : +CIE/SODECI/MA2E, −groupe Eranove.
+- **Back-office** : fix sessions expirées silencieuses (gestion globale du `401`, déconnexion+redirection) ;
+  coordonnées + horaires + email DCP éditables au CMS (Footer/Contact lisent les réglages) ; champs longs en textarea.
+- **Sécurité** : dossiers contenant des données personnelles (CNI, formulaires remplis) **git-ignorés**.
+- **Comptes seed à durcir avant usage réel** : `admin@ma2e.ci`/`admin123` + JWT_SECRET par défaut → à changer.
+
+**Restes mineurs / dépendances MA2E** : photos du personnel (seules DG/DAGF/RSI fournies, reste en initiales) ;
+image de la pop-up OQSF (réglage CMS « splash ») ; titre govTitle « une seule ligne » (F3, cosmétique) ;
+modèle PDF à ajuster si le formulaire officiel MA2E diffère de l'exemple.
 
 ## Stack
 - **Front** : Vite + React + React Router (SPA), react-i18next (FR/EN), React Query, zustand (`useAuth`).
