@@ -10,117 +10,170 @@ interface AppLike {
   data: Record<string, unknown>;
 }
 
-// Génère le formulaire d'adhésion / souscription au capital pré-rempli (PDF imprimable).
-// L'admin le télécharge depuis le back-office, l'imprime, et l'adhérent le signe à la MA2E.
-export function generateAdhesionPdf(app: AppLike) {
+// Montants du prélèvement (à confirmer avec MA2E — le CR indique 6 000 F de droit
+// d'adhésion ; l'ancien modèle imprimé indiquait 1 000 / 5 000).
+const FEE_ADHESION = "6 000";
+const FEE_PART = "8 000";
+
+const LOGO_URL = "/logo-ma2e.png";
+
+function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+// Génère le formulaire d'adhésion / souscription au capital pré-rempli (PDF imprimable),
+// reprenant la disposition du modèle officiel MA2E. L'admin le télécharge, l'imprime, et
+// l'adhérent le signe physiquement à la MA2E.
+export async function generateAdhesionPdf(app: AppLike) {
   const d = app.data || {};
-  const s = (v: unknown) => (v === null || v === undefined || v === "" ? "—" : String(v));
+  const s = (v: unknown) => (v === null || v === undefined || v === "" ? "" : String(v));
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = 210;
-  const M = 16;
-  const colW = (W - 2 * M) / 2;
+  const M = 15;
   let y = M;
 
-  // En-tête
+  // --- En-tête : logo + titre ---
+  const logo = await loadImage(LOGO_URL);
+  if (logo) {
+    const h = 16;
+    const w = h * (logo.naturalWidth / logo.naturalHeight || 1.5);
+    doc.addImage(logo, "PNG", M, y, w, h);
+  }
+  y += 19;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("MA2E — Mutuelle des Agents de l'Eau et de l'Électricité", W / 2, y, { align: "center" });
-  y += 7;
   doc.setFontSize(15);
-  doc.text("DEMANDE D'ADHÉSION / SOUSCRIPTION AU CAPITAL", W / 2, y, { align: "center" });
-  y += 8;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text(`Référence : ${app.id}`, M, y);
-  doc.text(`Date : ${app.date || ""}`, W - M, y, { align: "right" });
+  doc.setTextColor(0);
+  const title = "DEMANDE D'ADHÉSION / SOUSCRIPTION AU CAPITAL";
+  doc.text(title, M, y);
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.4);
+  doc.line(M, y + 1.5, M + doc.getTextWidth(title), y + 1.5);
+  doc.setLineWidth(0.2);
+  y += 9;
+
+  // --- Champs en ligne (label : valeur sur pointillés) ---
+  const row = (segments: { label: string; value: string }[]) => {
+    const segW = (W - 2 * M) / segments.length;
+    segments.forEach((seg, i) => {
+      const x = M + i * segW;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.setTextColor(0);
+      const lbl = `${seg.label} :`;
+      doc.text(lbl, x, y);
+      const vx = x + doc.getTextWidth(lbl) + 1.5;
+      const end = M + (i + 1) * segW - (i === segments.length - 1 ? 0 : 4);
+      doc.setFont("helvetica", "bold");
+      doc.text(seg.value, vx, y);
+      doc.setDrawColor(150);
+      doc.setLineDashPattern([0.7, 0.7], 0);
+      doc.line(vx, y + 1.3, end, y + 1.3);
+      doc.setLineDashPattern([], 0);
+    });
+    y += 8.2;
+  };
+
+  const naissance = [s(d.dateDeNaissance), s(d.lieuDeNaissance)].filter(Boolean).join(" à ");
+  row([{ label: "Je soussigné(e)", value: s(app.name) }]);
+  row([{ label: "Date de naissance et lieu de naissance", value: naissance }]);
+  row([{ label: "N° CNI", value: "" }]);
+  row([{ label: "Situation matrimoniale", value: s(d.situationMatrimoniale) }, { label: "Fonction", value: "" }]);
+  row([{ label: "Service", value: s(d.service) }, { label: "Boîte postale", value: "" }]);
+  row([{ label: "Matricule", value: s(app.matricule) }, { label: "Catégorie", value: s(d.categorie) }]);
+  row([
+    { label: "Société", value: s(d.societe) },
+    { label: "Direction", value: s(d.direction) },
+    { label: "Exploitation", value: s(d.exploitation) },
+  ]);
+  row([{ label: "Embauché(e) le", value: s(d.dateEmbauche) }]);
+  row([{ label: "Nom du conjoint(e)", value: "" }, { label: "Contacts", value: "" }]);
+  row([{ label: "Nom de la mère", value: s(d.nomMere) }]);
+  row([{ label: "Personnes à prévenir", value: s(d.personneAPrevenir) }, { label: "Contacts", value: s(d.contactPrevenir) }]);
+  row([{ label: "Ayants droit", value: s(d.ayantsDroit) }, { label: "Contacts", value: s(d.contactAyantsDroit) }]);
   y += 3;
-  doc.setDrawColor(170);
-  doc.line(M, y, W - M, y);
+
+  // --- Prélèvement ---
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.text("Donne mon accord pour le prélèvement sur mon salaire de la somme de :", M, y);
   y += 7;
-
-  const section = (title: string) => {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10.5);
-    doc.setTextColor(20, 90, 70);
-    doc.text(title, M, y);
-    doc.setTextColor(0);
-    y += 6;
-  };
-
-  const row = (l1: string, v1: string, l2?: string, v2?: string) => {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(120);
-    doc.text(l1.toUpperCase(), M, y);
-    if (l2) doc.text(l2.toUpperCase(), M + colW, y);
-    doc.setFontSize(10.5);
-    doc.setTextColor(0);
-    doc.text(v1, M, y + 4.8);
-    if (l2) doc.text(v2 || "—", M + colW, y + 4.8);
-    doc.setDrawColor(220);
-    doc.line(M, y + 6.3, M + colW - 6, y + 6.3);
-    if (l2) doc.line(M + colW, y + 6.3, W - M, y + 6.3);
-    y += 11.5;
-  };
-
-  const checkbox = (checked: unknown, label: string) => {
-    doc.setDrawColor(70);
-    doc.rect(M, y - 3.3, 4.2, 4.2);
+  const checkbox = (checked: unknown, amount: string, label: string) => {
+    doc.setDrawColor(60);
+    doc.setLineWidth(0.3);
+    doc.rect(M, y - 3.4, 4.4, 4.4);
     if (checked) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
-      doc.text("X", M + 0.7, y);
+      doc.text("X", M + 0.8, y);
     }
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10.5);
-    doc.setTextColor(0);
-    doc.text(label, M + 7, y);
-    y += 7.5;
+    doc.setFontSize(9.5);
+    doc.text(`${amount} F.CFA pour `, M + 7, y);
+    const bx = M + 7 + doc.getTextWidth(`${amount} F.CFA pour `);
+    doc.setFont("helvetica", "bold");
+    doc.text(label, bx, y);
+    doc.setLineWidth(0.2);
+    y += 7;
   };
-
-  section("Identité");
-  row("Nom et prénoms", s(app.name), "Nom de la mère", s(d.nomMere));
-  row("Date de naissance", s(d.dateDeNaissance), "Lieu de naissance", s(d.lieuDeNaissance));
-  row("Situation matrimoniale", s(d.situationMatrimoniale), "Adresse / Boîte postale", s(d.adresse));
-  y += 2;
-
-  section("Informations professionnelles");
-  row("Matricule", s(app.matricule), "Société", s(d.societe));
-  row("Catégorie", s(d.categorie), "Direction", s(d.direction));
-  row("Service", s(d.service), "Exploitation", s(d.exploitation));
-  y += 2;
-
-  section("Personnes liées");
-  row("Personne à prévenir", s(d.personneAPrevenir), "Contact", s(d.contactPrevenir));
-  row("Ayant(s) droit", s(d.ayantsDroit), "Contact", s(d.contactAyantsDroit));
-  y += 2;
-
-  section("Contact");
-  row("Téléphone", s(app.phone), "Email", s(app.email));
-  y += 2;
-
-  section("Engagement de paiement (prélèvement à la source)");
-  checkbox(d.intentionAdhesion, "Droit d'adhésion — 6 000 FCFA");
-  checkbox(d.intentionPart, "Souscription à la part sociale — 8 000 FCFA");
+  checkbox(d.intentionAdhesion, FEE_ADHESION, "le règlement de mon droit d'adhésion");
+  checkbox(d.intentionPart, FEE_PART, "la libération de ma part sociale");
   y += 6;
 
+  // --- Contact (gauche) + Signature (droite) ---
+  const colX = W / 2 + 8;
+  const startY = y;
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(9.5);
-  doc.setTextColor(0);
-  doc.text("Fait à ......................................................   le ......................................", M, y);
-  y += 13;
-  doc.text("Signature de l'adhérent (précédée de la mention « Lu et Approuvé ») :", M, y);
-  doc.setDrawColor(150);
-  doc.rect(M, y + 3, W - 2 * M, 24);
+  doc.text("Contact :", M, y);
+  doc.setFont("helvetica", "normal");
+  y += 6;
+  const contactLine = (label: string, value: string) => {
+    doc.text(`${label} :`, M, y);
+    doc.setFont("helvetica", "bold");
+    doc.text(value, M + 22, y);
+    doc.setFont("helvetica", "normal");
+    y += 5.5;
+  };
+  contactLine("Domicile", "");
+  contactLine("Bureau", "");
+  contactLine("Cellulaire", s(app.phone));
+  contactLine("E-mail", s(app.email));
 
-  // Pied de page
+  // Colonne signature (à droite)
+  let yr = startY;
+  doc.setFont("helvetica", "normal");
+  doc.text(`Fait à ...............................   le ${app.date || "...................."}`, colX, yr);
+  yr += 8;
+  doc.text("Signature", colX + 20, yr);
+  yr += 4.5;
+  doc.setFontSize(8);
+  doc.text("(Précédée de la mention « Lu et Approuvé »)", colX, yr);
+
+  // --- Mentions légales (encadré bas) ---
+  const fy = 268;
+  doc.setDrawColor(120);
+  doc.setLineWidth(0.2);
+  doc.rect(M, fy, W - 2 * M, 14);
+  doc.setFontSize(6.5);
+  doc.setTextColor(60);
+  const dpo =
+    "Les données personnelles recueillies font l'objet d'un traitement destiné à MA2E dans le cadre de votre adhésion. Vous pouvez exercer vos droits (accès, modification, suppression) à tout moment par courrier : DPO de MA2E, 18 BP 1210 Abidjan 18 ou par mail : privacyMA2E@ma2e.ci. Joindre une copie de votre pièce d'identité.";
+  doc.text(doc.splitTextToSize(dpo, W - 2 * M - 4), M + 2, fy + 3.5);
+  doc.setFontSize(6);
+  doc.setTextColor(90);
+  const legal =
+    "Institution Mutualiste d'Épargne et de Crédit sans but lucratif — Régie par l'ordonnance N°2011-367 du 3 novembre 2011 — Agrément N°A-1.1.9/09-03. Siège Social : 34 Avenue Houdaille, Plateau, 6ème étage, Immeuble SIDAM — 18 BP 1210 Abidjan 18.";
+  doc.text(doc.splitTextToSize(legal, W - 2 * M), M, fy + 17);
+
+  // Référence (discret, en haut à droite)
   doc.setFontSize(7.5);
   doc.setTextColor(130);
-  doc.text(
-    "Document généré depuis la plateforme E-MA2E à partir de la demande en ligne — à imprimer et à signer à la MA2E.",
-    W / 2,
-    287,
-    { align: "center" },
-  );
+  doc.text(`Réf. ${app.id}`, W - M, M + 2, { align: "right" });
 
   doc.save(`adhesion-${app.id}.pdf`);
 }

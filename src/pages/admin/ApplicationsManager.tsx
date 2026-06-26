@@ -529,7 +529,7 @@ export const ApplicationsManager = () => {
                     <div className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Traitement du dossier</div>
                     {selectedApp.category === "Adhésion" && (
                       <Button
-                        onClick={() => generateAdhesionPdf(selectedApp)}
+                        onClick={() => { void generateAdhesionPdf(selectedApp).catch(() => toast.error("Échec de la génération du PDF.")); }}
                         className="w-full rounded-xl h-11 gap-2 bg-primary hover:bg-primary-dark text-white"
                       >
                         <Download className="h-4 w-4" /> Télécharger le formulaire (PDF)

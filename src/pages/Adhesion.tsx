@@ -51,6 +51,7 @@ const formSchema = z.object({
   direction: z.string().optional(),
   service: z.string().optional(),
   exploitation: z.string().optional(),
+  dateEmbauche: z.string().optional(),
   // Proches
   personneAPrevenir: z.string().optional(),
   contactPrevenir: z.string().optional(),
@@ -93,7 +94,7 @@ const Adhesion = () => {
     defaultValues: {
       fullName: "", nomMere: "", situationMatrimoniale: "", email: "", phone: "",
       dateDeNaissance: "", lieuDeNaissance: "", adresse: "",
-      matricule: "", societe: "", categorie: "", direction: "", service: "", exploitation: "",
+      matricule: "", societe: "", categorie: "", direction: "", service: "", exploitation: "", dateEmbauche: "",
       personneAPrevenir: "", contactPrevenir: "", ayantsDroit: "", contactAyantsDroit: "",
       intentionAdhesion: false, intentionPart: false, acceptTerms: false,
     },
@@ -122,6 +123,7 @@ const Adhesion = () => {
             direction: values.direction,
             service: values.service,
             exploitation: values.exploitation,
+            dateEmbauche: values.dateEmbauche,
             personneAPrevenir: values.personneAPrevenir,
             contactPrevenir: values.contactPrevenir,
             ayantsDroit: values.ayantsDroit,
@@ -277,6 +279,11 @@ const Adhesion = () => {
                           )} />
                           <FormField control={form.control} name="exploitation" render={({ field }) => (
                             <FormItem><FormLabel>Exploitation</FormLabel><FormControl><Input placeholder="G31…" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <FormField control={form.control} name="dateEmbauche" render={({ field }) => (
+                            <FormItem><FormLabel>Date d'embauche</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
                           )} />
                         </div>
                         <div className="flex justify-between">
