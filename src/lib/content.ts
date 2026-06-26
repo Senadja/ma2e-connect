@@ -93,7 +93,6 @@ export function useProducts(type: "epargne" | "credit" | "immobilier") {
   return useQuery({
     queryKey: ["public", "products", type],
     queryFn: async () => {
-      try {
         const rows = await api<ApiProduct[]>(`/products?type=${type}`);
         if (type === "epargne") {
           return rows.map((p) => ({
@@ -126,9 +125,6 @@ export function useProducts(type: "epargne" | "credit" | "immobilier") {
           image: p.image,
           form: p.form,
         }));
-      } catch {
-        return fallback as any[];
-      }
     },
     initialData: fallback as any[],
   });
@@ -278,13 +274,10 @@ const fallbackSettings: SiteSettings = {
 export function useSettings() {
   return useQuery({
     queryKey: ["public", "settings"],
-    queryFn: async () => {
-      try {
-        return await api<SiteSettings>("/settings");
-      } catch {
-        return fallbackSettings;
-      }
-    },
+    // Pas de catch → repli : en cas d'échec réseau ponctuel, React Query conserve la
+    // dernière valeur valide (sinon chatbot/pop-up disparaissent par intermittence).
+    // Le repli reste assuré au 1er rendu par `initialData`.
+    queryFn: () => api<SiteSettings>("/settings"),
     initialData: fallbackSettings,
   });
 }
