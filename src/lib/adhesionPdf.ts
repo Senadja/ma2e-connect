@@ -39,12 +39,14 @@ export async function generateAdhesionPdf(app: AppLike) {
 
   // --- En-tête : logo + titre ---
   const logo = await loadImage(LOGO_URL);
+  let headerBottom = M + 6;
   if (logo) {
-    const h = 16;
+    const h = 14;
     const w = h * (logo.naturalWidth / logo.naturalHeight || 1.5);
     doc.addImage(logo, "PNG", M, y, w, h);
+    headerBottom = y + h;
   }
-  y += 19;
+  y = headerBottom + 9;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(15);
   doc.setTextColor(0);
@@ -154,8 +156,8 @@ export async function generateAdhesionPdf(app: AppLike) {
   doc.setFontSize(8);
   doc.text("(Précédée de la mention « Lu et Approuvé »)", colX, yr);
 
-  // --- Mentions légales (encadré bas) ---
-  const fy = 268;
+  // --- Mentions légales (encadré, juste sous le bloc contact/signature, avec un espace de signature) ---
+  const fy = Math.max(y, yr) + 22;
   doc.setDrawColor(120);
   doc.setLineWidth(0.2);
   doc.rect(M, fy, W - 2 * M, 14);
