@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -19,75 +18,84 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { FileText, UserPlus, CheckCircle2, Upload, Briefcase, User, X } from "lucide-react";
-import { useState, useRef } from "react";
+import { FileText, UserPlus, CheckCircle2, Upload, Briefcase, User, X, Users } from "lucide-react";
+import { useState } from "react";
 import { api } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 
+// Sociétés membres (liste déroulante du champ « Société »).
+const SOCIETES = ["CIE", "SODECI", "MA2E", "CIPREL", "ATINKOU", "AWALE", "GS2E", "SGA2E", "SIVE", "Smart Energy", "Autre"];
+
+// Pièces à téléverser : un champ distinct par type de document.
+const DOC_SLOTS = [
+  { key: "cniRecto", label: "CNI — Recto" },
+  { key: "cniVerso", label: "CNI — Verso" },
+  { key: "passeport", label: "Passeport (si pas de CNI)" },
+  { key: "photo", label: "Photo d'identité" },
+] as const;
+
 const formSchema = z.object({
-  // Informations Personnelles
+  // Personnel
   fullName: z.string().min(3, "Le nom complet est requis"),
-  email: z.string().email("Email invalide"),
-  phone: z.string().min(10, "Numéro de téléphone invalide"),
-  dateDeNaissance: z.string().min(1, "La date de naissance est requise"),
-  lieuDeNaissance: z.string().min(2, "Le lieu de naissance est requis"),
-  adresse: z.string().min(5, "L'adresse est requise"),
-  
-  // Informations Professionnelles
-  matricule: z.string().min(4, "Le matricule est requis"),
-  service: z.string().min(2, "Le service est requis"),
-  direction: z.string().min(2, "La direction est requise"),
-  site: z.string().min(2, "Le site d'affectation est requis"),
-  dateEmbauche: z.string().min(1, "La date d'embauche est requise"),
-  typeAdherent: z.enum(["actif", "retraite"]),
-  
-  // Documents (Simulés pour le moment)
+  nomMere: z.string().optional(),
+  situationMatrimoniale: z.string().optional(),
+  email: z.string().email("Email invalide").optional().or(z.literal("")), // non bloquant
+  phone: z.string().min(8, "Numéro de téléphone invalide"),
+  dateDeNaissance: z.string().optional(),
+  lieuDeNaissance: z.string().optional(),
+  adresse: z.string().optional(),
+  // Professionnel
+  matricule: z.string().min(1, "Le matricule est requis"),
+  societe: z.string().min(1, "La société est requise"),
+  categorie: z.string().optional(),
+  direction: z.string().optional(),
+  service: z.string().optional(),
+  exploitation: z.string().optional(),
+  // Proches
+  personneAPrevenir: z.string().optional(),
+  contactPrevenir: z.string().optional(),
+  ayantsDroit: z.string().optional(),
+  contactAyantsDroit: z.string().optional(),
+  // Engagement
+  intentionAdhesion: z.boolean().optional(),
+  intentionPart: z.boolean().optional(),
   acceptTerms: z.boolean().refine((val) => val === true, "Vous devez accepter les conditions"),
 });
+
+type Slot = (typeof DOC_SLOTS)[number]["key"];
 
 const Adhesion = () => {
   const { t } = useTranslation();
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
-  const [documents, setDocuments] = useState<{ name: string; path: string }[]>([]);
-  const [uploadingDoc, setUploadingDoc] = useState(false);
-  const docInputRef = useRef<HTMLInputElement>(null);
+  const [docs, setDocs] = useState<Partial<Record<Slot, { name: string; path: string }>>>({});
+  const [uploading, setUploading] = useState<Slot | null>(null);
 
-  const uploadDocuments = async (files: FileList) => {
-    setUploadingDoc(true);
+  const uploadSlot = async (slot: Slot, file: File) => {
+    setUploading(slot);
     try {
-      for (const file of Array.from(files)) {
-        const fd = new FormData();
-        fd.append("file", file);
-        const res = await api<{ path: string; name: string }>("/applications/documents", { method: "POST", isForm: true, body: fd });
-        setDocuments((d) => [...d, { name: res.name, path: res.path }]);
-      }
-      toast.success("Document(s) ajouté(s).");
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await api<{ path: string; name: string }>("/applications/documents", { method: "POST", isForm: true, body: fd });
+      setDocs((d) => ({ ...d, [slot]: { name: res.name, path: res.path } }));
+      toast.success("Document ajouté.");
     } catch (e: any) {
-      toast.error(e?.message || "Échec du téléversement (PDF, image ou Word, 8 Mo max).");
+      toast.error(e?.message || "Échec du téléversement (PDF ou image, 8 Mo max).");
     } finally {
-      setUploadingDoc(false);
+      setUploading(null);
     }
   };
-  const removeDocument = (i: number) => setDocuments((d) => d.filter((_, idx) => idx !== i));
+  const removeSlot = (slot: Slot) => setDocs((d) => { const n = { ...d }; delete n[slot]; return n; });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      fullName: "",
-      email: "",
-      phone: "",
-      dateDeNaissance: "",
-      lieuDeNaissance: "",
-      adresse: "",
-      matricule: "",
-      service: "",
-      direction: "",
-      site: "",
-      dateEmbauche: "",
-      typeAdherent: "actif",
-      acceptTerms: false,
+      fullName: "", nomMere: "", situationMatrimoniale: "", email: "", phone: "",
+      dateDeNaissance: "", lieuDeNaissance: "", adresse: "",
+      matricule: "", societe: "", categorie: "", direction: "", service: "", exploitation: "",
+      personneAPrevenir: "", contactPrevenir: "", ayantsDroit: "", contactAyantsDroit: "",
+      intentionAdhesion: false, intentionPart: false, acceptTerms: false,
     },
   });
 
@@ -98,21 +106,29 @@ const Adhesion = () => {
         method: "POST",
         body: {
           category: "adhésion",
-          type: values.typeAdherent === "retraite" ? "Adhésion (retraité)" : "Adhésion (actif)",
+          type: "Adhésion (sociétaire)",
           name: values.fullName,
           matricule: values.matricule,
-          email: values.email,
+          email: values.email || "",
           phone: values.phone,
           data: {
+            nomMere: values.nomMere,
+            situationMatrimoniale: values.situationMatrimoniale,
             dateDeNaissance: values.dateDeNaissance,
             lieuDeNaissance: values.lieuDeNaissance,
             adresse: values.adresse,
-            service: values.service,
+            societe: values.societe,
+            categorie: values.categorie,
             direction: values.direction,
-            site: values.site,
-            dateEmbauche: values.dateEmbauche,
-            typeAdherent: values.typeAdherent,
-            documents,
+            service: values.service,
+            exploitation: values.exploitation,
+            personneAPrevenir: values.personneAPrevenir,
+            contactPrevenir: values.contactPrevenir,
+            ayantsDroit: values.ayantsDroit,
+            contactAyantsDroit: values.contactAyantsDroit,
+            intentionAdhesion: values.intentionAdhesion,
+            intentionPart: values.intentionPart,
+            documents: docs,
           },
         },
       });
@@ -134,12 +150,8 @@ const Adhesion = () => {
             <CheckCircle2 className="h-10 w-10" />
           </div>
           <h1 className="font-display text-4xl font-bold">{t("adhesion.receivedTitle")}</h1>
-          <p className="mt-4 text-muted-foreground max-w-md text-lg">
-            {t("adhesion.receivedText")}
-          </p>
-          <Button asChild className="mt-10 rounded-full px-8">
-            <a href="/">{t("adhesion.backHome")}</a>
-          </Button>
+          <p className="mt-4 text-muted-foreground max-w-md text-lg">{t("adhesion.receivedText")}</p>
+          <Button asChild className="mt-10 rounded-full px-8"><a href="/">{t("adhesion.backHome")}</a></Button>
         </div>
       </Layout>
     );
@@ -147,14 +159,11 @@ const Adhesion = () => {
 
   return (
     <Layout>
-      <SEO 
-        title="Devenir adhérent" 
-        description="Rejoignez la MA2E pour bénéficier de nos services d'épargne, de crédit et de logement. Formulaire d'adhésion en ligne pour les agents de l'eau et de l'électricité." 
+      <SEO
+        title="Devenir sociétaire"
+        description="Rejoignez la MA2E pour bénéficier de nos services d'épargne et de crédit. Formulaire d'adhésion en ligne pour les agents de l'eau et de l'électricité."
       />
-      <PageHero
-        title={t("adhesion.heroTitle")}
-        subtitle={t("adhesion.heroSubtitle")}
-      />
+      <PageHero title="Devenir sociétaire" subtitle={t("adhesion.heroSubtitle")} />
 
       <section className="py-20">
         <div className="container max-w-5xl">
@@ -163,32 +172,17 @@ const Adhesion = () => {
               <div className="rounded-2xl bg-secondary/40 p-6">
                 <h3 className="font-display text-lg font-bold mb-4">{t("adhesion.whyJoin")}</h3>
                 <ul className="space-y-4">
-                  <li className="flex gap-3 text-sm">
-                    <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-                    <span>{t("adhesion.benefit1")}</span>
-                  </li>
-                  <li className="flex gap-3 text-sm">
-                    <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-                    <span>{t("adhesion.benefit2")}</span>
-                  </li>
-                  <li className="flex gap-3 text-sm">
-                    <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-                    <span>{t("adhesion.benefit3")}</span>
-                  </li>
+                  {[t("adhesion.benefit1"), t("adhesion.benefit2"), t("adhesion.benefit3")].map((b, i) => (
+                    <li key={i} className="flex gap-3 text-sm"><CheckCircle2 className="h-5 w-5 text-primary shrink-0" /><span>{b}</span></li>
+                  ))}
                 </ul>
               </div>
-
               <div className="rounded-2xl border border-border p-6">
-                <h3 className="font-display text-lg font-bold mb-4">{t("adhesion.requiredDocs")}</h3>
+                <h3 className="font-display text-lg font-bold mb-4">Pièces à fournir</h3>
                 <ul className="space-y-3">
-                  <li className="flex items-start gap-3 text-sm">
-                    <FileText className="h-4 w-4 text-primary mt-1" />
-                    <span>{t("adhesion.doc2")}</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-sm">
-                    <FileText className="h-4 w-4 text-primary mt-1" />
-                    <span>{t("adhesion.doc3")}</span>
-                  </li>
+                  {["CNI (recto et verso) ou passeport", "Photo d'identité"].map((d, i) => (
+                    <li key={i} className="flex items-start gap-3 text-sm"><FileText className="h-4 w-4 text-primary mt-1" /><span>{d}</span></li>
+                  ))}
                 </ul>
               </div>
             </div>
@@ -196,294 +190,179 @@ const Adhesion = () => {
             <div className="lg:col-span-3">
               <div className="rounded-2xl border border-border p-8 md:p-10 bg-card shadow-sm">
                 <div className="flex items-center gap-3 mb-8">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                    <UserPlus className="h-5 w-5" />
-                  </div>
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"><UserPlus className="h-5 w-5" /></div>
                   <h2 className="font-display text-2xl font-bold">{t("adhesion.fileTitle")}</h2>
                 </div>
 
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                      <TabsList className="grid w-full grid-cols-3 mb-10">
-                        <TabsTrigger value="personal" className="flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          <span className="hidden sm:inline">{t("adhesion.tabPersonal")}</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="professional" className="flex items-center gap-2">
-                          <Briefcase className="h-4 w-4" />
-                          <span className="hidden sm:inline">{t("adhesion.tabProfessional")}</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="documents" className="flex items-center gap-2">
-                          <Upload className="h-4 w-4" />
-                          <span className="hidden sm:inline">{t("adhesion.tabDocuments")}</span>
-                        </TabsTrigger>
+                      <TabsList className="grid w-full grid-cols-4 mb-10">
+                        <TabsTrigger value="personal" className="flex items-center gap-2"><User className="h-4 w-4" /><span className="hidden sm:inline">Personnel</span></TabsTrigger>
+                        <TabsTrigger value="professional" className="flex items-center gap-2"><Briefcase className="h-4 w-4" /><span className="hidden sm:inline">Professionnel</span></TabsTrigger>
+                        <TabsTrigger value="proches" className="flex items-center gap-2"><Users className="h-4 w-4" /><span className="hidden sm:inline">Proches</span></TabsTrigger>
+                        <TabsTrigger value="documents" className="flex items-center gap-2"><Upload className="h-4 w-4" /><span className="hidden sm:inline">Documents</span></TabsTrigger>
                       </TabsList>
 
+                      {/* PERSONNEL */}
                       <TabsContent value="personal" className="space-y-6 animate-in fade-in slide-in-from-right-2">
                         <div className="grid md:grid-cols-2 gap-6">
-                          <FormField
-                            control={form.control}
-                            name="fullName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{t("adhesion.fullName")}</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Jean Dupont" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="email"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{t("adhesion.email")}</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="j.dupont@cie.ci" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                          <FormField control={form.control} name="fullName" render={({ field }) => (
+                            <FormItem><FormLabel>Nom et prénoms *</FormLabel><FormControl><Input placeholder="Jean Dupont" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name="nomMere" render={({ field }) => (
+                            <FormItem><FormLabel>Nom de la mère</FormLabel><FormControl><Input placeholder="Nom de jeune fille" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
                         </div>
-
                         <div className="grid md:grid-cols-2 gap-6">
-                          <FormField
-                            control={form.control}
-                            name="phone"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{t("adhesion.phone")}</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="07 00 00 00 00" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="dateDeNaissance"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{t("adhesion.birthDate")}</FormLabel>
-                                <FormControl>
-                                  <Input type="date" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                          <FormField control={form.control} name="email" render={({ field }) => (
+                            <FormItem><FormLabel>Email (professionnel)</FormLabel><FormControl><Input placeholder="j.dupont@cie.ci" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name="phone" render={({ field }) => (
+                            <FormItem><FormLabel>Téléphone *</FormLabel><FormControl><Input placeholder="07 00 00 00 00" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
                         </div>
-
                         <div className="grid md:grid-cols-2 gap-6">
-                          <FormField
-                            control={form.control}
-                            name="lieuDeNaissance"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{t("adhesion.birthPlace")}</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Abidjan" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="adresse"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{t("adhesion.address")}</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Cocody, Cité des Arts" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                          <FormField control={form.control} name="dateDeNaissance" render={({ field }) => (
+                            <FormItem><FormLabel>Date de naissance</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name="lieuDeNaissance" render={({ field }) => (
+                            <FormItem><FormLabel>Lieu de naissance</FormLabel><FormControl><Input placeholder="Abidjan" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
                         </div>
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <FormField control={form.control} name="situationMatrimoniale" render={({ field }) => (
+                            <FormItem><FormLabel>Situation matrimoniale</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  {["Célibataire", "Marié(e)", "Veuf(ve)", "Divorcé(e)"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                </SelectContent>
+                              </Select><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name="adresse" render={({ field }) => (
+                            <FormItem><FormLabel>Adresse / Boîte postale</FormLabel><FormControl><Input placeholder="Cocody, 18 BP 1210" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                        </div>
+                        <div className="flex justify-end"><Button type="button" onClick={() => setActiveTab("professional")} className="rounded-full px-8">{t("adhesion.next")}</Button></div>
+                      </TabsContent>
 
-                        <div className="flex justify-end">
-                          <Button type="button" onClick={() => setActiveTab("professional")} className="rounded-full px-8">{t("adhesion.next")}</Button>
+                      {/* PROFESSIONNEL */}
+                      <TabsContent value="professional" className="space-y-6 animate-in fade-in slide-in-from-right-2">
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <FormField control={form.control} name="matricule" render={({ field }) => (
+                            <FormItem><FormLabel>Matricule *</FormLabel><FormControl><Input placeholder="ABC12345" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name="societe" render={({ field }) => (
+                            <FormItem><FormLabel>Société *</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Choisir votre société" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  {SOCIETES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                </SelectContent>
+                              </Select><FormMessage /></FormItem>
+                          )} />
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <FormField control={form.control} name="categorie" render={({ field }) => (
+                            <FormItem><FormLabel>Catégorie</FormLabel><FormControl><Input placeholder="Cadre, Agent de maîtrise…" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name="direction" render={({ field }) => (
+                            <FormItem><FormLabel>Direction</FormLabel><FormControl><Input placeholder="DG / DAGF…" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <FormField control={form.control} name="service" render={({ field }) => (
+                            <FormItem><FormLabel>Service</FormLabel><FormControl><Input placeholder="Exploitation, Finances…" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name="exploitation" render={({ field }) => (
+                            <FormItem><FormLabel>Exploitation</FormLabel><FormControl><Input placeholder="G31…" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                        </div>
+                        <div className="flex justify-between">
+                          <Button type="button" variant="outline" onClick={() => setActiveTab("personal")} className="rounded-full px-8">{t("adhesion.previous")}</Button>
+                          <Button type="button" onClick={() => setActiveTab("proches")} className="rounded-full px-8">{t("adhesion.next")}</Button>
                         </div>
                       </TabsContent>
 
-                      <TabsContent value="professional" className="space-y-6 animate-in fade-in slide-in-from-right-2">
+                      {/* PROCHES */}
+                      <TabsContent value="proches" className="space-y-6 animate-in fade-in slide-in-from-right-2">
+                        <p className="text-sm text-muted-foreground">Personne(s) à prévenir et ayant(s) droit en cas de besoin.</p>
                         <div className="grid md:grid-cols-2 gap-6">
-                          <FormField
-                            control={form.control}
-                            name="matricule"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{t("adhesion.matricule")}</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="ABC12345" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="direction"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{t("adhesion.direction")}</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="DSI / DRH" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                          <FormField control={form.control} name="personneAPrevenir" render={({ field }) => (
+                            <FormItem><FormLabel>Personne à prévenir</FormLabel><FormControl><Input placeholder="Nom et prénoms" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name="contactPrevenir" render={({ field }) => (
+                            <FormItem><FormLabel>Contact</FormLabel><FormControl><Input placeholder="07 00 00 00 00" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
                         </div>
-
                         <div className="grid md:grid-cols-2 gap-6">
-                          <FormField
-                            control={form.control}
-                            name="service"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{t("adhesion.service")}</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Développement" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="site"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{t("adhesion.site")}</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Abidjan - Plateau" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                          <FormField control={form.control} name="ayantsDroit" render={({ field }) => (
+                            <FormItem><FormLabel>Ayant(s) droit</FormLabel><FormControl><Input placeholder="Nom et prénoms" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name="contactAyantsDroit" render={({ field }) => (
+                            <FormItem><FormLabel>Contact</FormLabel><FormControl><Input placeholder="07 00 00 00 00" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
                         </div>
-
-                        <div className="grid md:grid-cols-2 gap-6">
-                          <FormField
-                            control={form.control}
-                            name="dateEmbauche"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{t("adhesion.hireDate")}</FormLabel>
-                                <FormControl>
-                                  <Input type="date" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="typeAdherent"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>{t("adhesion.status")}</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder={t("adhesion.select")} />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="actif">{t("adhesion.activeAgent")}</SelectItem>
-                                    <SelectItem value="retraite">{t("adhesion.retired")}</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
                         <div className="flex justify-between">
-                          <Button type="button" variant="outline" onClick={() => setActiveTab("personal")} className="rounded-full px-8">{t("adhesion.previous")}</Button>
+                          <Button type="button" variant="outline" onClick={() => setActiveTab("professional")} className="rounded-full px-8">{t("adhesion.previous")}</Button>
                           <Button type="button" onClick={() => setActiveTab("documents")} className="rounded-full px-8">{t("adhesion.next")}</Button>
                         </div>
                       </TabsContent>
 
+                      {/* DOCUMENTS */}
                       <TabsContent value="documents" className="space-y-8 animate-in fade-in slide-in-from-right-2">
-                        <div className="space-y-4">
-                          <div
-                            onClick={() => docInputRef.current?.click()}
-                            className="p-8 border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-center hover:bg-secondary/20 transition-colors cursor-pointer"
-                          >
-                            <Upload className="h-10 w-10 text-muted-foreground mb-4" />
-                            <h4 className="font-bold">{uploadingDoc ? t("adhesion.uploading") : t("adhesion.uploadDocs")}</h4>
-                            <p className="text-sm text-muted-foreground mt-2 max-w-xs">
-                              {t("adhesion.uploadHint")}
-                            </p>
-                          </div>
-                          <input
-                            ref={docInputRef}
-                            type="file"
-                            multiple
-                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                            className="hidden"
-                            onChange={(e) => { if (e.target.files?.length) uploadDocuments(e.target.files); e.target.value = ""; }}
-                          />
-
-                          {documents.length > 0 && (
-                            <ul className="space-y-2">
-                              {documents.map((doc, i) => (
-                                <li key={i} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
-                                  <FileText className="h-5 w-5 text-primary shrink-0" />
-                                  <span className="text-sm font-medium flex-1 truncate">{doc.name}</span>
-                                  <button type="button" onClick={() => removeDocument(i)} className="text-muted-foreground hover:text-destructive shrink-0" aria-label={t("adhesion.removeDoc")}>
-                                    <X className="h-4 w-4" />
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                          
-                          <div className="bg-secondary/30 rounded-xl p-4 flex items-center gap-3">
-                            <FileText className="h-5 w-5 text-primary" />
-                            <div className="text-sm flex-1">
-                              <p className="font-medium">{t("adhesion.paperForm")}</p>
-                              <p className="text-xs text-muted-foreground">{t("adhesion.paperFormHint")}</p>
-                            </div>
-                            <Button variant="ghost" size="sm" className="text-primary hover:text-primary-dark" asChild>
-                              <a href="/documents/formulaires/Formulaire_FICHE D'ADHESION E-MA2E.pdf" download>{t("adhesion.download")}</a>
-                            </Button>
-                          </div>
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          {DOC_SLOTS.map((slot) => {
+                            const file = docs[slot.key];
+                            return (
+                              <div key={slot.key} className="rounded-2xl border border-border p-4">
+                                <p className="text-sm font-semibold mb-2">{slot.label}</p>
+                                {file ? (
+                                  <div className="flex items-center gap-2 rounded-lg bg-secondary/40 p-2">
+                                    <FileText className="h-4 w-4 text-primary shrink-0" />
+                                    <span className="text-xs flex-1 truncate">{file.name}</span>
+                                    <button type="button" onClick={() => removeSlot(slot.key)} className="text-muted-foreground hover:text-destructive shrink-0" aria-label="Retirer"><X className="h-4 w-4" /></button>
+                                  </div>
+                                ) : (
+                                  <label className="flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-border p-4 text-center cursor-pointer hover:bg-secondary/20 transition-colors">
+                                    <Upload className="h-5 w-5 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground">{uploading === slot.key ? "Envoi…" : "PDF ou image · 8 Mo"}</span>
+                                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadSlot(slot.key, e.target.files[0]); e.target.value = ""; }} />
+                                  </label>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
 
-                        <FormField
-                          control={form.control}
-                          name="acceptTerms"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                />
-                              </FormControl>
-                              <div className="space-y-1 leading-none">
-                                <FormLabel className="text-sm">
-                                  {t("adhesion.certify")}
-                                </FormLabel>
-                              </div>
+                        {/* Engagement de paiement (à la source) */}
+                        <div className="rounded-2xl border border-border bg-secondary/20 p-5 space-y-3">
+                          <p className="text-sm font-semibold">Engagement de paiement (prélèvement à la source)</p>
+                          <p className="text-xs text-muted-foreground">En cochant ci-dessous, vous marquez votre intention de payer. Aucun paiement n'est effectué en ligne : les règlements se font à la source.</p>
+                          <FormField control={form.control} name="intentionAdhesion" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center gap-3 space-y-0">
+                              <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                              <FormLabel className="text-sm font-normal">Droit d'adhésion — <strong>6 000 FCFA</strong></FormLabel>
                             </FormItem>
-                          )}
-                        />
+                          )} />
+                          <FormField control={form.control} name="intentionPart" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center gap-3 space-y-0">
+                              <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                              <FormLabel className="text-sm font-normal">Souscription à la part sociale — <strong>8 000 FCFA</strong></FormLabel>
+                            </FormItem>
+                          )} />
+                        </div>
+
+                        <FormField control={form.control} name="acceptTerms" render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                            <div className="space-y-1 leading-none"><FormLabel className="text-sm">{t("adhesion.certify")}</FormLabel></div>
+                          </FormItem>
+                        )} />
 
                         <div className="flex justify-between pt-4">
-                          <Button type="button" variant="outline" onClick={() => setActiveTab("professional")} className="rounded-full px-8">{t("adhesion.previous")}</Button>
+                          <Button type="button" variant="outline" onClick={() => setActiveTab("proches")} className="rounded-full px-8">{t("adhesion.previous")}</Button>
                           <Button type="submit" disabled={loading} className="rounded-full px-10 bg-gradient-gold text-accent-foreground font-bold shadow-gold hover:scale-[1.02] transition-all">
                             {loading ? t("adhesion.submitting") : t("adhesion.submit")}
                           </Button>
@@ -502,4 +381,3 @@ const Adhesion = () => {
 };
 
 export default Adhesion;
-
