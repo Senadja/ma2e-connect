@@ -9,7 +9,8 @@ import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Tras
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { MILESTONES } from "@/data/site";
-import { DEFAULT_ORG_TREE, type OrgNode } from "@/lib/content";
+import { DEFAULT_ORG_TREE, DEFAULT_PERSONNEL, type OrgNode } from "@/lib/content";
+import { FocalPointPicker } from "@/components/admin/FocalPointPicker";
 import { DEFAULT_LANGUAGES, LANGUAGE_PRESETS, BASE_LANG, type Language } from "@/lib/translate";
 import { DEFAULT_BRAND_HEX, applyBrandColor } from "@/lib/brandColor";
 
@@ -61,6 +62,9 @@ export const SettingsManager = () => {
   const [social, setSocial] = useState({ facebook: "", linkedin: "", twitter: "" });
   const [stats, setStats] = useState<StatItem[]>(DEFAULT_STATS);
   const [orgTree, setOrgTree] = useState<OrgNode>(DEFAULT_ORG_TREE);
+  const [personnel, setPersonnel] = useState(DEFAULT_PERSONNEL);
+  const updatePersonnel = (i: number, field: string, value: string) =>
+    setPersonnel((arr) => arr.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)));
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>(DEFAULT_ORG_UNITS);
   const [splash, setSplash] = useState({ enabled: false, image: "/images/splash-accueil.png", link: "" });
   const whyDefaults: Record<string, string> = {
@@ -178,6 +182,7 @@ export const SettingsManager = () => {
     if (data.contact) setContact({ address: data.contact.address || "", phone: data.contact.phone || "", email: data.contact.email || "", hours: data.contact.hours || "", dcpEmail: data.contact.dcpEmail || "" });
     if (data.social) setSocial({ facebook: data.social.facebook || "", linkedin: data.social.linkedin || "", twitter: data.social.twitter || "" });
     if (Array.isArray(data.stats) && data.stats.length) setStats(data.stats);
+    if (Array.isArray(data.personnel) && data.personnel.length) setPersonnel(data.personnel);
     if (data.orgTree && data.orgTree.name) setOrgTree(data.orgTree);
     if (Array.isArray(data.orgUnits) && data.orgUnits.length) setOrgUnits(data.orgUnits.map((u) => ({ name: u.name || "", note: u.note || "" })));
     if (data.splash) setSplash({ enabled: !!data.splash.enabled, image: data.splash.image || "/images/splash-accueil.png", link: data.splash.link || "" });
@@ -440,14 +445,19 @@ export const SettingsManager = () => {
               </div>
               <div className="grid gap-2"><label className={label}>Photo du fondateur (chemin ou URL)</label>
                 <Input value={aboutContent.founderPhoto || ""} onChange={(e) => setAboutContent({ ...aboutContent, founderPhoto: e.target.value })} placeholder="/images/fondateur.jpg — téléversez via la Médiathèque puis collez le chemin ici" />
-                {aboutContent.founderPhoto && <img src={aboutContent.founderPhoto} alt="" className="mt-1 h-24 w-24 rounded-xl object-cover border border-border" />}
+                {aboutContent.founderPhoto && (
+                  <div className="mt-2 rounded-lg border border-border/60 bg-secondary/20 p-3">
+                    <p className="text-[11px] text-muted-foreground mb-2">Cadrage : déplacez les curseurs pour bien centrer le visage.</p>
+                    <FocalPointPicker src={aboutContent.founderPhoto} value={aboutContent.founderPhotoPos} onChange={(pos) => setAboutContent({ ...aboutContent, founderPhotoPos: pos })} shape="rounded" />
+                  </div>
+                )}
               </div>
               <div className="h-px bg-border/60" />
               <p className="text-[11px] text-muted-foreground">Les 3 missions affichées sur « À propos ».</p>
               {[1, 2, 3].map((n) => (
                 <div key={n} className="grid sm:grid-cols-2 gap-4">
                   <div className="grid gap-2"><label className={label}>Mission {n} — titre</label><Input value={aboutContent[`mission${n}Title`]} onChange={(e) => setAboutContent({ ...aboutContent, [`mission${n}Title`]: e.target.value })} /></div>
-                  <div className="grid gap-2"><label className={label}>Mission {n} — description</label><Input value={aboutContent[`mission${n}Desc`]} onChange={(e) => setAboutContent({ ...aboutContent, [`mission${n}Desc`]: e.target.value })} /></div>
+                  <div className="grid gap-2"><label className={label}>Mission {n} — description</label><textarea value={aboutContent[`mission${n}Desc`]} onChange={(e) => setAboutContent({ ...aboutContent, [`mission${n}Desc`]: e.target.value })} rows={2} className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" /></div>
                 </div>
               ))}
               <Button onClick={() => save.mutate({ key: "aboutContent", value: aboutContent })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les textes</Button>
@@ -517,6 +527,27 @@ export const SettingsManager = () => {
             </CardContent>
           </Card>
 
+          {/* Personnel de la MA2E — photos & cadrage */}
+          <Card className="border-border/40 shadow-sm">
+            <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Users className="h-5 w-5 text-primary" /> Personnel de la MA2E</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-[11px] text-muted-foreground">Cartes affichées sur « À propos ». Collez le chemin d'une photo (téléversée via la Médiathèque) puis ajustez le <strong>cadrage</strong> avec les curseurs pour bien centrer le visage dans le cercle.</p>
+              <div className="space-y-3 max-h-[30rem] overflow-y-auto pr-1">
+                {personnel.map((p, i) => (
+                  <div key={i} className="rounded-xl border border-border/50 p-3 space-y-2">
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <div className="grid gap-1"><label className={label}>Nom</label><Input value={p.name} onChange={(e) => updatePersonnel(i, "name", e.target.value)} /></div>
+                      <div className="grid gap-1"><label className={label}>Fonction</label><Input value={p.role} onChange={(e) => updatePersonnel(i, "role", e.target.value)} /></div>
+                    </div>
+                    <div className="grid gap-1"><label className={label}>Photo (chemin)</label><Input value={p.photo || ""} onChange={(e) => updatePersonnel(i, "photo", e.target.value)} placeholder="/images/team/…" /></div>
+                    {p.photo && <FocalPointPicker src={p.photo} value={p.pos} onChange={(pos) => updatePersonnel(i, "pos", pos)} shape="circle" />}
+                  </div>
+                ))}
+              </div>
+              <Button onClick={() => save.mutate({ key: "personnel", value: personnel })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer le personnel</Button>
+            </CardContent>
+          </Card>
+
         </TabsContent>
 
         {/* ============================ GÉNÉRAL ============================ */}
@@ -561,7 +592,7 @@ export const SettingsManager = () => {
               </div>
               {flashInfos.items.map((it, i) => (
                 <div key={i} className="grid gap-2 rounded-xl border border-border/50 p-3">
-                  <Input value={it.text} onChange={(e) => updateInfo(i, "text", e.target.value)} placeholder="Message de l'info…" />
+                  <textarea value={it.text} onChange={(e) => updateInfo(i, "text", e.target.value)} placeholder="Message de l'info…" rows={2} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
                   <div className="flex gap-2">
                     <Input value={it.url} onChange={(e) => updateInfo(i, "url", e.target.value)} placeholder="URL au clic (optionnel) — /adhesion ou https://…" />
                     <Button type="button" variant="ghost" size="icon" onClick={() => removeInfo(i)} disabled={flashInfos.items.length <= 1} className="shrink-0 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>

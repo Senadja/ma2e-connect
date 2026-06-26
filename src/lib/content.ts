@@ -219,6 +219,28 @@ export const DEFAULT_ORG_TREE: OrgNode = {
   ],
 };
 
+// Personnel de la MA2E (annuaire officiel) — repli ; éditable au CMS. Photos : DG, DAGF, RSI.
+export const DEFAULT_PERSONNEL: { name: string; role: string; photo?: string; pos?: string }[] = [
+  { name: "GOUEDAN Franck Olivier", role: "Directeur Général", photo: "/images/team/dg.jpg", pos: "50% 18%" },
+  { name: "KONE Madoussou Yari épse Sombo", role: "Directrice Administration Gestion Finance", photo: "/images/team/dagf.jpg", pos: "50% 16%" },
+  { name: "TOURE Adama", role: "Responsable des Systèmes d'Information", photo: "/images/team/rsi.jpg", pos: "50% 30%" },
+  { name: "KOISSI Aya Philomène épse Kouamé", role: "Responsable Audit Interne et QSE" },
+  { name: "DJEDJERO Natacha", role: "Contrôleur Interne" },
+  { name: "AKPOUE Affouet Rosabelle", role: "Responsable Exploitation" },
+  { name: "TRAORE Ismaël", role: "Responsable Financier" },
+  { name: "N'ZI Obodji Micheline", role: "Responsable Administratif" },
+  { name: "ASSI Amon Anna Patricia", role: "Gestionnaire de Portefeuille" },
+  { name: "KOUASSI Affoua Elisabeth", role: "Gestionnaire de Portefeuille" },
+  { name: "M'BEDJI Guie Banou Tresore", role: "Gestionnaire de Portefeuille" },
+  { name: "ZEZE Amenan Marie Sophie Ange", role: "Gestionnaire de Portefeuille" },
+  { name: "GOUA Jean Moïse", role: "Comptable" },
+  { name: "BONOUMAN Effossy Marie Esther", role: "Caissière" },
+  { name: "DEGNI Achiket Patricia Laure", role: "Secrétaire de Direction" },
+  { name: "KONE Siriki", role: "Chauffeur-Coursier" },
+  { name: "OKAIGNE Achi Abel", role: "Chauffeur DG" },
+  { name: "KONAN François Léopold", role: "Chauffeur DAGF" },
+];
+
 export interface SiteSettings {
   flashBanner?: { enabled: boolean; text: string; link?: string };
   flashInfos?: { enabled: boolean; speed?: number; items: { text: string; url?: string }[] };
@@ -227,7 +249,7 @@ export interface SiteSettings {
   orgChart?: OrgChart;
   orgTree?: OrgNode;
   orgUnits?: OrgUnit[];
-  personnel?: { name: string; role: string; photo?: string }[];
+  personnel?: { name: string; role: string; photo?: string; pos?: string }[];
   splash?: { enabled: boolean; image: string; link?: string };
   whatsapp?: { enabled: boolean; phone: string; message?: string };
   chatbot?: { enabled: boolean; url: string };
@@ -239,7 +261,7 @@ export interface SiteSettings {
   };
   presidentQuote?: { quote?: string; name?: string; role?: string; bgImage?: string; bgColor?: string };
   homeHero?: { badge?: string; title1?: string; title2?: string; leadPre?: string; leadMembers?: string; leadPost?: string; ctaProducts?: string; ctaJoin?: string };
-  aboutContent?: { founderVision?: string; founderQuote?: string; founderName?: string; founderRole?: string; founderPhoto?: string; mission1Title?: string; mission1Desc?: string; mission2Title?: string; mission2Desc?: string; mission3Title?: string; mission3Desc?: string };
+  aboutContent?: { founderVision?: string; founderQuote?: string; founderName?: string; founderRole?: string; founderPhoto?: string; founderPhotoPos?: string; mission1Title?: string; mission1Desc?: string; mission2Title?: string; mission2Desc?: string; mission3Title?: string; mission3Desc?: string };
   milestones?: { year: string; title: string; desc: string }[];
   languages?: { code: string; label: string }[];
   branding?: { primary?: string };

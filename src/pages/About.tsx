@@ -2,7 +2,7 @@ import { Layout } from "@/components/layout/Layout";
 import { PageHero } from "@/components/PageHero";
 import { useReveal, useCounter } from "@/hooks/useReveal";
 import { MILESTONES, STATS } from "@/data/site";
-import { useSettings, DEFAULT_ORG_TREE, type OrgNode } from "@/lib/content";
+import { useSettings, DEFAULT_ORG_TREE, DEFAULT_PERSONNEL, type OrgNode } from "@/lib/content";
 import { useTranslation } from "react-i18next";
 import { Quote, ShieldCheck, Wallet, Briefcase, Users, Award, TrendingUp, Coins } from "lucide-react";
 
@@ -126,28 +126,6 @@ const DEFAULT_ORG_UNITS = [
   ] },
 ];
 
-// Personnel de la MA2E (annuaire officiel) — repli ; éditable au CMS. Photos fournies : DG, DAGF, RSI.
-const DEFAULT_PERSONNEL = [
-  { name: "GOUEDAN Franck Olivier", role: "Directeur Général", photo: "/images/team/dg.jpg" },
-  { name: "KONE Madoussou Yari épse Sombo", role: "Directrice Administration Gestion Finance", photo: "/images/team/dagf.jpg" },
-  { name: "TOURE Adama", role: "Responsable des Systèmes d'Information", photo: "/images/team/rsi.jpg" },
-  { name: "KOISSI Aya Philomène épse Kouamé", role: "Responsable Audit Interne et QSE" },
-  { name: "DJEDJERO Natacha", role: "Contrôleur Interne" },
-  { name: "AKPOUE Affouet Rosabelle", role: "Responsable Exploitation" },
-  { name: "TRAORE Ismaël", role: "Responsable Financier" },
-  { name: "N'ZI Obodji Micheline", role: "Responsable Administratif" },
-  { name: "ASSI Amon Anna Patricia", role: "Gestionnaire de Portefeuille" },
-  { name: "KOUASSI Affoua Elisabeth", role: "Gestionnaire de Portefeuille" },
-  { name: "M'BEDJI Guie Banou Tresore", role: "Gestionnaire de Portefeuille" },
-  { name: "ZEZE Amenan Marie Sophie Ange", role: "Gestionnaire de Portefeuille" },
-  { name: "GOUA Jean Moïse", role: "Comptable" },
-  { name: "BONOUMAN Effossy Marie Esther", role: "Caissière" },
-  { name: "DEGNI Achiket Patricia Laure", role: "Secrétaire de Direction" },
-  { name: "KONE Siriki", role: "Chauffeur-Coursier" },
-  { name: "OKAIGNE Achi Abel", role: "Chauffeur DG" },
-  { name: "KONAN François Léopold", role: "Chauffeur DAGF" },
-];
-
 const About = () => {
   const { t } = useTranslation();
   const r1 = useReveal(); const r2 = useReveal(); const r3 = useReveal(); const r4 = useReveal();
@@ -187,7 +165,7 @@ const About = () => {
             <Quote className="absolute top-4 right-4 md:top-6 md:right-6 h-12 w-12 md:h-20 md:w-20 text-white/10" />
             <div className="shrink-0">
               {about?.founderPhoto ? (
-                <img src={about.founderPhoto} alt={founderName} className="h-40 w-40 md:h-52 md:w-52 rounded-2xl object-cover ring-4 ring-white/15 shadow-lg" />
+                <img src={about.founderPhoto} alt={founderName} style={{ objectPosition: about?.founderPhotoPos || "50% 20%" }} className="h-40 w-40 md:h-52 md:w-52 rounded-2xl object-cover ring-4 ring-white/15 shadow-lg" />
               ) : (
                 <div className="h-40 w-40 md:h-52 md:w-52 rounded-2xl bg-white/10 ring-4 ring-white/15 grid place-items-center" aria-hidden>
                   <span className="font-display text-5xl font-bold text-white/80">{founderInitials}</span>
@@ -325,7 +303,7 @@ const About = () => {
               return (
                 <div key={p.name} className="rounded-2xl bg-card border border-border p-5 text-center hover:shadow-elegant transition-smooth">
                   {p.photo ? (
-                    <img src={p.photo} alt={p.name} loading="lazy" className="mx-auto h-24 w-24 rounded-full object-cover ring-2 ring-primary/10" />
+                    <img src={p.photo} alt={p.name} loading="lazy" style={{ objectPosition: p.pos || "50% 25%" }} className="mx-auto h-24 w-24 rounded-full object-cover ring-2 ring-primary/10" />
                   ) : (
                     <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-gradient-primary text-white font-display text-2xl font-bold">{initials}</div>
                   )}
