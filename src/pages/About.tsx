@@ -2,10 +2,13 @@ import { Layout } from "@/components/layout/Layout";
 import { PageHero } from "@/components/PageHero";
 import { useReveal, useCounter } from "@/hooks/useReveal";
 import { MILESTONES, STATS } from "@/data/site";
-import { useSettings, DEFAULT_ORG_TREE, DEFAULT_PERSONNEL } from "@/lib/content";
-import { OrgChartView } from "@/components/OrgChart";
+import { useSettings, DEFAULT_PERSONNEL } from "@/lib/content";
 import { useTranslation } from "react-i18next";
-import { Quote, ShieldCheck, Wallet, Briefcase, Users, Award, TrendingUp, Coins } from "lucide-react";
+import { Quote, ShieldCheck, Wallet, Briefcase, Users, Award, TrendingUp, Coins, Download, ZoomIn } from "lucide-react";
+
+// Organigramme officiel (image) — affiché tel quel ; téléchargeable en PDF.
+const ORG_IMG = "/images/organigramme-ma2e.png";
+const ORG_PDF = "/documents/institutionnel/Organigramme de la MA2E - MISE A JOUR LE 22-05-2026.pdf";
 
 const StatItem = ({ stat, icon: Icon }: { stat: typeof STATS[number]; icon: any }) => {
   const { ref, value } = useCounter<HTMLDivElement>(stat.value);
@@ -87,8 +90,6 @@ const About = () => {
     : MILESTONES.map((m) => ({ year: m.year, title: t(`about.milestones.${m.year}.title`, { defaultValue: m.title }), desc: t(`about.milestones.${m.year}.desc`, { defaultValue: m.desc }) }));
   const statIcons = [Users, Award, TrendingUp, Coins];
 
-  // Organigramme (section « Organisation ») : arbre éditable au CMS, repli sur l'encadrement officiel.
-  const orgTree = settings?.orgTree ?? DEFAULT_ORG_TREE;
   const missions = [
     { icon: Wallet, title: about?.mission1Title || t("about.mission1Title"), desc: about?.mission1Desc || t("about.mission1Desc") },
     { icon: Briefcase, title: about?.mission2Title || t("about.mission2Title"), desc: about?.mission2Desc || t("about.mission2Desc") },
@@ -191,7 +192,34 @@ const About = () => {
             <h2 className="mt-2 font-display text-4xl md:text-5xl font-bold">{t("about.orgTitle")}</h2>
           </div>
 
-          <OrgChartView root={orgTree} />
+          <figure>
+            <a
+              href={ORG_IMG}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative block overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
+            >
+              <img
+                src={ORG_IMG}
+                alt="Organigramme officiel de la MA2E (mise à jour du 22/05/2026)"
+                className="mx-auto h-auto w-full max-w-3xl"
+                loading="lazy"
+              />
+              <span className="pointer-events-none absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-background/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm opacity-0 transition-opacity group-hover:opacity-100">
+                <ZoomIn className="h-3.5 w-3.5" /> Agrandir
+              </span>
+            </a>
+            <figcaption className="mt-4">
+              <a
+                href={ORG_PDF}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+              >
+                <Download className="h-4 w-4" /> Télécharger l'organigramme (PDF)
+              </a>
+            </figcaption>
+          </figure>
         </div>
       </section>
 

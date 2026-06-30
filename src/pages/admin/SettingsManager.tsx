@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { MILESTONES } from "@/data/site";
 import { DEFAULT_ORG_TREE, DEFAULT_PERSONNEL, type OrgNode } from "@/lib/content";
-import { OrgChartView } from "@/components/OrgChart";
 import { FocalPointPicker } from "@/components/admin/FocalPointPicker";
 import { DEFAULT_LANGUAGES, LANGUAGE_PRESETS, BASE_LANG, type Language } from "@/lib/translate";
 import { DEFAULT_BRAND_HEX, applyBrandColor } from "@/lib/brandColor";
@@ -492,18 +491,19 @@ export const SettingsManager = () => {
             <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Network className="h-5 w-5 text-primary" /> Organigramme</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <p className="text-[11px] text-muted-foreground">
-                Structure affichée dans la section « Organisation » de la page À propos. Chaque ligne est un poste ou un organe ;
-                « <Plus className="inline h-3 w-3" /> » ajoute un sous-élément (indenté en dessous), les flèches réordonnent, la corbeille supprime.
-                Périmètre conseillé : jusqu'aux directeurs/responsables.
+                Le site affiche l'<strong>organigramme officiel</strong> (image) dans la section « Organisation » de la page À propos —
+                ci-dessous, tel qu'il apparaît aux visiteurs. Pour le mettre à jour, remplacez le fichier
+                <code className="mx-1 rounded bg-secondary px-1">public/images/organigramme-ma2e.png</code>
+                (et le PDF dans la médiathèque) ou demandez à l'administrateur technique.
               </p>
-              <div className="rounded-lg border border-border/60 bg-secondary/20 p-3 space-y-1.5">
-                {renderOrgNode(orgTree, [])}
-              </div>
-              <Button onClick={saveTree} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer l'organigramme</Button>
-              {/* Aperçu — rendu identique au site (front) */}
               <div className="rounded-xl border border-border/60 bg-secondary/20 p-4">
-                <p className="mb-3 text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Aperçu (tel qu'affiché sur le site)</p>
-                <OrgChartView root={orgTree} />
+                <p className="mb-3 text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Affiché sur le site</p>
+                <a href="/images/organigramme-ma2e.png" target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border border-border bg-white">
+                  <img src="/images/organigramme-ma2e.png" alt="Organigramme officiel de la MA2E" className="mx-auto h-auto w-full max-w-2xl" />
+                </a>
+                <a href="/documents/institutionnel/Organigramme de la MA2E - MISE A JOUR LE 22-05-2026.pdf" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+                  <Save className="h-4 w-4" /> Télécharger le PDF
+                </a>
               </div>
             </CardContent>
           </Card>
