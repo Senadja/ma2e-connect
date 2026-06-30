@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { MILESTONES } from "@/data/site";
 import { DEFAULT_ORG_TREE, DEFAULT_PERSONNEL, type OrgNode } from "@/lib/content";
+import { OrgChartView } from "@/components/OrgChart";
 import { FocalPointPicker } from "@/components/admin/FocalPointPicker";
 import { DEFAULT_LANGUAGES, LANGUAGE_PRESETS, BASE_LANG, type Language } from "@/lib/translate";
 import { DEFAULT_BRAND_HEX, applyBrandColor } from "@/lib/brandColor";
@@ -499,6 +500,11 @@ export const SettingsManager = () => {
                 {renderOrgNode(orgTree, [])}
               </div>
               <Button onClick={saveTree} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer l'organigramme</Button>
+              {/* Aperçu — rendu identique au site (front) */}
+              <div className="rounded-xl border border-border/60 bg-secondary/20 p-4">
+                <p className="mb-3 text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Aperçu (tel qu'affiché sur le site)</p>
+                <OrgChartView root={orgTree} />
+              </div>
             </CardContent>
           </Card>
 

@@ -2,7 +2,8 @@ import { Layout } from "@/components/layout/Layout";
 import { PageHero } from "@/components/PageHero";
 import { useReveal, useCounter } from "@/hooks/useReveal";
 import { MILESTONES, STATS } from "@/data/site";
-import { useSettings, DEFAULT_ORG_TREE, DEFAULT_PERSONNEL, type OrgNode } from "@/lib/content";
+import { useSettings, DEFAULT_ORG_TREE, DEFAULT_PERSONNEL } from "@/lib/content";
+import { OrgChartView } from "@/components/OrgChart";
 import { useTranslation } from "react-i18next";
 import { Quote, ShieldCheck, Wallet, Briefcase, Users, Award, TrendingUp, Coins } from "lucide-react";
 
@@ -19,59 +20,7 @@ const StatItem = ({ stat, icon: Icon }: { stat: typeof STATS[number]; icon: any 
   );
 };
 
-// Carte d'un poste / organe — le style dépend de la profondeur dans l'arbre.
-const OrgCard = ({ node, depth }: { node: OrgNode; depth: number }) => {
-  if (depth === 0) {
-    return (
-      <div className="inline-block rounded-2xl bg-gradient-primary text-primary-foreground px-7 py-5 shadow-elegant transition-transform hover:-translate-y-0.5">
-        <div className="font-display text-lg md:text-xl font-bold">{node.name}</div>
-        {node.role && <div className="text-xs text-white/70 mt-0.5">{node.role}</div>}
-      </div>
-    );
-  }
-  if (depth >= 4) {
-    return (
-      <div className="inline-block rounded-lg bg-card border border-border px-3 py-2 text-left shadow-sm transition-colors hover:border-primary/40">
-        <span className="text-sm font-semibold">{node.name}</span>
-        {node.role && <span className="block text-[11px] text-muted-foreground">{node.role}</span>}
-      </div>
-    );
-  }
-  return (
-    <div className={`inline-block rounded-xl bg-card px-5 py-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-elegant ${depth === 1 ? "border-2 border-primary/20" : "border border-border"}`}>
-      <div className="font-display font-bold text-sm md:text-base">{node.name}</div>
-      {node.role && <div className="text-[11px] text-muted-foreground mt-0.5">{node.role}</div>}
-    </div>
-  );
-};
 
-// Branche récursive : disposition horizontale en haut, liste verticale dès qu'on descend en profondeur.
-const OrgBranch = ({ node, depth }: { node: OrgNode; depth: number }) => {
-  const kids = node.children ?? [];
-  const vertical = depth >= 3;
-  return (
-    <li>
-      <OrgCard node={node} depth={depth} />
-      {kids.length > 0 && (
-        <ul className={vertical ? "org-v" : "org-h"}>
-          {kids.map((child, i) => (
-            <OrgBranch key={`${child.name}-${i}`} node={child} depth={depth + 1} />
-          ))}
-        </ul>
-      )}
-    </li>
-  );
-};
-
-const OrgChartView = ({ root }: { root: OrgNode }) => (
-  <div className="overflow-x-auto pb-2 text-center">
-    <div className="org-tree">
-      <ul>
-        <OrgBranch node={root} depth={0} />
-      </ul>
-    </div>
-  </div>
-);
 
 // Organes de gouvernance (composition officielle MEMBRES DES ORGANES 2026) — repli ; éditable au CMS.
 const DEFAULT_ORG_UNITS = [
