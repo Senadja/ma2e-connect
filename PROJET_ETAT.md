@@ -12,15 +12,20 @@
   `src/components/OrgChart.tsx` : organes en grille 1/2/4 col + structures rattachées en arbre
   vertical indenté). Le **BO affiche le même composant** (aperçu) → BO = front. Conforme au PDF
   officiel (MAJ 22/05/2026). Vérifié 375/1280 px sans scroll horizontal.
-- **Organigramme → IMAGE officielle** (choix client « c'est mieux ») : front + BO affichent
-  `public/images/organigramme-ma2e.png` (rendu du PDF officiel) + lien de téléchargement du PDF.
-  Composant interactif `OrgChart.tsx` supprimé.
+- **Organigramme → SVG vectoriel** (`src/components/OrgChartSvg.tsx`) reproduisant la
+  **disposition exacte du PDF officiel** (AG → 4 organes → DG + Staff DG + colonne RAI/RSI/Contrôleur
+  avec lien pointillé Surveillance→Audit → DAGF → 4 services → sous-services), net/responsive, sans
+  débordement (375/1280 vérifiés), + lien de téléchargement du PDF. Front + BO utilisent ce composant.
+  Étapes intermédiaires (arbre interactif, puis image PNG) abandonnées au profit du SVG (« l'image
+  n'est pas l'idéale »). Pour modifier : éditer `OrgChartSvg.tsx`.
 - **Dossier d'adhésion PDF — FAIT** (`adhesionPdf.ts`, choix client = Option 3) : **3 pages** =
   P1 Adhésion/Capital + P2 Demande d'Épargne (Épargne Expresse cochée/obligatoire, identité
   pré-remplie, société cochée, montants/période vierges = réglés à l'agence « à la source »,
   Prélèvement coché) + P3 Pièce d'identité (CNI recto/verso embarqués depuis `data.documents`,
   images uniquement ; PDF/Word ignorés). Pages Ordinaire/Logement facultatives **omises** (Option 3).
   Vérifié par rendu headless (3 pages conformes à l'exemple).
+  **Montant Expresse auto-rempli selon la catégorie** (`expresseAmountByCategory`) : Cadre sup 10 000 /
+  Cadre 5 000 / Maîtrise 5 000 / Employé-Ouvrier-Exécution 1 500 ; période laissée vierge (à la source).
 
 ## Git & déploiement (état au 2026-06-26)
 - Remote : `github.com/Senadja/ma2e-connect`.

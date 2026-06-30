@@ -4,10 +4,10 @@ import { useReveal, useCounter } from "@/hooks/useReveal";
 import { MILESTONES, STATS } from "@/data/site";
 import { useSettings, DEFAULT_PERSONNEL } from "@/lib/content";
 import { useTranslation } from "react-i18next";
-import { Quote, ShieldCheck, Wallet, Briefcase, Users, Award, TrendingUp, Coins, Download, ZoomIn } from "lucide-react";
+import { Quote, ShieldCheck, Wallet, Briefcase, Users, Award, TrendingUp, Coins, Download } from "lucide-react";
+import { OrgChartSvg } from "@/components/OrgChartSvg";
 
-// Organigramme officiel (image) — affiché tel quel ; téléchargeable en PDF.
-const ORG_IMG = "/images/organigramme-ma2e.png";
+// Organigramme officiel — version vectorielle (disposition du PDF) + lien de téléchargement du PDF.
 const ORG_PDF = "/documents/institutionnel/Organigramme de la MA2E - MISE A JOUR LE 22-05-2026.pdf";
 
 const StatItem = ({ stat, icon: Icon }: { stat: typeof STATS[number]; icon: any }) => {
@@ -193,22 +193,9 @@ const About = () => {
           </div>
 
           <figure>
-            <a
-              href={ORG_IMG}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group relative block overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
-            >
-              <img
-                src={ORG_IMG}
-                alt="Organigramme officiel de la MA2E (mise à jour du 22/05/2026)"
-                className="mx-auto h-auto w-full max-w-3xl"
-                loading="lazy"
-              />
-              <span className="pointer-events-none absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-background/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm opacity-0 transition-opacity group-hover:opacity-100">
-                <ZoomIn className="h-3.5 w-3.5" /> Agrandir
-              </span>
-            </a>
+            <div className="rounded-2xl border border-border bg-white p-4 shadow-sm md:p-6">
+              <OrgChartSvg />
+            </div>
             <figcaption className="mt-4">
               <a
                 href={ORG_PDF}
