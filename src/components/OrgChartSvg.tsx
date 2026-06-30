@@ -61,14 +61,14 @@ const vline = (a: Box, b: Box, key: string) => (
 );
 
 const FILL: Record<Kind, string> = {
-  root: "#15803d",
+  root: "#2b6ca3",
   organ: "#d6e7f6",
   lead: "#c3dcef",
   node: "#e7f1fb",
   leaf: "#eef5fb",
 };
 const BORDER: Record<Kind, string> = {
-  root: "#0f5c2e",
+  root: "#1d4e75",
   organ: "#2b6ca3",
   lead: "#2b6ca3",
   node: "#6b9ec9",

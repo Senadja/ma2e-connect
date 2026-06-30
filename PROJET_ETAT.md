@@ -17,7 +17,9 @@
   avec lien pointillé Surveillance→Audit → DAGF → 4 services → sous-services), net/responsive, sans
   débordement (375/1280 vérifiés), + lien de téléchargement du PDF. Front + BO utilisent ce composant.
   Étapes intermédiaires (arbre interactif, puis image PNG) abandonnées au profit du SVG (« l'image
-  n'est pas l'idéale »). Pour modifier : éditer `OrgChartSvg.tsx`.
+  n'est pas l'idéale »). Cadre AG en **bleu** (cohérent PDF). **Upload d'image possible au BO**
+  (réglage `orgImage` ; si présente, l'image téléversée remplace le SVG sur le front). Pour modifier
+  le schéma par défaut : éditer `OrgChartSvg.tsx`.
 - **Dossier d'adhésion PDF — FAIT** (`adhesionPdf.ts`, choix client = Option 3) : **3 pages** =
   P1 Adhésion/Capital + P2 Demande d'Épargne (Épargne Expresse cochée/obligatoire, identité
   pré-remplie, société cochée, montants/période vierges = réglés à l'agence « à la source »,

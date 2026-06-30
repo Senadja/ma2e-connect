@@ -194,7 +194,11 @@ const About = () => {
 
           <figure>
             <div className="rounded-2xl border border-border bg-white p-4 shadow-sm md:p-6">
-              <OrgChartSvg />
+              {settings?.orgImage ? (
+                <img src={settings.orgImage} alt="Organigramme officiel de la MA2E" className="mx-auto h-auto w-full" />
+              ) : (
+                <OrgChartSvg />
+              )}
             </div>
             <figcaption className="mt-4">
               <a

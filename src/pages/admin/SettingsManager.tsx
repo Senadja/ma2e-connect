@@ -24,6 +24,7 @@ interface Settings {
   social?: { facebook: string; linkedin: string; twitter: string };
   stats?: StatItem[];
   orgTree?: OrgNode;
+  orgImage?: string;
   orgUnits?: OrgUnit[];
   splash?: { enabled: boolean; image: string; link: string };
   whatsapp?: { enabled: boolean; phone: string; message: string };
@@ -67,6 +68,23 @@ export const SettingsManager = () => {
   const updatePersonnel = (i: number, field: string, value: string) =>
     setPersonnel((arr) => arr.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)));
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>(DEFAULT_ORG_UNITS);
+  const [orgImage, setOrgImage] = useState<string>("");
+  const [uploadingOrg, setUploadingOrg] = useState(false);
+  const orgImgRef = useRef<HTMLInputElement>(null);
+  const uploadOrgImage = async (file: File) => {
+    setUploadingOrg(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { path } = await api<{ path: string }>("/uploads", { method: "POST", auth: true, isForm: true, body: fd });
+      setOrgImage(path);
+      toast.success("Image téléversée. N'oubliez pas d'enregistrer.");
+    } catch (e: any) {
+      toast.error(e?.message || "Téléversement impossible.");
+    } finally {
+      setUploadingOrg(false);
+    }
+  };
   const [splash, setSplash] = useState({ enabled: false, image: "/images/splash-accueil.png", link: "" });
   const whyDefaults: Record<string, string> = {
     kicker: t("home.whyKicker"), titleStart: t("home.whyTitle1"), titleEm: t("home.whyTitleEm"), lead: t("home.whyLead"),
@@ -185,6 +203,7 @@ export const SettingsManager = () => {
     if (Array.isArray(data.stats) && data.stats.length) setStats(data.stats);
     if (Array.isArray(data.personnel) && data.personnel.length) setPersonnel(data.personnel);
     if (data.orgTree && data.orgTree.name) setOrgTree(data.orgTree);
+    if (typeof data.orgImage === "string") setOrgImage(data.orgImage);
     if (Array.isArray(data.orgUnits) && data.orgUnits.length) setOrgUnits(data.orgUnits.map((u) => ({ name: u.name || "", note: u.note || "" })));
     if (data.splash) setSplash({ enabled: !!data.splash.enabled, image: data.splash.image || "/images/splash-accueil.png", link: data.splash.link || "" });
     if (data.whatsapp) setWhatsapp({ enabled: !!data.whatsapp.enabled, phone: data.whatsapp.phone || "", message: data.whatsapp.message || "" });
@@ -492,16 +511,33 @@ export const SettingsManager = () => {
             <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Network className="h-5 w-5 text-primary" /> Organigramme</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <p className="text-[11px] text-muted-foreground">
-                Le site affiche l'<strong>organigramme officiel</strong> (MAJ 22/05/2026) dans la section « Organisation » de la page À propos —
-                ci-dessous, exactement comme il apparaît aux visiteurs. La structure et les noms sont définis dans
-                <code className="mx-1 rounded bg-secondary px-1">src/components/OrgChartSvg.tsx</code>
-                (modification par l'administrateur technique).
+                Section « Organisation » de la page À propos. Par défaut, le site affiche le <strong>schéma officiel</strong> intégré
+                (MAJ 22/05/2026). Pour le mettre à jour, vous pouvez <strong>téléverser une image</strong> (PNG/JPG) de l'organigramme :
+                elle remplacera alors le schéma par défaut. Supprimez-la pour revenir au schéma intégré.
               </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button type="button" variant="outline" onClick={() => orgImgRef.current?.click()} disabled={uploadingOrg} className="rounded-full gap-2">
+                  <Upload className="h-4 w-4" /> {uploadingOrg ? "Téléversement…" : "Téléverser une image"}
+                </Button>
+                <input ref={orgImgRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadOrgImage(f); e.target.value = ""; }} />
+                {orgImage && (
+                  <Button type="button" variant="ghost" onClick={() => setOrgImage("")} className="rounded-full gap-2 text-muted-foreground hover:text-destructive">
+                    <Trash2 className="h-4 w-4" /> Retirer l'image (revenir au schéma)
+                  </Button>
+                )}
+                <Button onClick={() => save.mutate({ key: "orgImage", value: orgImage })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer</Button>
+              </div>
               <div className="rounded-xl border border-border/60 bg-white p-4">
-                <p className="mb-3 text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Affiché sur le site</p>
-                <OrgChartSvg />
+                <p className="mb-3 text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+                  {orgImage ? "Image téléversée (affichée sur le site)" : "Schéma par défaut (affiché sur le site)"}
+                </p>
+                {orgImage ? (
+                  <img src={orgImage} alt="Organigramme téléversé" className="mx-auto h-auto w-full max-w-2xl rounded-lg border border-border" />
+                ) : (
+                  <OrgChartSvg />
+                )}
                 <a href="/documents/institutionnel/Organigramme de la MA2E - MISE A JOUR LE 22-05-2026.pdf" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline">
-                  <Save className="h-4 w-4" /> Télécharger le PDF
+                  <Save className="h-4 w-4" /> Télécharger le PDF officiel
                 </a>
               </div>
             </CardContent>

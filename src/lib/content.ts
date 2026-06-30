@@ -264,6 +264,7 @@ export interface SiteSettings {
   social?: { facebook: string; linkedin: string; twitter: string };
   orgChart?: OrgChart;
   orgTree?: OrgNode;
+  orgImage?: string; // image d'organigramme téléversée au CMS (remplace le schéma SVG par défaut si présente)
   orgUnits?: OrgUnit[];
   personnel?: { name: string; role: string; photo?: string; pos?: string }[];
   splash?: { enabled: boolean; image: string; link?: string };
