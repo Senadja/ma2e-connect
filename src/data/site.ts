@@ -86,11 +86,11 @@ export const NEWS: NewsArticle[] = [
     author: "Direction de la Communication",
     readTime: "4 min",
     content: [
-      { type: "p", text: "La Mutuelle des Agents de l'Eau et de l'Électricité (MA2E) a le plaisir de convier l'ensemble de ses 7 335 sociétaires à l'Assemblée Générale Ordinaire 2025, qui se tiendra le samedi 12 avril 2025 à 9h00 à l'Hôtel Pullman d'Abidjan-Plateau." },
+      { type: "p", text: "La Mutuelle des Agents de l'Eau et de l'Électricité (MA2E) a le plaisir de convier l'ensemble de ses 8 430 sociétaires à l'Assemblée Générale Ordinaire 2025, qui se tiendra le samedi 12 avril 2025 à 9h00 à l'Hôtel Pullman d'Abidjan-Plateau." },
       { type: "h2", text: "Ordre du jour" },
       { type: "list", items: ["Présentation du rapport moral du Conseil d'Administration", "Lecture du rapport financier de l'exercice 2024", "Approbation des comptes annuels et affectation du résultat", "Renouvellement partiel du Conseil d'Administration", "Perspectives stratégiques 2025-2027", "Questions diverses"] },
       { type: "h2", text: "Un exercice 2024 marqué par la croissance" },
-      { type: "p", text: "L'année 2024 a été particulièrement dynamique pour notre mutuelle avec une augmentation de 12% du volume d'épargne collectée et plus de 2,4 milliards de FCFA de crédits accordés à nos sociétaires. Le programme immobilier a également franchi un cap symbolique avec la livraison de la deuxième tranche de logements." },
+      { type: "p", text: "L'année 2024 a été particulièrement dynamique pour notre mutuelle avec une augmentation de 12% du volume d'épargne collectée et plus de 6,3 milliards de FCFA de crédits accordés à nos sociétaires. Le programme immobilier a également franchi un cap symbolique avec la livraison de la deuxième tranche de logements." },
       { type: "quote", text: "Cette assemblée est un moment fort de notre vie démocratique. Chaque sociétaire est invité à contribuer activement aux décisions qui façonnent l'avenir de notre mutuelle." },
       { type: "p", text: "Les documents préparatoires (rapport moral, états financiers, projet de résolutions) sont disponibles sur la plateforme E-MA2E à compter du 25 mars 2025. Votre participation est essentielle." },
     ],

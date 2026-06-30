@@ -71,7 +71,7 @@ export const SettingsManager = () => {
     kicker: t("home.whyKicker"), titleStart: t("home.whyTitle1"), titleEm: t("home.whyTitleEm"), lead: t("home.whyLead"),
     feat1Title: t("home.whyFeat1Title"), feat1Desc: t("home.whyFeat1Desc"),
     feat2Title: t("home.whyFeat2Title"), feat2Desc: t("home.whyFeat2Desc"),
-    stat1Value: "7 335", stat1Label: t("home.whyActiveMembers"),
+    stat1Value: "8 430", stat1Label: t("home.whyActiveMembers"),
     stat2Value: "2006", stat2Label: t("home.whyFoundedIn"),
     growthLabel: t("home.whyFundsGrowth"), growthValue: t("home.whyPerYear"),
   };

@@ -346,7 +346,7 @@ const Index = () => {
 
                 <div className="grid grid-cols-2 gap-6 mb-10">
                   <div className="p-6 rounded-3xl bg-primary/5 border border-primary/10">
-                    <div className="text-3xl font-display font-bold text-primary mb-1">{why?.stat1Value || "7 335"}</div>
+                    <div className="text-3xl font-display font-bold text-primary mb-1">{why?.stat1Value || "8 430"}</div>
                     <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{why?.stat1Label || t("home.whyActiveMembers")}</div>
                   </div>
                   <div className="p-6 rounded-3xl bg-accent/5 border border-accent/10 text-right">
