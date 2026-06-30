@@ -2,15 +2,15 @@ export const FAQ_CATEGORIES = ["Adhésion", "Épargne", "Crédit", "E-MA2E"] as 
 export type FaqCategory = typeof FAQ_CATEGORIES[number];
 
 export const FAQS: { category: FaqCategory; q: string; a: string }[] = [
-  { category: "Adhésion", q: "Qui peut devenir adhérent de la MA2E ?", a: "Tout agent en activité des sociétés du secteur de l'eau et de l'électricité (CIE, SODECI, et structures affiliées) peut devenir adhérent." },
+  { category: "Adhésion", q: "Qui peut devenir sociétaire de la MA2E ?", a: "Tout agent en activité des sociétés du secteur de l'eau et de l'électricité (CIE, SODECI, et structures affiliées) peut devenir sociétaire." },
   { category: "Adhésion", q: "Quels sont les frais d'adhésion ?", a: "L'adhésion comprend un droit unique de 6 000 FCFA et la souscription à la part sociale. Les détails sont disponibles en agence." },
   { category: "Adhésion", q: "Comment soumettre ma demande d'adhésion ?", a: "Téléchargez le formulaire dans la médiathèque, complétez-le et déposez-le en agence avec les pièces justificatives demandées." },
   { category: "Épargne", q: "Quels sont les types d'épargne proposés ?", a: "La MA2E propose 5 formules : Épargne Expresse, Ordinaire, Logement, Dépôt à terme simple et DAT à versements progressifs." },
   { category: "Épargne", q: "Mon épargne est-elle disponible à tout moment ?", a: "Cela dépend de la formule choisie. L'Épargne Expresse est disponible à tout moment, alors que les DAT sont bloqués sur la durée contractuelle." },
-  { category: "Crédit", q: "Quelles sont les conditions pour obtenir un crédit ?", a: "Être adhérent depuis au moins 6 mois, être à jour de ses cotisations et présenter un dossier complet (justificatifs de revenus, projet, garanties)." },
+  { category: "Crédit", q: "Quelles sont les conditions pour obtenir un crédit ?", a: "Être sociétaire depuis au moins 6 mois, être à jour de ses cotisations et présenter un dossier complet (justificatifs de revenus, projet, garanties)." },
   { category: "Crédit", q: "Quel est le délai de traitement d'un dossier ?", a: "Crédit Expresse : 48h. Crédit Ordinaire : 7 jours ouvrés. Crédit Immobilier : 15 à 30 jours selon complexité du dossier." },
   { category: "Crédit", q: "Puis-je rembourser par anticipation ?", a: "Oui, le remboursement anticipé est possible sans pénalité sur la plupart de nos formules." },
-  { category: "E-MA2E", q: "Qu'est-ce que la plateforme E-MA2E ?", a: "E-MA2E est l'espace digital permettant aux adhérents de consulter leur compte, télécharger leurs relevés et effectuer des opérations en ligne." },
+  { category: "E-MA2E", q: "Qu'est-ce que la plateforme E-MA2E ?", a: "E-MA2E est l'espace digital permettant aux sociétaires de consulter leur compte, télécharger leurs relevés et effectuer des opérations en ligne." },
   { category: "E-MA2E", q: "Combien coûte l'accès à E-MA2E ?", a: "L'abonnement est de 500 FCFA par mois, prélevé directement sur votre compte." },
   { category: "E-MA2E", q: "J'ai oublié mon mot de passe, que faire ?", a: "Cliquez sur « Mot de passe oublié » sur la page de connexion, ou contactez le support à info@ma2e.ci." },
 ];

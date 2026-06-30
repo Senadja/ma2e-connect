@@ -90,13 +90,13 @@ const DATA_LABELS: Record<string, string> = {
   exploitation: "Exploitation",
   site: "Site d'affectation",
   dateEmbauche: "Date d'embauche",
-  typeAdherent: "Statut adhérent",
+  typeAdherent: "Statut sociétaire",
   personneAPrevenir: "Personne à prévenir",
   contactPrevenir: "Contact (personne à prévenir)",
   ayantsDroit: "Ayant(s) droit",
   contactAyantsDroit: "Contact (ayant droit)",
-  intentionAdhesion: "Intention — droit d'adhésion (6 000 F)",
-  intentionPart: "Intention — part sociale (8 000 F)",
+  intentionAdhesion: "Intention — droit d'adhésion (1 000 F)",
+  intentionPart: "Intention — part sociale (5 000 F)",
 };
 
 // Causes de refus pré-définies (cases à cocher) — accélèrent la saisie de l'admin.
@@ -276,11 +276,19 @@ export const ApplicationsManager = () => {
     toast.success(`${filteredApps.length} demande(s) exportée(s).`);
   };
 
-  const documents: { name: string; path: string }[] = Array.isArray((selectedApp?.data as any)?.documents)
-    ? (selectedApp!.data as any).documents
+  // `documents` peut être un tableau (ancien format) ou un objet { slot: {name, path} } (formulaire actuel).
+  const rawDocs = (selectedApp?.data as any)?.documents;
+  const documents: { name: string; path: string }[] = Array.isArray(rawDocs)
+    ? rawDocs
+    : rawDocs && typeof rawDocs === "object"
+    ? (Object.values(rawDocs) as { name: string; path: string }[])
     : [];
+  const signature =
+    typeof (selectedApp?.data as any)?.signature === "string" ? ((selectedApp!.data as any).signature as string) : "";
   const dataEntries = selectedApp
-    ? Object.entries(selectedApp.data).filter(([k, v]) => k !== "documents" && v !== "" && v != null)
+    ? Object.entries(selectedApp.data).filter(
+        ([k, v]) => k !== "documents" && k !== "signature" && v !== "" && v != null,
+      )
     : [];
 
   return (
@@ -483,6 +491,16 @@ export const ApplicationsManager = () => {
                           </li>
                         ))}
                       </ul>
+                    </div>
+                  )}
+
+                  {/* Signature du demandeur (si fournie en ligne) */}
+                  {signature && (
+                    <div className="pt-6 border-t space-y-3">
+                      <div className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Signature</div>
+                      <div className="rounded-xl border border-border bg-white p-3">
+                        <img src={signature} alt="Signature du demandeur" className="mx-auto max-h-28 object-contain" />
+                      </div>
                     </div>
                   )}
 

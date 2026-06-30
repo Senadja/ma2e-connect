@@ -20,7 +20,7 @@ const PolitiqueDcp = () => {
             <p className="text-sm text-muted-foreground leading-relaxed">
               {en
                 ? "MA2E is committed to respecting the confidentiality, integrity and security of the personal data of its members and visitors, in accordance with Law no. 2013-450 on the protection of personal data in Côte d'Ivoire."
-                : "La MA2E s'engage à respecter la confidentialité, l'intégrité et la sécurité des données personnelles de ses adhérents et visiteurs, conformément à la loi n° 2013-450 relative à la protection des données à caractère personnel en Côte d'Ivoire."}
+                : "La MA2E s'engage à respecter la confidentialité, l'intégrité et la sécurité des données personnelles de ses sociétaires et visiteurs, conformément à la loi n° 2013-450 relative à la protection des données à caractère personnel en Côte d'Ivoire."}
             </p>
           </div>
 
@@ -36,7 +36,7 @@ const PolitiqueDcp = () => {
                 </>
               ) : (
                 <>
-                  <li>Données d'identification : nom, prénom, date de naissance, numéro d'adhérent ;</li>
+                  <li>Données d'identification : nom, prénom, date de naissance, numéro de sociétaire ;</li>
                   <li>Coordonnées : adresse postale, email, téléphone ;</li>
                   <li>Données financières strictement nécessaires aux opérations ;</li>
                   <li>Données de connexion (logs techniques anonymisés).</li>

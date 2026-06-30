@@ -16,7 +16,7 @@ interface SEOProps {
 }
 
 const DEFAULT_DESC =
-  "La MA2E (Mutuelle des Agents de l'Eau et de l'Électricité) accompagne ses adhérents en Côte d'Ivoire : épargne rémunérée, crédits à taux préférentiels et accession à la propriété.";
+  "La MA2E (Mutuelle des Agents de l'Eau et de l'Électricité) accompagne ses sociétaires en Côte d'Ivoire : épargne rémunérée, crédits à taux préférentiels et accession à la propriété.";
 
 export const SEO = ({
   title,

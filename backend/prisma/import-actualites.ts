@@ -66,7 +66,7 @@ const ARTICLES: ArticleInput[] = [
     content: [
       {
         type: 'p',
-        text: "Dans le cadre d'Octobre Rose, mois international de sensibilisation au dépistage du cancer du sein, la MA2E s'est mobilisée aux côtés de son personnel et de ses adhérents. Le rose s'est invité dans nos locaux pour rappeler l'importance de la prévention et du dépistage précoce.",
+        text: "Dans le cadre d'Octobre Rose, mois international de sensibilisation au dépistage du cancer du sein, la MA2E s'est mobilisée aux côtés de son personnel et de ses sociétaires. Le rose s'est invité dans nos locaux pour rappeler l'importance de la prévention et du dépistage précoce.",
       },
       { type: 'p', text: 'Un engagement qui illustre l’attention portée par la mutuelle à la santé et au bien-être de sa communauté.' },
       { type: 'gallery', items: gal('octobre-rose-2025', 13) },
@@ -82,7 +82,7 @@ const ARTICLES: ArticleInput[] = [
     content: [
       {
         type: 'p',
-        text: "La MA2E a organisé une remise de matériel à l'attention de son personnel. Cette initiative vise à améliorer les conditions de travail et à accompagner les équipes dans leurs missions au service des adhérents.",
+        text: "La MA2E a organisé une remise de matériel à l'attention de son personnel. Cette initiative vise à améliorer les conditions de travail et à accompagner les équipes dans leurs missions au service des sociétaires.",
       },
       { type: 'p', text: 'Retour en images sur cette remise.' },
       { type: 'gallery', items: gal('remise-de-materiel', 8) },

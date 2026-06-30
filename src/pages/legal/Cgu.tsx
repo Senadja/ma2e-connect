@@ -16,7 +16,7 @@ const Cgu = () => {
             <p className="text-muted-foreground leading-relaxed">
               {en
                 ? "These Terms of Use (ToU) govern access to and use of MA2E's institutional website as well as the E-MA2E platform reserved for members."
-                : "Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation du site institutionnel de la MA2E ainsi que de la plateforme E-MA2E réservée aux adhérents."}
+                : "Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation du site institutionnel de la MA2E ainsi que de la plateforme E-MA2E réservée aux sociétaires."}
             </p>
           </section>
 
@@ -34,7 +34,7 @@ const Cgu = () => {
             <p className="text-muted-foreground leading-relaxed">
               {en
                 ? "The institutional site is freely accessible to anyone with Internet access. Access to the E-MA2E platform is reserved for members, after authentication, and subject to a subscription of 500 FCFA per month."
-                : "Le site institutionnel est accessible librement à toute personne disposant d'un accès à Internet. L'accès à la plateforme E-MA2E est réservé aux adhérents, après authentification, et soumis à un abonnement de 500 FCFA par mois."}
+                : "Le site institutionnel est accessible librement à toute personne disposant d'un accès à Internet. L'accès à la plateforme E-MA2E est réservé aux sociétaires, après authentification, et soumis à un abonnement de 500 FCFA par mois."}
             </p>
           </section>
 

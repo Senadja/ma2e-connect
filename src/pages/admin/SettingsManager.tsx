@@ -37,7 +37,7 @@ interface Settings {
 }
 
 const DEFAULT_STATS: StatItem[] = [
-  { value: 8430, label: "Adhérents", suffix: "" },
+  { value: 8430, label: "Sociétaires", suffix: "" },
   { value: 9, label: "Produits", suffix: "" },
   { value: 20, label: "Années d'activités", suffix: "" },
   { value: 6.3, label: "Mds FCFA de crédits", suffix: "" },
@@ -331,7 +331,7 @@ export const SettingsManager = () => {
                 <div className="grid gap-2"><label className={label}>Mot après le nombre</label><Input value={homeHero.leadMembers} onChange={(e) => setHomeHero({ ...homeHero, leadMembers: e.target.value })} /></div>
                 <div className="grid gap-2"><label className={label}>Accroche (suite)</label><Input value={homeHero.leadPost} onChange={(e) => setHomeHero({ ...homeHero, leadPost: e.target.value })} /></div>
               </div>
-              <p className="text-[11px] text-muted-foreground">Le nombre d'adhérents s'insère automatiquement entre les deux premiers champs d'accroche.</p>
+              <p className="text-[11px] text-muted-foreground">Le nombre de sociétaires s'insère automatiquement entre les deux premiers champs d'accroche.</p>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="grid gap-2"><label className={label}>Bouton 1 (produits)</label><Input value={homeHero.ctaProducts} onChange={(e) => setHomeHero({ ...homeHero, ctaProducts: e.target.value })} /></div>
                 <div className="grid gap-2"><label className={label}>Bouton 2 (adhésion)</label><Input value={homeHero.ctaJoin} onChange={(e) => setHomeHero({ ...homeHero, ctaJoin: e.target.value })} /></div>

@@ -106,7 +106,7 @@ const Dashboard = () => {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <DashboardStat
-          title="Adhérents"
+          title="Sociétaires"
           value={STATS[0].value.toLocaleString()}
           icon={Users}
           color="bg-blue-100 text-blue-700"
@@ -187,7 +187,7 @@ const Dashboard = () => {
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2 text-white/80">
                 <UserCheck className="h-4 w-4" />
-                <span className="text-xs font-bold uppercase tracking-widest">Support Adhérents</span>
+                <span className="text-xs font-bold uppercase tracking-widest">Support Sociétaires</span>
               </div>
               <CardTitle className="text-2xl font-display font-bold mt-2">Prêt à aider ?</CardTitle>
             </CardHeader>

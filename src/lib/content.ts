@@ -181,8 +181,8 @@ export interface OrgNode {
   children?: OrgNode[];
 }
 
-// Organigramme par défaut — encadrement, d'après l'organigramme officiel MA2E (MAJ 22/05/2026).
-// Modifiable au CMS (Paramètres › Accueil › Organigramme). Postes opérationnels volontairement masqués.
+// Organigramme par défaut — reproduit l'organigramme officiel MA2E (MAJ 22/05/2026),
+// y compris les postes opérationnels. Modifiable au CMS (Paramètres › Accueil › Organigramme).
 export const DEFAULT_ORG_TREE: OrgNode = {
   name: "Assemblée Générale",
   children: [
@@ -194,6 +194,7 @@ export const DEFAULT_ORG_TREE: OrgNode = {
           name: "Directeur Général",
           role: "GOUEDAN Franck Olivier",
           children: [
+            { name: "Staff DG (2)" },
             { name: "Responsable Audit Interne et QSE", role: "KOISSI Aya Philomène" },
             { name: "Responsable des Systèmes d'Information", role: "TOURE Adama" },
             { name: "Contrôleur Interne", role: "DJEDJERO Natacha" },
@@ -201,9 +202,28 @@ export const DEFAULT_ORG_TREE: OrgNode = {
               name: "Directeur Administration Gestion Finance",
               role: "KONE Madoussou Yari épse Sombo",
               children: [
-                { name: "Responsable Exploitation", role: "AKPOUE Affouet Rosabelle" },
-                { name: "Responsable Financier", role: "TRAORE Ismaël" },
-                { name: "Responsable Administratif", role: "N'ZI Obodji Micheline" },
+                { name: "Chauffeur", role: "KONAN François Léopold" },
+                {
+                  name: "Responsable Exploitation",
+                  role: "AKPOUE Affouet Rosabelle",
+                  children: [{ name: "Gestionnaires de Crédits (4)" }],
+                },
+                {
+                  name: "Responsable Financier",
+                  role: "TRAORE Ismaël",
+                  children: [
+                    {
+                      name: "Comptable",
+                      role: "GOUA Jean Moïse",
+                      children: [{ name: "Caissière", role: "BONOUMAN Effossy Marie Esther" }],
+                    },
+                  ],
+                },
+                {
+                  name: "Responsable Administratif",
+                  role: "N'ZI Obodji Micheline",
+                  children: [{ name: "Chauffeur-coursier", role: "KONE Siriki" }],
+                },
               ],
             },
           ],

@@ -10,10 +10,9 @@ interface AppLike {
   data: Record<string, unknown>;
 }
 
-// Montants du prélèvement (à confirmer avec MA2E — le CR indique 6 000 F de droit
-// d'adhésion ; l'ancien modèle imprimé indiquait 1 000 / 5 000).
-const FEE_ADHESION = "6 000";
-const FEE_PART = "8 000";
+// Montants du prélèvement — conformes au modèle officiel MA2E (exemple de dossier d'adhésion).
+const FEE_ADHESION = "1 000";
+const FEE_PART = "5 000";
 
 const LOGO_URL = "/logo-ma2e.png";
 
@@ -28,7 +27,7 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
 
 // Génère le formulaire d'adhésion / souscription au capital pré-rempli (PDF imprimable),
 // reprenant la disposition du modèle officiel MA2E. L'admin le télécharge, l'imprime, et
-// l'adhérent le signe physiquement à la MA2E.
+// le sociétaire le signe physiquement à la MA2E.
 export async function generateAdhesionPdf(app: AppLike) {
   const d = app.data || {};
   const s = (v: unknown) => (v === null || v === undefined || v === "" ? "" : String(v));
@@ -36,6 +35,9 @@ export async function generateAdhesionPdf(app: AppLike) {
   const W = 210;
   const M = 15;
   let y = M;
+
+  // Signature fournie en ligne (data-URL) — embarquée dans le PDF si présente.
+  const sigImg = d.signature ? await loadImage(String(d.signature)) : null;
 
   // --- En-tête : logo + titre ---
   const logo = await loadImage(LOGO_URL);
@@ -83,7 +85,7 @@ export async function generateAdhesionPdf(app: AppLike) {
   const naissance = [s(d.dateDeNaissance), s(d.lieuDeNaissance)].filter(Boolean).join(" à ");
   row([{ label: "Je soussigné(e)", value: s(app.name) }]);
   row([{ label: "Date de naissance et lieu de naissance", value: naissance }]);
-  row([{ label: "N° CNI", value: "" }]);
+  row([{ label: "N° CNI", value: "" }, { label: "Du", value: "" }, { label: "au", value: "" }]);
   row([{ label: "Situation matrimoniale", value: s(d.situationMatrimoniale) }, { label: "Fonction", value: "" }]);
   row([{ label: "Service", value: s(d.service) }, { label: "Boîte postale", value: "" }]);
   row([{ label: "Matricule", value: s(app.matricule) }, { label: "Catégorie", value: s(d.categorie) }]);
@@ -115,8 +117,8 @@ export async function generateAdhesionPdf(app: AppLike) {
     }
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9.5);
-    doc.text(`${amount} F.CFA pour `, M + 7, y);
-    const bx = M + 7 + doc.getTextWidth(`${amount} F.CFA pour `);
+    doc.text(`${amount} F.CFA pour`, M + 7, y);
+    const bx = M + 7 + doc.getTextWidth(`${amount} F.CFA pour`) + 1.4;
     doc.setFont("helvetica", "bold");
     doc.text(label, bx, y);
     doc.setLineWidth(0.2);
@@ -149,6 +151,7 @@ export async function generateAdhesionPdf(app: AppLike) {
   // Colonne signature (à droite)
   let yr = startY;
   doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
   doc.text(`Fait à ...............................   le ${app.date || "...................."}`, colX, yr);
   yr += 8;
   doc.text("Signature", colX + 20, yr);
@@ -156,8 +159,23 @@ export async function generateAdhesionPdf(app: AppLike) {
   doc.setFontSize(8);
   doc.text("(Précédée de la mention « Lu et Approuvé »)", colX, yr);
 
-  // --- Mentions légales (encadré, juste sous le bloc contact/signature, avec un espace de signature) ---
-  const fy = Math.max(y, yr) + 22;
+  // Signature fournie en ligne : mention typographiée + image ; sinon, espace pour signature manuscrite.
+  let signatureBottom: number;
+  if (sigImg) {
+    const sigW = 42;
+    const sigH = Math.min(24, sigW * (sigImg.naturalHeight / sigImg.naturalWidth || 0.35));
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(8);
+    doc.setTextColor(0);
+    doc.text("Lu et Approuvé", colX, yr + 6);
+    doc.addImage(sigImg, "PNG", colX, yr + 8, sigW, sigH);
+    signatureBottom = yr + 8 + sigH + 2;
+  } else {
+    signatureBottom = yr + 22;
+  }
+
+  // --- Mentions légales (encadré, juste sous le bloc contact/signature) ---
+  const fy = Math.max(y, signatureBottom) + 6;
   doc.setDrawColor(120);
   doc.setLineWidth(0.2);
   doc.rect(M, fy, W - 2 * M, 14);
@@ -171,6 +189,12 @@ export async function generateAdhesionPdf(app: AppLike) {
   const legal =
     "Institution Mutualiste d'Épargne et de Crédit sans but lucratif — Régie par l'ordonnance N°2011-367 du 3 novembre 2011 — Agrément N°A-1.1.9/09-03. Siège Social : 34 Avenue Houdaille, Plateau, 6ème étage, Immeuble SIDAM — 18 BP 1210 Abidjan 18.";
   doc.text(doc.splitTextToSize(legal, W - 2 * M), M, fy + 17);
+
+  // Codes de référence du modèle officiel (bas de page).
+  doc.setFontSize(7);
+  doc.setTextColor(110);
+  doc.text("MA2E IS 80 01 00", M, fy + 26);
+  doc.text("Rattachée à la MA2E PO 80 00", W / 2, fy + 26, { align: "center" });
 
   // Référence (discret, en haut à droite)
   doc.setFontSize(7.5);

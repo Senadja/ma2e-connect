@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SignaturePad } from "@/components/SignaturePad";
 import { toast } from "sonner";
 import { FileText, UserPlus, CheckCircle2, Upload, Briefcase, User, X, Users } from "lucide-react";
 import { useState } from "react";
@@ -72,6 +73,7 @@ const Adhesion = () => {
   const [activeTab, setActiveTab] = useState("personal");
   const [docs, setDocs] = useState<Partial<Record<Slot, { name: string; path: string }>>>({});
   const [uploading, setUploading] = useState<Slot | null>(null);
+  const [signature, setSignature] = useState("");
 
   const uploadSlot = async (slot: Slot, file: File) => {
     setUploading(slot);
@@ -131,6 +133,7 @@ const Adhesion = () => {
             intentionAdhesion: values.intentionAdhesion,
             intentionPart: values.intentionPart,
             documents: docs,
+            signature,
           },
         },
       });
@@ -343,6 +346,13 @@ const Adhesion = () => {
                           })}
                         </div>
 
+                        {/* Signature (tracé ou import) */}
+                        <div className="rounded-2xl border border-border p-5 space-y-3">
+                          <p className="text-sm font-semibold">Signature</p>
+                          <p className="text-xs text-muted-foreground">Signez directement ci-dessous ou importez l'image de votre signature. Facultatif : vous pourrez aussi signer la version imprimée à la MA2E.</p>
+                          <SignaturePad value={signature} onChange={setSignature} />
+                        </div>
+
                         {/* Engagement de paiement (à la source) */}
                         <div className="rounded-2xl border border-border bg-secondary/20 p-5 space-y-3">
                           <p className="text-sm font-semibold">Engagement de paiement (prélèvement à la source)</p>
@@ -350,13 +360,13 @@ const Adhesion = () => {
                           <FormField control={form.control} name="intentionAdhesion" render={({ field }) => (
                             <FormItem className="flex flex-row items-center gap-3 space-y-0">
                               <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                              <FormLabel className="text-sm font-normal">Droit d'adhésion — <strong>6 000 FCFA</strong></FormLabel>
+                              <FormLabel className="text-sm font-normal">Droit d'adhésion — <strong>1 000 FCFA</strong></FormLabel>
                             </FormItem>
                           )} />
                           <FormField control={form.control} name="intentionPart" render={({ field }) => (
                             <FormItem className="flex flex-row items-center gap-3 space-y-0">
                               <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                              <FormLabel className="text-sm font-normal">Souscription à la part sociale — <strong>8 000 FCFA</strong></FormLabel>
+                              <FormLabel className="text-sm font-normal">Souscription à la part sociale — <strong>5 000 FCFA</strong></FormLabel>
                             </FormItem>
                           )} />
                         </div>

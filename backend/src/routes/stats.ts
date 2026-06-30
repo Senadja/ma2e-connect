@@ -27,7 +27,7 @@ statsRouter.get('/', async (_req, res) => {
     ]);
 
     res.json([
-      { value: BASELINE.adherents + usersCount, label: 'Adhérents', suffix: '' },
+      { value: BASELINE.adherents + usersCount, label: 'Sociétaires', suffix: '' },
       {
         value: productsCount > 0 ? productsCount : BASELINE.produitsActifs,
         label: 'Produits actifs',

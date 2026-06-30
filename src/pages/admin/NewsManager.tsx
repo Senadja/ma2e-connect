@@ -193,7 +193,7 @@ export const NewsManager = () => {
               <h2 className="text-2xl font-display font-bold text-primary-dark">
                 {currentArticle ? "Modifier la publication" : "Créer un nouvel article"}
               </h2>
-              <p className="text-muted-foreground text-sm">Rédigez un contenu captivant pour vos adhérents.</p>
+              <p className="text-muted-foreground text-sm">Rédigez un contenu captivant pour vos sociétaires.</p>
             </div>
           </div>
           <div className="flex gap-3">
