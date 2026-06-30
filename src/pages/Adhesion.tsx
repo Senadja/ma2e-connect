@@ -45,15 +45,23 @@ const formSchema = z.object({
   dateDeNaissance: z.string().optional(),
   lieuDeNaissance: z.string().optional(),
   adresse: z.string().optional(),
+  cniNumero: z.string().optional(),
+  cniDu: z.string().optional(),
+  cniAu: z.string().optional(),
+  domicile: z.string().optional(),
+  bureau: z.string().optional(),
   // Professionnel
   matricule: z.string().min(1, "Le matricule est requis"),
   societe: z.string().min(1, "La société est requise"),
+  fonction: z.string().optional(),
   categorie: z.string().optional(),
   direction: z.string().optional(),
   service: z.string().optional(),
   exploitation: z.string().optional(),
   dateEmbauche: z.string().optional(),
   // Proches
+  conjoint: z.string().optional(),
+  contactConjoint: z.string().optional(),
   personneAPrevenir: z.string().optional(),
   contactPrevenir: z.string().optional(),
   ayantsDroit: z.string().optional(),
@@ -96,8 +104,9 @@ const Adhesion = () => {
     defaultValues: {
       fullName: "", nomMere: "", situationMatrimoniale: "", email: "", phone: "",
       dateDeNaissance: "", lieuDeNaissance: "", adresse: "",
-      matricule: "", societe: "", categorie: "", direction: "", service: "", exploitation: "", dateEmbauche: "",
-      personneAPrevenir: "", contactPrevenir: "", ayantsDroit: "", contactAyantsDroit: "",
+      cniNumero: "", cniDu: "", cniAu: "", domicile: "", bureau: "",
+      matricule: "", societe: "", fonction: "", categorie: "", direction: "", service: "", exploitation: "", dateEmbauche: "",
+      conjoint: "", contactConjoint: "", personneAPrevenir: "", contactPrevenir: "", ayantsDroit: "", contactAyantsDroit: "",
       intentionAdhesion: false, intentionPart: false, acceptTerms: false,
     },
   });
@@ -120,12 +129,20 @@ const Adhesion = () => {
             dateDeNaissance: values.dateDeNaissance,
             lieuDeNaissance: values.lieuDeNaissance,
             adresse: values.adresse,
+            cniNumero: values.cniNumero,
+            cniDu: values.cniDu,
+            cniAu: values.cniAu,
+            domicile: values.domicile,
+            bureau: values.bureau,
+            fonction: values.fonction,
             societe: values.societe,
             categorie: values.categorie,
             direction: values.direction,
             service: values.service,
             exploitation: values.exploitation,
             dateEmbauche: values.dateEmbauche,
+            conjoint: values.conjoint,
+            contactConjoint: values.contactConjoint,
             personneAPrevenir: values.personneAPrevenir,
             contactPrevenir: values.contactPrevenir,
             ayantsDroit: values.ayantsDroit,
@@ -249,6 +266,25 @@ const Adhesion = () => {
                             <FormItem><FormLabel>Adresse / Boîte postale</FormLabel><FormControl><Input placeholder="Cocody, 18 BP 1210" {...field} /></FormControl><FormMessage /></FormItem>
                           )} />
                         </div>
+                        <div className="grid md:grid-cols-3 gap-6">
+                          <FormField control={form.control} name="cniNumero" render={({ field }) => (
+                            <FormItem><FormLabel>N° CNI</FormLabel><FormControl><Input placeholder="C1000812473" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name="cniDu" render={({ field }) => (
+                            <FormItem><FormLabel>CNI valable du</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name="cniAu" render={({ field }) => (
+                            <FormItem><FormLabel>au</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <FormField control={form.control} name="domicile" render={({ field }) => (
+                            <FormItem><FormLabel>Téléphone domicile</FormLabel><FormControl><Input placeholder="Numéro fixe / domicile" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name="bureau" render={({ field }) => (
+                            <FormItem><FormLabel>Téléphone bureau</FormLabel><FormControl><Input placeholder="Numéro bureau" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                        </div>
                         <div className="flex justify-end"><Button type="button" onClick={() => setActiveTab("professional")} className="rounded-full px-8">{t("adhesion.next")}</Button></div>
                       </TabsContent>
 
@@ -269,9 +305,14 @@ const Adhesion = () => {
                           )} />
                         </div>
                         <div className="grid md:grid-cols-2 gap-6">
+                          <FormField control={form.control} name="fonction" render={({ field }) => (
+                            <FormItem><FormLabel>Fonction</FormLabel><FormControl><Input placeholder="Intitulé du poste" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
                           <FormField control={form.control} name="categorie" render={({ field }) => (
                             <FormItem><FormLabel>Catégorie</FormLabel><FormControl><Input placeholder="Cadre, Agent de maîtrise…" {...field} /></FormControl><FormMessage /></FormItem>
                           )} />
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-6">
                           <FormField control={form.control} name="direction" render={({ field }) => (
                             <FormItem><FormLabel>Direction</FormLabel><FormControl><Input placeholder="DG / DAGF…" {...field} /></FormControl><FormMessage /></FormItem>
                           )} />
@@ -297,7 +338,15 @@ const Adhesion = () => {
 
                       {/* PROCHES */}
                       <TabsContent value="proches" className="space-y-6 animate-in fade-in slide-in-from-right-2">
-                        <p className="text-sm text-muted-foreground">Personne(s) à prévenir et ayant(s) droit en cas de besoin.</p>
+                        <p className="text-sm text-muted-foreground">Conjoint(e), personne(s) à prévenir et ayant(s) droit en cas de besoin.</p>
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <FormField control={form.control} name="conjoint" render={({ field }) => (
+                            <FormItem><FormLabel>Nom du conjoint(e)</FormLabel><FormControl><Input placeholder="Nom et prénoms" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name="contactConjoint" render={({ field }) => (
+                            <FormItem><FormLabel>Contact du conjoint(e)</FormLabel><FormControl><Input placeholder="07 00 00 00 00" {...field} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                        </div>
                         <div className="grid md:grid-cols-2 gap-6">
                           <FormField control={form.control} name="personneAPrevenir" render={({ field }) => (
                             <FormItem><FormLabel>Personne à prévenir</FormLabel><FormControl><Input placeholder="Nom et prénoms" {...field} /></FormControl><FormMessage /></FormItem>

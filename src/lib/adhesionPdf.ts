@@ -31,6 +31,12 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
 export async function generateAdhesionPdf(app: AppLike) {
   const d = app.data || {};
   const s = (v: unknown) => (v === null || v === undefined || v === "" ? "" : String(v));
+  // Dates ISO (YYYY-MM-DD des <input type="date">) -> JJ/MM/AAAA ; sinon valeur telle quelle.
+  const fmtFr = (v: unknown) => {
+    const str = s(v).trim();
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str);
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : str;
+  };
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = 210;
   const M = 15;
@@ -82,20 +88,20 @@ export async function generateAdhesionPdf(app: AppLike) {
     y += 8.2;
   };
 
-  const naissance = [s(d.dateDeNaissance), s(d.lieuDeNaissance)].filter(Boolean).join(" à ");
+  const naissance = [fmtFr(d.dateDeNaissance), s(d.lieuDeNaissance)].filter(Boolean).join(" à ");
   row([{ label: "Je soussigné(e)", value: s(app.name) }]);
   row([{ label: "Date de naissance et lieu de naissance", value: naissance }]);
-  row([{ label: "N° CNI", value: "" }, { label: "Du", value: "" }, { label: "au", value: "" }]);
-  row([{ label: "Situation matrimoniale", value: s(d.situationMatrimoniale) }, { label: "Fonction", value: "" }]);
-  row([{ label: "Service", value: s(d.service) }, { label: "Boîte postale", value: "" }]);
+  row([{ label: "N° CNI", value: s(d.cniNumero) }, { label: "Du", value: fmtFr(d.cniDu) }, { label: "au", value: fmtFr(d.cniAu) }]);
+  row([{ label: "Situation matrimoniale", value: s(d.situationMatrimoniale) }, { label: "Fonction", value: s(d.fonction) }]);
+  row([{ label: "Service", value: s(d.service) }, { label: "Boîte postale", value: s(d.adresse) }]);
   row([{ label: "Matricule", value: s(app.matricule) }, { label: "Catégorie", value: s(d.categorie) }]);
   row([
     { label: "Société", value: s(d.societe) },
     { label: "Direction", value: s(d.direction) },
     { label: "Exploitation", value: s(d.exploitation) },
   ]);
-  row([{ label: "Embauché(e) le", value: s(d.dateEmbauche) }]);
-  row([{ label: "Nom du conjoint(e)", value: "" }, { label: "Contacts", value: "" }]);
+  row([{ label: "Embauché(e) le", value: fmtFr(d.dateEmbauche) }]);
+  row([{ label: "Nom du conjoint(e)", value: s(d.conjoint) }, { label: "Contacts", value: s(d.contactConjoint) }]);
   row([{ label: "Nom de la mère", value: s(d.nomMere) }]);
   row([{ label: "Personnes à prévenir", value: s(d.personneAPrevenir) }, { label: "Contacts", value: s(d.contactPrevenir) }]);
   row([{ label: "Ayants droit", value: s(d.ayantsDroit) }, { label: "Contacts", value: s(d.contactAyantsDroit) }]);
@@ -143,8 +149,8 @@ export async function generateAdhesionPdf(app: AppLike) {
     doc.setFont("helvetica", "normal");
     y += 5.5;
   };
-  contactLine("Domicile", "");
-  contactLine("Bureau", "");
+  contactLine("Domicile", s(d.domicile));
+  contactLine("Bureau", s(d.bureau));
   contactLine("Cellulaire", s(app.phone));
   contactLine("E-mail", s(app.email));
 
