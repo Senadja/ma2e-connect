@@ -46,7 +46,10 @@ async function seedUsers() {
     const password = await bcrypt.hash(u.password, 10);
     await prisma.user.upsert({
       where: { email: u.email },
-      update: { password, name: u.name, role: u.role, permissions: u.permissions },
+      // On NE réinitialise PAS le mot de passe d'un compte existant (sinon le mot de passe
+      // changé au back-office serait écrasé à chaque redémarrage). Le mot de passe par défaut
+      // n'est posé qu'à la création initiale du compte.
+      update: { name: u.name, role: u.role, permissions: u.permissions },
       create: { email: u.email, password, name: u.name, role: u.role, permissions: u.permissions },
     });
     console.log(`✓ user ${u.email} (${u.role})`);

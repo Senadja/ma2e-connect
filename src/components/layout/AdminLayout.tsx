@@ -19,11 +19,21 @@ import {
   Handshake,
   UsersRound,
   Inbox,
-  History
+  History,
+  KeyRound
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChangePasswordDialog } from "@/components/admin/ChangePasswordDialog";
 
 const SidebarLink = ({ to, icon: Icon, label, active, collapsed }: { to: string, icon: any, label: string, active: boolean, collapsed: boolean }) => (
   <Link
@@ -45,6 +55,7 @@ export const AdminLayout = () => {
   const { user, isAuthenticated, logout, can } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -161,15 +172,29 @@ export const AdminLayout = () => {
             
             <div className="h-8 w-px bg-border mx-1" />
             
-            <div className="flex items-center gap-3">
-              <div className="text-right hidden sm:block">
-                <div className="text-sm font-bold">{user?.name}</div>
-                <div className="text-[10px] uppercase tracking-wider font-mono text-primary font-bold">{user?.role}</div>
-              </div>
-              <div className="h-10 w-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold">
-                {user?.name.charAt(0)}
-              </div>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-3 rounded-full p-1 hover:bg-secondary/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+                  <div className="text-right hidden sm:block">
+                    <div className="text-sm font-bold">{user?.name}</div>
+                    <div className="text-[10px] uppercase tracking-wider font-mono text-primary font-bold">{user?.role}</div>
+                  </div>
+                  <div className="h-10 w-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold">
+                    {user?.name.charAt(0)}
+                  </div>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="truncate">{user?.name}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setPwOpen(true)}>
+                  <KeyRound className="mr-2 h-4 w-4" /> Changer le mot de passe
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" /> Déconnexion
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
@@ -203,6 +228,8 @@ export const AdminLayout = () => {
           </aside>
         </div>
       )}
+
+      <ChangePasswordDialog open={pwOpen} onOpenChange={setPwOpen} />
     </div>
   );
 };

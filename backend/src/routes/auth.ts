@@ -59,3 +59,25 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
 authRouter.get('/me', requireAuth, (req, res) => {
   res.json({ user: req.user });
 });
+
+// Changement de son propre mot de passe (self-service). Exige le mot de passe actuel.
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Mot de passe actuel requis'),
+  newPassword: z.string().min(6, 'Nouveau mot de passe : 6 caractères minimum'),
+});
+
+authRouter.post('/change-password', requireAuth, async (req, res) => {
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+  const { currentPassword, newPassword } = parsed.data;
+
+  const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+  if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+
+  const ok = await bcrypt.compare(currentPassword, user.password);
+  if (!ok) return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
+
+  const password = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({ where: { id: user.id }, data: { password } });
+  res.json({ ok: true });
+});
