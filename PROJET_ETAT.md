@@ -2,7 +2,25 @@
 
 > Point de re-lecture unique pour reprendre le travail après un compactage de contexte
 > ou une nouvelle session. **À mettre à jour à la fin de chaque tâche significative.**
-> Dernière mise à jour : 2026-06-26.
+> Dernière mise à jour : 2026-06-30.
+
+## MAJ 2026-06-30 (post-recette, suite)
+- **Chiffres unifiés** (commits `fa340ae`, `78e6679`) : 8 430 sociétaires / 6,3 Md / 20 ans PARTOUT
+  (accueil, menu, EN, repli `stats.ts`). feat1Desc/feat2Desc + FAQ e-mail corrigés **en BDD prod**.
+  Compteur accueil = réglage `settings.stats` (éditable au BO) ; **ce n'est PAS orphelin**.
+- **Organigramme** (commit `d44069f`) : rendu **responsive sans débordement** (composant partagé
+  `src/components/OrgChart.tsx` : organes en grille 1/2/4 col + structures rattachées en arbre
+  vertical indenté). Le **BO affiche le même composant** (aperçu) → BO = front. Conforme au PDF
+  officiel (MAJ 22/05/2026). Vérifié 375/1280 px sans scroll horizontal.
+- **Organigramme → IMAGE officielle** (choix client « c'est mieux ») : front + BO affichent
+  `public/images/organigramme-ma2e.png` (rendu du PDF officiel) + lien de téléchargement du PDF.
+  Composant interactif `OrgChart.tsx` supprimé.
+- **Dossier d'adhésion PDF — FAIT** (`adhesionPdf.ts`, choix client = Option 3) : **3 pages** =
+  P1 Adhésion/Capital + P2 Demande d'Épargne (Épargne Expresse cochée/obligatoire, identité
+  pré-remplie, société cochée, montants/période vierges = réglés à l'agence « à la source »,
+  Prélèvement coché) + P3 Pièce d'identité (CNI recto/verso embarqués depuis `data.documents`,
+  images uniquement ; PDF/Word ignorés). Pages Ordinaire/Logement facultatives **omises** (Option 3).
+  Vérifié par rendu headless (3 pages conformes à l'exemple).
 
 ## Git & déploiement (état au 2026-06-26)
 - Remote : `github.com/Senadja/ma2e-connect`.
