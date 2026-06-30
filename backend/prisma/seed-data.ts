@@ -141,7 +141,6 @@ export const FAQS = [
   { category: 'Épargne', question: 'Quels sont les types d\'épargne proposés ?', answer: 'La MA2E propose 5 formules : Épargne Expresse, Ordinaire, Logement, Dépôt à terme simple et DAT à versements progressifs.' },
   { category: 'Épargne', question: 'Mon épargne est-elle disponible à tout moment ?', answer: "Cela dépend de la formule choisie. L'Épargne Expresse est disponible à tout moment, alors que les DAT sont bloqués sur la durée contractuelle." },
   { category: 'Crédit', question: 'Quelles sont les conditions pour obtenir un crédit ?', answer: 'Être sociétaire depuis au moins 6 mois, être à jour de ses cotisations et présenter un dossier complet (justificatifs de revenus, projet, garanties).' },
-  { category: 'Crédit', question: 'Quel est le délai de traitement d\'un dossier ?', answer: 'Crédit Expresse : 48h. Crédit Ordinaire : 7 jours ouvrés. Crédit Immobilier : 15 à 30 jours selon complexité du dossier.' },
   { category: 'Crédit', question: 'Puis-je rembourser par anticipation ?', answer: 'Oui, le remboursement anticipé est possible sans pénalité sur la plupart de nos formules.' },
   { category: 'E-MA2E', question: 'Qu\'est-ce que la plateforme E-MA2E ?', answer: 'E-MA2E est l\'espace digital permettant aux sociétaires de consulter leur compte, télécharger leurs relevés et effectuer des opérations en ligne.' },
   { category: 'E-MA2E', question: 'Combien coûte l\'accès à E-MA2E ?', answer: 'L\'abonnement est de 500 FCFA par mois, prélevé directement sur votre compte.' },
