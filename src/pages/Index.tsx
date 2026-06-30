@@ -145,7 +145,11 @@ const Index = () => {
     // Utilise le client API centralisé (URL configurable, compatible prod).
     api<typeof DEFAULT_STATS>(`/stats?t=${Date.now()}`)
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) setStats(data);
+        // On garde les libellés locaux (vocabulaire « sociétaire ») et on n'injecte
+        // que les valeurs chiffrées renvoyées par le backend (même ordre).
+        if (Array.isArray(data) && data.length > 0) {
+          setStats(DEFAULT_STATS.map((s, i) => ({ ...s, value: data[i]?.value ?? s.value })));
+        }
       })
       .catch((err) => {
         console.error("Could not fetch stats:", err);
