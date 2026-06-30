@@ -8,8 +8,8 @@ export const statsRouter = Router();
 const BASELINE = {
   adherents: 8430,
   produitsActifs: 9,
-  anneesExperience: 14,
-  mdsFcfa: 2.9,
+  anneesExperience: 20,
+  mdsFcfa: 6.3,
 };
 
 statsRouter.get('/', async (_req, res) => {

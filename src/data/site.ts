@@ -5,7 +5,7 @@ export const NAV_LINKS = [
     label: "À propos",
     href: "/a-propos",
     children: [
-      { label: "Notre histoire", href: "/a-propos#histoire", desc: "14 ans au service des agents" },
+      { label: "Notre histoire", href: "/a-propos#histoire", desc: "20 ans au service des agents" },
       { label: "Notre mission", href: "/a-propos#mission", desc: "Nos engagements" },
       { label: "Organisation", href: "/a-propos#organisation", desc: "Gouvernance & équipe" },
     ],
