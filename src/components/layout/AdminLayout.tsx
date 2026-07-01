@@ -17,7 +17,6 @@ import {
   Briefcase,
   HelpCircle,
   Handshake,
-  UsersRound,
   Inbox,
   History,
   KeyRound
@@ -88,7 +87,6 @@ export const AdminLayout = () => {
       { to: "/admin/contact", icon: Inbox, label: "Messages de contact", perm: "contact:manage" },
     ] },
     { title: "Institution", items: [
-      { to: "/admin/team", icon: UsersRound, label: "Équipe & gouvernance", perm: "team:write" },
       { to: "/admin/partners", icon: Handshake, label: "Partenaires", perm: "partners:write" },
     ] },
     { title: "Administration", items: [

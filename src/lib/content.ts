@@ -3,7 +3,7 @@
 // est indisponible — le site public ne casse jamais.
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { NEWS, SAVINGS, CREDITS, TEAM, type NewsArticle } from "@/data/site";
+import { NEWS, SAVINGS, CREDITS, type NewsArticle } from "@/data/site";
 import { MEDIA, FAQS, PARTNERS } from "@/data/institutional";
 
 export function slugify(input: string): string {
@@ -145,21 +145,6 @@ export function usePartners() {
   });
 }
 
-export interface PublicTeamMember { name: string; role: string; initials: string; photo?: string; category?: string }
-
-export function useTeam() {
-  return useQuery({
-    queryKey: ["public", "team"],
-    queryFn: async (): Promise<PublicTeamMember[]> => {
-      try {
-        return await api<PublicTeamMember[]>("/team");
-      } catch {
-        return TEAM as PublicTeamMember[];
-      }
-    },
-    initialData: TEAM as PublicTeamMember[],
-  });
-}
 
 /* ---------------- Réglages du site ---------------- */
 export interface OrgChart {

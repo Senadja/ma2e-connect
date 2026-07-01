@@ -57,7 +57,6 @@ const UsersManager = lazyWithReload(() => import("./pages/admin/UsersManager.tsx
 const FaqManager = lazyWithReload(() => import("./pages/admin/FaqManager.tsx"));
 const SettingsManager = lazyWithReload(() => import("./pages/admin/SettingsManager.tsx"));
 const PartnersManager = lazyWithReload(() => import("./pages/admin/PartnersManager.tsx"));
-const TeamManager = lazyWithReload(() => import("./pages/admin/TeamManager.tsx"));
 const ContactManager = lazyWithReload(() => import("./pages/admin/ContactManager.tsx"));
 const AuditLog = lazyWithReload(() => import("./pages/admin/AuditLog.tsx"));
 
@@ -123,7 +122,6 @@ const App = () => (
                 <Route path="contact" element={<ContactManager />} />
                 <Route path="media" element={<MediaLibraryPage />} />
                 <Route path="partners" element={<PartnersManager />} />
-                <Route path="team" element={<TeamManager />} />
                 <Route path="users" element={<UsersManager />} />
                 <Route path="audit" element={<AuditLog />} />
                 <Route path="settings" element={<SettingsManager />} />
