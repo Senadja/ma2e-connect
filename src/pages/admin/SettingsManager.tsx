@@ -19,8 +19,9 @@ interface StatItem { value: number; label: string; suffix: string }
 interface Settings {
   flashBanner?: { enabled: boolean; text: string; link: string };
   flashInfos?: { enabled: boolean; speed?: number; items: { text: string; url: string }[] };
-  contact?: { address: string; phone: string; email: string; hours?: string; dcpEmail?: string };
+  contact?: { address: string; phone: string; email: string; hours?: string; dcpEmail?: string; mapLat?: string; mapLng?: string };
   social?: { facebook: string; linkedin: string; twitter: string };
+  links?: { ebanking?: string; playstore?: string };
   stats?: StatItem[];
   orgTree?: OrgNode;
   orgImage?: string;
@@ -53,8 +54,9 @@ export const SettingsManager = () => {
   const [flashInfos, setFlashInfos] = useState<{ enabled: boolean; speed: number; items: { text: string; url: string }[] }>({ enabled: true, speed: 25, items: [{ text: "", url: "" }] });
   const [whatsapp, setWhatsapp] = useState({ enabled: false, phone: "", message: "" });
   const [chatbot, setChatbot] = useState({ enabled: false, url: "" });
-  const [contact, setContact] = useState({ address: "", phone: "", email: "", hours: "", dcpEmail: "" });
+  const [contact, setContact] = useState({ address: "", phone: "", email: "", hours: "", dcpEmail: "", mapLat: "", mapLng: "" });
   const [social, setSocial] = useState({ facebook: "", linkedin: "", twitter: "" });
+  const [links, setLinks] = useState({ ebanking: "", playstore: "" });
   const [stats, setStats] = useState<StatItem[]>(DEFAULT_STATS);
   const [orgTree, setOrgTree] = useState<OrgNode>(DEFAULT_ORG_TREE);
   const [personnel, setPersonnel] = useState(DEFAULT_PERSONNEL);
@@ -191,8 +193,9 @@ export const SettingsManager = () => {
     } else if (data.flashBanner?.text) {
       setFlashInfos({ enabled: !!data.flashBanner.enabled, speed: 25, items: [{ text: data.flashBanner.text, url: data.flashBanner.link || "" }] });
     }
-    if (data.contact) setContact({ address: data.contact.address || "", phone: data.contact.phone || "", email: data.contact.email || "", hours: data.contact.hours || "", dcpEmail: data.contact.dcpEmail || "" });
+    if (data.contact) setContact({ address: data.contact.address || "", phone: data.contact.phone || "", email: data.contact.email || "", hours: data.contact.hours || "", dcpEmail: data.contact.dcpEmail || "", mapLat: data.contact.mapLat || "", mapLng: data.contact.mapLng || "" });
     if (data.social) setSocial({ facebook: data.social.facebook || "", linkedin: data.social.linkedin || "", twitter: data.social.twitter || "" });
+    if (data.links) setLinks({ ebanking: data.links.ebanking || "", playstore: data.links.playstore || "" });
     if (Array.isArray(data.stats) && data.stats.length) setStats(data.stats);
     if (Array.isArray(data.personnel) && data.personnel.length) setPersonnel(data.personnel);
     if (data.orgTree && data.orgTree.name) setOrgTree(data.orgTree);
@@ -711,7 +714,26 @@ export const SettingsManager = () => {
                 <div className="grid gap-2"><label className={label}>Email DCP (données personnelles)</label>
                   <Input value={contact.dcpEmail} onChange={(e) => setContact({ ...contact, dcpEmail: e.target.value })} placeholder="privacyMA2E@ma2e.ci" /></div>
               </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid gap-2"><label className={label}>Carte — Latitude</label>
+                  <Input value={contact.mapLat} onChange={(e) => setContact({ ...contact, mapLat: e.target.value })} placeholder="5.325" /></div>
+                <div className="grid gap-2"><label className={label}>Carte — Longitude</label>
+                  <Input value={contact.mapLng} onChange={(e) => setContact({ ...contact, mapLng: e.target.value })} placeholder="-4.018" /></div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">Position du marqueur sur la carte (OpenStreetMap, gratuit). Astuce : sur Google Maps, clic droit sur le lieu → « Copier les coordonnées » (latitude, longitude).</p>
               <Button onClick={() => save.mutate({ key: "contact", value: contact })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les coordonnées</Button>
+            </CardContent>
+          </Card>
+
+          {/* Liens externes */}
+          <Card className="border-border/40 shadow-sm">
+            <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Server className="h-5 w-5 text-primary" /> Liens externes</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2"><label className={label}>Espace MA2E / e-banking (bouton « Espace Mobile Banking »)</label>
+                <Input value={links.ebanking} onChange={(e) => setLinks({ ...links, ebanking: e.target.value })} placeholder="https://ebanking.ma2e.ci/" /></div>
+              <div className="grid gap-2"><label className={label}>Application mobile — lien Google Play (footer)</label>
+                <Input value={links.playstore} onChange={(e) => setLinks({ ...links, playstore: e.target.value })} placeholder="https://play.google.com/store/apps/details?id=…" /></div>
+              <Button onClick={() => save.mutate({ key: "links", value: links })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les liens</Button>
             </CardContent>
           </Card>
 

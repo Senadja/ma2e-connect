@@ -11,6 +11,11 @@ const Contact = () => {
   const { t } = useTranslation();
   const { data: settings } = useSettings();
   const c = settings?.contact;
+  // Carte OpenStreetMap (gratuite, sans clé API) centrée sur la position éditable au CMS.
+  const mapLat = parseFloat(String(c?.mapLat ?? "")) || 5.325;
+  const mapLng = parseFloat(String(c?.mapLng ?? "")) || -4.018;
+  const dLat = 0.01, dLng = 0.0125;
+  const mapSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${(mapLng - dLng).toFixed(4)}%2C${(mapLat - dLat).toFixed(4)}%2C${(mapLng + dLng).toFixed(4)}%2C${(mapLat + dLat).toFixed(4)}&layer=mapnik&marker=${mapLat.toFixed(4)}%2C${mapLng.toFixed(4)}`;
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showDcp, setShowDcp] = useState(false);
@@ -95,7 +100,7 @@ const Contact = () => {
                 <div className="mt-8 rounded-xl overflow-hidden border border-white/10">
                   <iframe
                     title={t("common.mapLabel")}
-                    src="https://www.openstreetmap.org/export/embed.html?bbox=-4.030%2C5.315%2C-4.005%2C5.335&layer=mapnik&marker=5.325%2C-4.018"
+                    src={mapSrc}
                     className="w-full h-48 border-0"
                     loading="lazy"
                   />

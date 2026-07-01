@@ -298,7 +298,8 @@ export const DEFAULT_PERSONNEL: { name: string; role: string; photo?: string; po
 export interface SiteSettings {
   flashBanner?: { enabled: boolean; text: string; link?: string };
   flashInfos?: { enabled: boolean; speed?: number; items: { text: string; url?: string }[] };
-  contact?: { address: string; phone: string; email: string; hours?: string; dcpEmail?: string };
+  contact?: { address: string; phone: string; email: string; hours?: string; dcpEmail?: string; mapLat?: string; mapLng?: string };
+  links?: { ebanking?: string; playstore?: string };
   social?: { facebook: string; linkedin: string; twitter: string };
   orgChart?: OrgChart;
   orgTree?: OrgNode;

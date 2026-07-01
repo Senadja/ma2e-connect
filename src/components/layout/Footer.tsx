@@ -38,7 +38,7 @@ export const Footer = () => {
               <div className="flex items-center gap-4">
                 <img src="/images/app-qr.png" alt="QR code de l'application mobile MA2E" className="h-20 w-20 shrink-0 rounded-lg bg-white p-1.5" />
                 <a
-                  href={PLAYSTORE_URL}
+                  href={settings?.links?.playstore || PLAYSTORE_URL}
                   target="_blank"
                   rel="noreferrer noopener"
                   className="inline-flex items-center gap-2 rounded-xl bg-white/10 hover:bg-accent hover:text-accent-foreground px-4 py-2.5 text-sm font-semibold text-white transition-smooth"

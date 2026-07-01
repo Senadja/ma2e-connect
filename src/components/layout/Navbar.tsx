@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Logo } from "../Logo";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { NAV_LINKS, EBANKING_URL } from "@/data/site";
+import { useSettings } from "@/lib/content";
 import { cn } from "@/lib/utils";
 
 // Correspondance href → clé de traduction (évite de modifier NAV_LINKS).
@@ -37,6 +38,8 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const location = useLocation();
   const { t } = useTranslation();
+  const { data: settings } = useSettings();
+  const ebanking = settings?.links?.ebanking || EBANKING_URL;
   const navLabel = (href: string, fallback: string) => (NAV_KEY[href] ? t(`nav.${NAV_KEY[href]}`) : fallback);
   const childLabel = (href: string, fallback: string) => (CHILD_KEY[href] ? t(`nav.${CHILD_KEY[href].label}`) : fallback);
   const childDesc = (href: string, fallback?: string) => (CHILD_KEY[href] ? t(`nav.${CHILD_KEY[href].desc}`) : fallback);
@@ -145,7 +148,7 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
             {t("common.accessAdmin")}
           </Link>
           <a
-            href={EBANKING_URL}
+            href={ebanking}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-2.5 text-sm font-bold text-accent-foreground shadow-gold hover:scale-[1.03] transition-bounce"
@@ -207,7 +210,7 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
             <div className="flex justify-center">
               <LanguageSwitcher />
             </div>
-            <a href={EBANKING_URL} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-3 rounded-2xl bg-primary h-16 text-lg font-bold text-white shadow-xl shadow-primary/20">
+            <a href={ebanking} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-3 rounded-2xl bg-primary h-16 text-lg font-bold text-white shadow-xl shadow-primary/20">
               <Smartphone className="h-6 w-6" /> {t("common.espaceEma2e")}
             </a>
             <div className="grid grid-cols-2 gap-4">
