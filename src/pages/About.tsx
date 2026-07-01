@@ -217,9 +217,9 @@ const About = () => {
       {/* Organes de gouvernance — tableaux */}
       <section className="py-20 bg-secondary/40">
         <div className="container">
-          <div className="max-w-2xl mb-12">
+          <div className="mb-12">
             <span className="text-sm font-mono uppercase tracking-wider text-primary">{t("about.govKicker")}</span>
-            <h2 className="mt-2 font-display text-4xl md:text-5xl font-bold">{t("about.govTitle")}</h2>
+            <h2 className="mt-2 font-display font-bold whitespace-nowrap text-[clamp(0.95rem,4.2vw,3rem)]">{t("about.govTitle")}</h2>
           </div>
           <div ref={r4} className="reveal space-y-12">
             {orgUnits.map((unit) => (

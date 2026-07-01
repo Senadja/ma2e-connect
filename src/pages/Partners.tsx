@@ -32,10 +32,16 @@ const MEMBER_COMPANIES: { name: string; logo: string }[] = [
 const Partners = () => {
   const { t } = useTranslation();
   const { data: PARTNERS = [] } = usePartners();
-  const grouped = PARTNERS.reduce<Record<string, typeof PARTNERS>>((acc, p) => {
+  // Les « Sociétés membres » ont leur propre mur de logos (hors des groupes institutionnels).
+  const grouped = PARTNERS.filter((p) => p.type !== "Société membre").reduce<Record<string, typeof PARTNERS>>((acc, p) => {
     (acc[p.type] ||= []).push(p);
     return acc;
   }, {});
+  // Sociétés membres : depuis la BDD si présentes (gérables au back-office), sinon repli sur la liste intégrée.
+  const dbMembers = PARTNERS.filter((p) => p.type === "Société membre");
+  const memberCompanies = dbMembers.length
+    ? dbMembers.map((p) => ({ name: p.name, logo: (p as any).logo || LOGO_MAP[p.name] || "", url: (p as any).url || "" }))
+    : MEMBER_COMPANIES.map((c) => ({ ...c, url: "" }));
 
   return (
     <Layout>
@@ -56,23 +62,28 @@ const Partners = () => {
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               {items.map((p) => {
                 const logo = (p as any).logo || LOGO_MAP[p.name];
-                return (
-                <article
-                  key={p.name}
-                  className="rounded-2xl border bg-card p-6 shadow-sm transition-smooth hover:-translate-y-1 hover:shadow-lg hover:border-accent/40"
-                >
-                  <div className="flex h-40 items-center justify-center rounded-xl bg-gradient-to-br from-primary/5 to-accent/5 mb-5 overflow-hidden p-4">
-                    {logo ? (
-                      <img src={logo} alt={p.name} className="h-full w-full object-contain" />
-                    ) : (
-                      <div className="flex items-center gap-2 text-primary">
-                        <Building2 className="h-6 w-6" />
-                        <span className="font-display text-xl font-semibold">{p.name}</span>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{p.desc}</p>
-                </article>
+                const url = (p as any).url as string | undefined;
+                const cardCls = "block rounded-2xl border bg-card p-6 shadow-sm transition-smooth hover:-translate-y-1 hover:shadow-lg hover:border-accent/40";
+                const inner = (
+                  <>
+                    <div className="flex h-40 items-center justify-center rounded-xl bg-gradient-to-br from-primary/5 to-accent/5 mb-5 overflow-hidden p-4">
+                      {logo ? (
+                        <img src={logo} alt={p.name} className="h-full w-full object-contain" />
+                      ) : (
+                        <div className="flex items-center gap-2 text-primary">
+                          <Building2 className="h-6 w-6" />
+                          <span className="font-display text-xl font-semibold">{p.name}</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{p.desc}</p>
+                    {url && <span className="mt-3 inline-block text-sm font-semibold text-primary">Visiter le site →</span>}
+                  </>
+                );
+                return url ? (
+                  <a key={p.name} href={url} target="_blank" rel="noopener noreferrer" className={cardCls}>{inner}</a>
+                ) : (
+                  <article key={p.name} className={cardCls}>{inner}</article>
                 );
               })}
             </div>
@@ -88,15 +99,15 @@ const Partners = () => {
             <h2 className="font-display text-2xl md:text-3xl">Sociétés membres</h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
-            {MEMBER_COMPANIES.map((c) => (
-              <div
-                key={c.name}
-                title={c.name}
-                className="flex h-32 items-center justify-center rounded-2xl border bg-card p-6 shadow-sm transition-smooth hover:-translate-y-1 hover:shadow-lg hover:border-accent/40"
-              >
-                <img src={c.logo} alt={c.name} loading="lazy" className="max-h-full max-w-full object-contain" />
-              </div>
-            ))}
+            {memberCompanies.map((c) => {
+              const cls = "flex h-32 items-center justify-center rounded-2xl border bg-card p-6 shadow-sm transition-smooth hover:-translate-y-1 hover:shadow-lg hover:border-accent/40";
+              const img = <img src={c.logo} alt={c.name} loading="lazy" className="max-h-full max-w-full object-contain" />;
+              return c.url ? (
+                <a key={c.name} href={c.url} target="_blank" rel="noopener noreferrer" title={c.name} className={cls}>{img}</a>
+              ) : (
+                <div key={c.name} title={c.name} className={cls}>{img}</div>
+              );
+            })}
           </div>
         </div>
       </section>

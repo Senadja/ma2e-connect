@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface Partner { id: string; name: string; type: string; desc: string; logo?: string; url?: string; order: number }
-const TYPES = ["Tutelle", "Partenaire institutionnel", "Association professionnelle", "Partenaire"];
+const TYPES = ["Tutelle", "Partenaire institutionnel", "Association professionnelle", "Partenaire", "Société membre"];
 const empty = { id: "", name: "", type: "Partenaire", desc: "", logo: "", url: "", order: 0 };
 
 export const PartnersManager = () => {
