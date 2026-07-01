@@ -177,7 +177,7 @@ export async function generateAdhesionPdf(app: AppLike) {
   let yr = startY;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9.5);
-  doc.text(`Fait à ...............................   le ${app.date || "...................."}`, colX, yr);
+  doc.text(`Fait à Abidjan,   le ${app.date || "...................."}`, colX, yr);
   yr += 8;
   doc.text("Signature", colX + 20, yr);
   yr += 4.5;
@@ -418,7 +418,7 @@ export async function generateAdhesionPdf(app: AppLike) {
   let yr2 = startY2;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9.5);
-  doc.text(`Fait à ...............................   le ${app.date || "...................."}`, colX, yr2);
+  doc.text(`Fait à Abidjan,   le ${app.date || "...................."}`, colX, yr2);
   yr2 += 8;
   doc.text("Signature", colX + 20, yr2);
   yr2 += 4.5;
