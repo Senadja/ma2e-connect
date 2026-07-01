@@ -50,7 +50,7 @@ const Savings = () => {
           <div key={current.id} className="mt-10 grid lg:grid-cols-3 gap-10 animate-fade-in">
             <div className="lg:col-span-2">
               <h2 className="font-display text-3xl md:text-4xl font-bold">{current.name}</h2>
-              <p className="mt-4 text-lg text-muted-foreground leading-relaxed">{current.desc}</p>
+              <p className="mt-4 text-lg text-muted-foreground leading-relaxed whitespace-pre-line">{current.desc}</p>
 
               {(current as any).image && (
                 <Dialog>
