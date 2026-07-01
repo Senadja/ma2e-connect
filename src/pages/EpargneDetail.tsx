@@ -4,12 +4,14 @@ import { SEO } from "@/components/SEO";
 import { ProductRequestForm } from "@/components/forms/ProductRequestForm";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useProducts } from "@/lib/content";
-import { Check, Download, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { SAVINGS_DETAILS } from "@/data/savingsDetails";
+import { Check, Download, ArrowLeft, CheckCircle2, Info } from "lucide-react";
 import { Link, useParams, useLocation, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-// Page dédiée à un produit d'épargne (fiche détaillée) — ex. Épargne Expresse.
-// Reprend l'ensemble des caractéristiques + formulaire de souscription.
+// Page dédiée à un produit d'épargne (fiche détaillée).
+// Contenu réglementaire complet (intro, conditions, fonctionnement, barème, fermeture)
+// issu des fiches officielles MA2E, + formulaire de souscription.
 const EpargneDetail = () => {
   const { t } = useTranslation();
   const { slug } = useParams<{ slug: string }>();
@@ -17,6 +19,7 @@ const EpargneDetail = () => {
   const fromAdhesion = (location.state as { fromAdhesion?: boolean } | null)?.fromAdhesion;
   const { data: SAVINGS = [] } = useProducts("epargne");
   const product = SAVINGS.find((s) => s.id === slug) as any;
+  const detail = slug ? SAVINGS_DETAILS[slug] : undefined;
 
   // Slug inconnu (une fois les données chargées) → retour à la liste des épargnes.
   if (SAVINGS.length > 0 && !product) return <Navigate to="/produits/epargne" replace />;
@@ -24,7 +27,7 @@ const EpargneDetail = () => {
 
   return (
     <Layout>
-      <SEO title={`Épargne — ${product.name}`} description={product.desc} />
+      <SEO title={`Épargne — ${product.name}`} description={detail?.intro ?? product.desc} />
       <PageHero
         title={product.name}
         subtitle={t("products.savingsHeroSubtitle")}
@@ -55,7 +58,7 @@ const EpargneDetail = () => {
           <div className="mt-8 grid lg:grid-cols-3 gap-10">
             <div className="lg:col-span-2">
               <h2 className="font-display text-3xl md:text-4xl font-bold">{product.name}</h2>
-              <p className="mt-4 text-lg text-muted-foreground leading-relaxed whitespace-pre-line">{product.desc}</p>
+              <p className="mt-4 text-lg text-muted-foreground leading-relaxed whitespace-pre-line">{detail?.intro ?? product.desc}</p>
 
               {product.image && (
                 <Dialog>
@@ -70,20 +73,72 @@ const EpargneDetail = () => {
                 </Dialog>
               )}
 
-              {product.features?.length > 0 && (
-                <>
-                  <h3 className="mt-10 font-display text-xl font-bold">{t("products.features")}</h3>
-                  <ul className="mt-4 grid sm:grid-cols-2 gap-3">
-                    {product.features.map((f: string) => (
-                      <li key={f} className="flex items-start gap-3 rounded-xl bg-card border border-border p-4">
-                        <span className="mt-0.5 grid h-6 w-6 place-items-center rounded-full bg-primary text-primary-foreground shrink-0">
-                          <Check className="h-3.5 w-3.5" />
-                        </span>
-                        <span className="font-medium">{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </>
+              {/* Contenu détaillé officiel */}
+              {detail ? (
+                <div className="mt-10 space-y-8">
+                  {detail.sections.map((sec) => (
+                    <div key={sec.heading}>
+                      <h3 className="font-display text-xl font-bold text-primary">{sec.heading}</h3>
+                      <ul className="mt-4 space-y-2.5">
+                        {sec.items.map((it) => (
+                          <li key={it} className="flex items-start gap-3">
+                            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-accent shrink-0" />
+                            <span className="text-muted-foreground leading-relaxed">{it}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+
+                  {detail.rateTable && (
+                    <div>
+                      <h3 className="font-display text-xl font-bold text-primary">Barème de rémunération</h3>
+                      <div className="mt-4 overflow-x-auto rounded-xl border border-border">
+                        <table className="w-full text-sm">
+                          <thead className="bg-secondary/50">
+                            <tr>
+                              {detail.rateTable.columns.map((c) => (
+                                <th key={c} className="px-4 py-3 text-left font-semibold">{c}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {detail.rateTable.rows.map((row, i) => (
+                              <tr key={i} className="border-t border-border">
+                                {row.map((cell, j) => (
+                                  <td key={j} className={j === row.length - 1 ? "px-4 py-3 font-bold text-primary" : "px-4 py-3 text-muted-foreground"}>{cell}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {detail.note && (
+                    <div className="flex items-start gap-3 rounded-xl border border-border bg-secondary/30 p-4">
+                      <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                      <p className="text-sm text-muted-foreground"><strong>NB :</strong> {detail.note}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                product.features?.length > 0 && (
+                  <>
+                    <h3 className="mt-10 font-display text-xl font-bold">{t("products.features")}</h3>
+                    <ul className="mt-4 grid sm:grid-cols-2 gap-3">
+                      {product.features.map((f: string) => (
+                        <li key={f} className="flex items-start gap-3 rounded-xl bg-card border border-border p-4">
+                          <span className="mt-0.5 grid h-6 w-6 place-items-center rounded-full bg-primary text-primary-foreground shrink-0">
+                            <Check className="h-3.5 w-3.5" />
+                          </span>
+                          <span className="font-medium">{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )
               )}
 
               {product.form && (
