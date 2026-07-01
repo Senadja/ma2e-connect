@@ -241,7 +241,7 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="mt-12 grid md:grid-cols-3 gap-6">
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 max-w-4xl">
             {products.map((p, i) => (
               <Link
                 key={p.title}
