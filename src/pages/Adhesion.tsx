@@ -4,6 +4,7 @@ import * as z from "zod";
 import { Layout } from "@/components/layout/Layout";
 import { PageHero } from "@/components/PageHero";
 import { SEO } from "@/components/SEO";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -76,7 +77,7 @@ type Slot = (typeof DOC_SLOTS)[number]["key"];
 
 const Adhesion = () => {
   const { t } = useTranslation();
-  const [submitted, setSubmitted] = useState(false);
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
   const [docs, setDocs] = useState<Partial<Record<Slot, { name: string; path: string }>>>({});
@@ -154,29 +155,14 @@ const Adhesion = () => {
           },
         },
       });
-      setSubmitted(true);
       toast.success(`Demande d'adhésion envoyée — référence ${appId} !`);
+      // Étape suivante : l'Épargne Expresse est obligatoire à l'adhésion → on redirige vers son formulaire.
+      navigate("/produits/epargne/expresse", { state: { fromAdhesion: true, ref: appId } });
     } catch (e: any) {
       toast.error(e?.message || t("adhesion.errorToast"));
     } finally {
       setLoading(false);
     }
-  }
-
-  if (submitted) {
-    return (
-      <Layout>
-        <SEO title="Demande envoyée" />
-        <div className="container py-32 flex flex-col items-center text-center">
-          <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-6">
-            <CheckCircle2 className="h-10 w-10" />
-          </div>
-          <h1 className="font-display text-4xl font-bold">{t("adhesion.receivedTitle")}</h1>
-          <p className="mt-4 text-muted-foreground max-w-md text-lg">{t("adhesion.receivedText")}</p>
-          <Button asChild className="mt-10 rounded-full px-8"><a href="/">{t("adhesion.backHome")}</a></Button>
-        </div>
-      </Layout>
-    );
   }
 
   return (

@@ -30,7 +30,7 @@ const Products = () => {
       />
 
       <section className="py-20">
-        <div className="container grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="container grid gap-8 md:grid-cols-2 max-w-5xl">
           {products.map((p) => (
             <Link key={p.title} to={p.to} className="group relative rounded-3xl overflow-hidden border border-border bg-card hover:-translate-y-1 hover:shadow-elegant transition-bounce flex flex-col">
               <div className={`bg-gradient-to-br ${p.gradient} p-8 text-white relative overflow-hidden`}>

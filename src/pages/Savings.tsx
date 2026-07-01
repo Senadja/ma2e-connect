@@ -5,7 +5,8 @@ import { SEO } from "@/components/SEO";
 import { ProductRequestForm } from "@/components/forms/ProductRequestForm";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useProducts } from "@/lib/content";
-import { Check, Download, Mail } from "lucide-react";
+import { Check, Download, Mail, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 
@@ -51,6 +52,15 @@ const Savings = () => {
             <div className="lg:col-span-2">
               <h2 className="font-display text-3xl md:text-4xl font-bold">{current.name}</h2>
               <p className="mt-4 text-lg text-muted-foreground leading-relaxed whitespace-pre-line">{current.desc}</p>
+
+              {current.id === "expresse" && (
+                <Link
+                  to={`/produits/epargne/${current.id}`}
+                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:brightness-110 transition-smooth"
+                >
+                  Voir la fiche détaillée <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
 
               {(current as any).image && (
                 <Dialog>

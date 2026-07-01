@@ -33,6 +33,7 @@ const Adhesion = lazyWithReload(() => import("./pages/Adhesion.tsx"));
 const About = lazyWithReload(() => import("./pages/About.tsx"));
 const Products = lazyWithReload(() => import("./pages/Products.tsx"));
 const Savings = lazyWithReload(() => import("./pages/Savings.tsx"));
+const EpargneDetail = lazyWithReload(() => import("./pages/EpargneDetail.tsx"));
 const Credits = lazyWithReload(() => import("./pages/Credits.tsx"));
 const News = lazyWithReload(() => import("./pages/News.tsx"));
 const NewsDetail = lazyWithReload(() => import("./pages/NewsDetail.tsx"));
@@ -97,6 +98,7 @@ const App = () => (
               <Route path="/a-propos" element={<About />} />
               <Route path="/produits" element={<Products />} />
               <Route path="/produits/epargne" element={<Savings />} />
+              <Route path="/produits/epargne/:slug" element={<EpargneDetail />} />
               <Route path="/produits/credits" element={<Credits />} />
               <Route path="/produits/immobilier" element={<Navigate to="/produits" replace />} />
               <Route path="/actualites" element={<News />} />
