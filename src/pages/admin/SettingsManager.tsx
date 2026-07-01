@@ -9,14 +9,13 @@ import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Tras
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { MILESTONES } from "@/data/site";
-import { DEFAULT_ORG_TREE, DEFAULT_PERSONNEL, type OrgNode } from "@/lib/content";
+import { DEFAULT_ORG_TREE, DEFAULT_PERSONNEL, DEFAULT_ORG_UNITS, type OrgNode, type OrgUnit } from "@/lib/content";
 import { OrgChartSvg } from "@/components/OrgChartSvg";
 import { FocalPointPicker } from "@/components/admin/FocalPointPicker";
 import { DEFAULT_LANGUAGES, LANGUAGE_PRESETS, BASE_LANG, type Language } from "@/lib/translate";
 import { DEFAULT_BRAND_HEX, applyBrandColor } from "@/lib/brandColor";
 
 interface StatItem { value: number; label: string; suffix: string }
-interface OrgUnit { name: string; note: string }
 interface Settings {
   flashBanner?: { enabled: boolean; text: string; link: string };
   flashInfos?: { enabled: boolean; speed?: number; items: { text: string; url: string }[] };
@@ -45,12 +44,6 @@ const DEFAULT_STATS: StatItem[] = [
   { value: 6.3, label: "Mds FCFA de crédits", suffix: "" },
 ];
 
-const DEFAULT_ORG_UNITS: OrgUnit[] = [
-  { name: "Conseil d'Administration", note: "Président · 2 vice-présidents · 13 administrateurs" },
-  { name: "Comité de Crédit", note: "Président · 1 vice-président · 1 secrétaire · 10 membres" },
-  { name: "Conseil de Surveillance", note: "Président · 1 vice-président · 1 secrétaire · 6 membres" },
-  { name: "Comité Éthique et Déontologie", note: "Président · 2 membres" },
-];
 
 export const SettingsManager = () => {
   const queryClient = useQueryClient();
@@ -204,7 +197,7 @@ export const SettingsManager = () => {
     if (Array.isArray(data.personnel) && data.personnel.length) setPersonnel(data.personnel);
     if (data.orgTree && data.orgTree.name) setOrgTree(data.orgTree);
     if (typeof data.orgImage === "string") setOrgImage(data.orgImage);
-    if (Array.isArray(data.orgUnits) && data.orgUnits.length) setOrgUnits(data.orgUnits.map((u) => ({ name: u.name || "", note: u.note || "" })));
+    if (Array.isArray(data.orgUnits) && data.orgUnits.length) setOrgUnits(data.orgUnits.map((u) => ({ name: u.name || "", note: u.note || "", members: (u.members || []).map((m) => ({ name: m.name || "", role: m.role || "", company: m.company || "" })) })));
     if (data.splash) setSplash({ enabled: !!data.splash.enabled, image: data.splash.image || "/images/splash-accueil.png", link: data.splash.link || "" });
     if (data.whatsapp) setWhatsapp({ enabled: !!data.whatsapp.enabled, phone: data.whatsapp.phone || "", message: data.whatsapp.message || "" });
     if (data.chatbot) setChatbot({ enabled: !!data.chatbot.enabled, url: data.chatbot.url || "" });
@@ -288,12 +281,27 @@ export const SettingsManager = () => {
     );
   };
 
-  const updateUnit = (i: number, field: keyof OrgUnit, val: string) =>
+  const updateUnit = (i: number, field: "name" | "note", val: string) =>
     setOrgUnits((u) => u.map((it, idx) => (idx === i ? { ...it, [field]: val } : it)));
-  const addUnit = () => setOrgUnits((u) => [...u, { name: "", note: "" }]);
+  const addUnit = () => setOrgUnits((u) => [...u, { name: "", note: "", members: [] }]);
   const removeUnit = (i: number) => setOrgUnits((u) => u.filter((_, idx) => idx !== i));
+  // Membres d'un organe
+  const addMember = (ui: number) =>
+    setOrgUnits((u) => u.map((it, idx) => (idx === ui ? { ...it, members: [...(it.members || []), { name: "", role: "", company: "" }] } : it)));
+  const updateMember = (ui: number, mi: number, field: "name" | "role" | "company", val: string) =>
+    setOrgUnits((u) => u.map((it, idx) => (idx === ui ? { ...it, members: (it.members || []).map((m, j) => (j === mi ? { ...m, [field]: val } : m)) } : it)));
+  const removeMember = (ui: number, mi: number) =>
+    setOrgUnits((u) => u.map((it, idx) => (idx === ui ? { ...it, members: (it.members || []).filter((_, j) => j !== mi) } : it)));
   const saveUnits = () => {
-    const cleaned = orgUnits.map((u) => ({ name: u.name.trim(), note: u.note.trim() })).filter((u) => u.name);
+    const cleaned = orgUnits
+      .map((u) => ({
+        name: u.name.trim(),
+        note: (u.note || "").trim(),
+        members: (u.members || [])
+          .map((m) => ({ name: m.name.trim(), role: (m.role || "").trim(), company: (m.company || "").trim() }))
+          .filter((m) => m.name),
+      }))
+      .filter((u) => u.name);
     save.mutate({ key: "orgUnits", value: cleaned });
   };
 
@@ -549,17 +557,33 @@ export const SettingsManager = () => {
             <CardContent className="space-y-4">
               <p className="text-[11px] text-muted-foreground">Organes affichés sur « À propos » (CA, CC, CS, CED…). Le texte « effectif » s'affiche à côté du titre ; les responsables avec photo se gèrent dans « Équipe &amp; gouvernance » (le nom de l'organe doit être identique des deux côtés).</p>
               {orgUnits.map((u, i) => (
-                <div key={i} className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-5 grid gap-1">
-                    <label className={label}>Organe</label>
-                    <Input value={u.name} onChange={(e) => updateUnit(i, "name", e.target.value)} placeholder="Conseil d'Administration" />
+                <div key={i} className="rounded-xl border border-border/60 bg-secondary/20 p-4 space-y-3">
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-12 sm:col-span-6 grid gap-1">
+                      <label className={label}>Organe</label>
+                      <Input value={u.name} onChange={(e) => updateUnit(i, "name", e.target.value)} placeholder="Conseil d'Administration" />
+                    </div>
+                    <div className="col-span-10 sm:col-span-5 grid gap-1">
+                      <label className={label}>Effectif (affiché à côté du titre)</label>
+                      <Input value={u.note || ""} onChange={(e) => updateUnit(i, "note", e.target.value)} placeholder="16 membres" />
+                    </div>
+                    <div className="col-span-2 sm:col-span-1 flex justify-center pb-1">
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeUnit(i)} disabled={orgUnits.length <= 1} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                    </div>
                   </div>
-                  <div className="col-span-6 grid gap-1">
-                    <label className={label}>Effectif / composition</label>
-                    <Input value={u.note} onChange={(e) => updateUnit(i, "note", e.target.value)} placeholder="Président · 2 VP · 13 administrateurs" />
-                  </div>
-                  <div className="col-span-1 flex justify-center pb-1">
-                    <Button type="button" variant="ghost" size="icon" onClick={() => removeUnit(i)} disabled={orgUnits.length <= 1} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                  <div className="space-y-2 border-t border-border/50 pt-3">
+                    <label className={label}>Membres (nom · fonction · société)</label>
+                    {(u.members || []).map((m, mi) => (
+                      <div key={mi} className="grid grid-cols-12 gap-2 items-center">
+                        <Input className="col-span-12 sm:col-span-5" value={m.name} onChange={(e) => updateMember(i, mi, "name", e.target.value)} placeholder="Nom et prénoms" />
+                        <Input className="col-span-6 sm:col-span-3" value={m.role || ""} onChange={(e) => updateMember(i, mi, "role", e.target.value)} placeholder="Fonction (Président…)" />
+                        <Input className="col-span-5 sm:col-span-3" value={m.company || ""} onChange={(e) => updateMember(i, mi, "company", e.target.value)} placeholder="Société (CIE…)" />
+                        <div className="col-span-1 flex justify-center">
+                          <Button type="button" variant="ghost" size="icon" onClick={() => removeMember(i, mi)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" size="sm" onClick={() => addMember(i)} className="w-fit rounded-full gap-2"><Plus className="h-3.5 w-3.5" /> Ajouter un membre</Button>
                   </div>
                 </div>
               ))}

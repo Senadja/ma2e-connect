@@ -2,7 +2,7 @@ import { Layout } from "@/components/layout/Layout";
 import { PageHero } from "@/components/PageHero";
 import { useReveal, useCounter } from "@/hooks/useReveal";
 import { MILESTONES, STATS } from "@/data/site";
-import { useSettings, DEFAULT_PERSONNEL } from "@/lib/content";
+import { useSettings, DEFAULT_PERSONNEL, DEFAULT_ORG_UNITS } from "@/lib/content";
 import { useTranslation } from "react-i18next";
 import { Quote, ShieldCheck, Wallet, Briefcase, Users, Award, TrendingUp, Coins, Download } from "lucide-react";
 import { OrgChartSvg } from "@/components/OrgChartSvg";
@@ -25,58 +25,7 @@ const StatItem = ({ stat, icon: Icon }: { stat: typeof STATS[number]; icon: any 
 
 
 
-// Organes de gouvernance (composition officielle MEMBRES DES ORGANES 2026) — repli ; éditable au CMS.
-const DEFAULT_ORG_UNITS = [
-  { name: "Conseil d'Administration", note: "16 membres", members: [
-    { name: "Jean Christian TURKSON", role: "Président", company: "CIE" },
-    { name: "DEGNY Guy Florent", role: "1er Vice-Président", company: "SODECI" },
-    { name: "SOUMAHORO Namory Hamed", role: "2ème Vice-Président", company: "CIE" },
-    { name: "DODO Olivier", role: "Administrateur", company: "GS2E" },
-    { name: "N'DRI Léandre", role: "Administrateur", company: "CIE" },
-    { name: "BITTY AYE Marie", role: "Administrateur", company: "CIE" },
-    { name: "OUATTARA Mamadou", role: "Administrateur", company: "CIE" },
-    { name: "KONATE Kadidia", role: "Administrateur", company: "SODECI" },
-    { name: "COULIBALY Damasse", role: "Administrateur", company: "SODECI" },
-    { name: "DJIBENOU Antoine", role: "Administrateur", company: "GS2E" },
-    { name: "COULIBALY épse DIOP Aminata", role: "Administrateur", company: "CIPREL" },
-    { name: "OURAGA Maxime", role: "Administrateur", company: "CIE - Fraternité" },
-    { name: "KOUADIO Koffi N'Da", role: "Administrateur", company: "CIE - SYNACIE" },
-    { name: "BAKO Solange épse OUATTARA", role: "Administrateur", company: "CIE - AXE" },
-    { name: "KOUAO Marc Russel", role: "Administrateur", company: "SODECI - SYNASOD" },
-    { name: "NIOULE épse NAHOUNOU A. C. Désirée", role: "Administrateur", company: "SODECI - SYNATRASE" },
-  ] },
-  { name: "Comité de Crédit", note: "13 membres", members: [
-    { name: "TRA BI Boris", role: "Président", company: "CIE" },
-    { name: "KOUASSI Prisca épse KOUGNON", role: "Vice-Président", company: "SODECI" },
-    { name: "OBLE KOIZAN Roseline", role: "Secrétaire", company: "CIE" },
-    { name: "DOUKPA Viviane épse GBAGBO", role: "Membre", company: "GS2E" },
-    { name: "DOBO Ange", role: "Membre", company: "CIE" },
-    { name: "SIDIBE Salimatou", role: "Membre", company: "CIE" },
-    { name: "BALLO Podo Noël", role: "Membre", company: "GS2E" },
-    { name: "BAKAYOKO Awa", role: "Membre", company: "CIE" },
-    { name: "ZABRE Léocadie Laure", role: "Membre", company: "CIE" },
-    { name: "ADINGRA Adeline Antoinette épse AMIA", role: "Membre", company: "SODECI" },
-    { name: "KOFFI N'GUESSAN Nadège épse ADINGRA", role: "Membre", company: "SODECI" },
-    { name: "BILE épse BOKO Euphrasie", role: "Membre", company: "SODECI" },
-    { name: "YORO Romain", role: "Membre", company: "CIPREL" },
-  ] },
-  { name: "Conseil de Surveillance", note: "9 membres", members: [
-    { name: "REGNIER-ONDOMAT Stéphane Antoine", role: "Président", company: "GS2E" },
-    { name: "SOGAN Prudencio", role: "Vice-Président", company: "CIPREL" },
-    { name: "ZAMA Johan", role: "Secrétaire", company: "SODECI" },
-    { name: "COULIBALY Kalwahanan", role: "Membre", company: "CIE" },
-    { name: "DJELOU Djelou Fabrice", role: "Membre", company: "CIE" },
-    { name: "TOURE Asseta épse ASSIFFOUA", role: "Membre", company: "SODECI" },
-    { name: "DOUA Gisèle épse KEBE", role: "Membre", company: "SODECI" },
-    { name: "BOHIAN BAMBA Mah", role: "Membre", company: "CIE" },
-    { name: "BOUYS Alexandre", role: "Membre", company: "CIE" },
-  ] },
-  { name: "Comité d'Éthique et de Déontologie", note: "3 membres", members: [
-    { name: "LATTA Hervé", role: "Président", company: "GS2E" },
-    { name: "FOFANA Daouda", role: "Membre", company: "SODECI" },
-    { name: "ANOUGBA Simplice", role: "Membre", company: "CIE" },
-  ] },
-];
+
 
 const About = () => {
   const { t } = useTranslation();
