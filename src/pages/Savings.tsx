@@ -4,7 +4,7 @@ import { PageHero } from "@/components/PageHero";
 import { SEO } from "@/components/SEO";
 import { ProductRequestForm } from "@/components/forms/ProductRequestForm";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { useProducts } from "@/lib/content";
+import { useProducts, useSettings } from "@/lib/content";
 import { SAVINGS_DETAILS } from "@/data/savingsDetails";
 import { Check, Download, Mail, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -14,6 +14,8 @@ import { useTranslation } from "react-i18next";
 const Savings = () => {
   const { t } = useTranslation();
   const { data: SAVINGS = [] } = useProducts("epargne");
+  const { data: settings } = useSettings();
+  const details = { ...SAVINGS_DETAILS, ...(settings?.savingsDetails ?? {}) };
   const [active, setActive] = useState<string>("");
   const current = (SAVINGS.find((s) => s.id === active) ?? SAVINGS[0]) as any;
 
@@ -54,15 +56,6 @@ const Savings = () => {
               <h2 className="font-display text-3xl md:text-4xl font-bold">{current.name}</h2>
               <p className="mt-4 text-lg text-muted-foreground leading-relaxed whitespace-pre-line">{current.desc}</p>
 
-              {SAVINGS_DETAILS[current.id] && (
-                <Link
-                  to={`/produits/epargne/${current.id}`}
-                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:brightness-110 transition-smooth"
-                >
-                  Voir plus <ArrowRight className="h-4 w-4" />
-                </Link>
-              )}
-
               {(current as any).image && (
                 <Dialog>
                   <DialogTrigger asChild>
@@ -79,7 +72,7 @@ const Savings = () => {
               <h3 className="mt-10 font-display text-xl font-bold">{t("products.features")}</h3>
               <ul className="mt-4 grid sm:grid-cols-2 gap-3">
                 {current.features.map((f) => (
-                  <li key={f} className="flex items-start gap-3 rounded-xl bg-card border border-border p-4">   
+                  <li key={f} className="flex items-start gap-3 rounded-xl bg-card border border-border p-4">
                     <span className="mt-0.5 grid h-6 w-6 place-items-center rounded-full bg-primary text-primary-foreground shrink-0">
                       <Check className="h-3.5 w-3.5" />
                     </span>
@@ -87,6 +80,15 @@ const Savings = () => {
                   </li>
                 ))}
               </ul>
+
+              {details[current.id] && (
+                <Link
+                  to={`/produits/epargne/${current.id}`}
+                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:brightness-110 transition-smooth"
+                >
+                  Voir plus <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
 
               <div className="mt-12 p-8 rounded-2xl bg-secondary/40 border border-border">
                 <h3 className="font-display text-2xl font-bold mb-4">{t("products.needHelp")}</h3>

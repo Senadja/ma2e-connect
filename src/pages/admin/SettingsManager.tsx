@@ -3,13 +3,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload, Languages, Send, Palette, RotateCcw, ChevronUp, ChevronDown } from "lucide-react";
+import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload, Languages, Send, Palette, RotateCcw, ChevronUp, ChevronDown, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { MILESTONES } from "@/data/site";
 import { DEFAULT_ORG_TREE, DEFAULT_PERSONNEL, DEFAULT_ORG_UNITS, type OrgNode, type OrgUnit } from "@/lib/content";
+import { SAVINGS_DETAILS, type SavingsDetail, type SavingsRateTable } from "@/data/savingsDetails";
 import { OrgChartSvg } from "@/components/OrgChartSvg";
 import { FocalPointPicker } from "@/components/admin/FocalPointPicker";
 import { DEFAULT_LANGUAGES, LANGUAGE_PRESETS, BASE_LANG, type Language } from "@/lib/translate";
@@ -36,6 +38,7 @@ interface Settings {
   milestones?: { year: string; title: string; desc: string }[];
   languages?: { code: string; label: string }[];
   branding?: { primary?: string };
+  savingsDetails?: Record<string, SavingsDetail>;
 }
 
 const DEFAULT_STATS: StatItem[] = [
@@ -44,6 +47,28 @@ const DEFAULT_STATS: StatItem[] = [
   { value: 20, label: "Années d'activités", suffix: "" },
   { value: 6.3, label: "Mds FCFA de crédits", suffix: "" },
 ];
+
+// Fiches détaillées épargne (« Voir plus ») : libellés + (dé)sérialisation du barème.
+const SAVINGS_LABELS: Record<string, string> = {
+  expresse: "Épargne Expresse",
+  ordinaire: "Épargne Ordinaire",
+  logement: "Épargne Logement",
+  dat: "Dépôt à terme simple",
+  datv: "DAT à versements progressifs",
+};
+
+const serializeRate = (rt?: SavingsRateTable): string =>
+  rt ? [rt.columns.join(" | "), ...rt.rows.map((r) => r.join(" | "))].join("\n") : "";
+
+const parseRate = (text: string): SavingsRateTable | undefined => {
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (lines.length < 2) return undefined;
+  const columns = lines[0].split("|").map((c) => c.trim());
+  const rows = lines.slice(1)
+    .map((l) => l.split("|").map((c) => c.trim()))
+    .filter((r) => r.some((c) => c));
+  return rows.length ? { columns, rows } : undefined;
+};
 
 
 export const SettingsManager = () => {
@@ -160,6 +185,35 @@ export const SettingsManager = () => {
     save.mutate({ key: "branding", value: { primary: DEFAULT_BRAND_HEX } }, { onSuccess: refreshPublic });
   };
 
+  // Fiches détaillées épargne (« Voir plus ») — repli SAVINGS_DETAILS, fusionné avec le CMS.
+  const [savingsDetails, setSavingsDetails] = useState<Record<string, SavingsDetail>>(SAVINGS_DETAILS);
+  const [rateTexts, setRateTexts] = useState<Record<string, string>>(() =>
+    Object.fromEntries(Object.entries(SAVINGS_DETAILS).map(([k, v]) => [k, serializeRate(v.rateTable)]))
+  );
+  const updateDetail = (pid: string, patch: Partial<SavingsDetail>) =>
+    setSavingsDetails((d) => ({ ...d, [pid]: { ...d[pid], ...patch } }));
+  const updateSection = (pid: string, si: number, patch: Partial<SavingsDetail["sections"][number]>) =>
+    setSavingsDetails((d) => ({ ...d, [pid]: { ...d[pid], sections: d[pid].sections.map((s, i) => (i === si ? { ...s, ...patch } : s)) } }));
+  const addSection = (pid: string) =>
+    setSavingsDetails((d) => ({ ...d, [pid]: { ...d[pid], sections: [...d[pid].sections, { heading: "", items: [] }] } }));
+  const removeSection = (pid: string, si: number) =>
+    setSavingsDetails((d) => ({ ...d, [pid]: { ...d[pid], sections: d[pid].sections.filter((_, i) => i !== si) } }));
+  const saveSavingsDetails = () => {
+    const cleaned: Record<string, SavingsDetail> = {};
+    for (const [pid, d] of Object.entries(savingsDetails)) {
+      const sections = d.sections
+        .map((s) => ({ heading: s.heading.trim(), items: s.items.map((x) => x.trim()).filter(Boolean) }))
+        .filter((s) => s.heading || s.items.length);
+      const entry: SavingsDetail = { intro: (d.intro || "").trim(), sections };
+      const rt = parseRate(rateTexts[pid] ?? "");
+      if (rt) entry.rateTable = rt;
+      const note = (d.note || "").trim();
+      if (note) entry.note = note;
+      cleaned[pid] = entry;
+    }
+    save.mutate({ key: "savingsDetails", value: cleaned }, { onSuccess: refreshPublic });
+  };
+
   const [smtp, setSmtp] = useState({ enabled: false, host: "", port: 587, user: "", pass: "", secure: false, from: "", to: "" });
   const [testTo, setTestTo] = useState("");
   const [testing, setTesting] = useState(false);
@@ -214,6 +268,11 @@ export const SettingsManager = () => {
     if (Array.isArray(data.milestones) && data.milestones.length) setMilestones(data.milestones.map((m) => ({ year: m.year || "", title: m.title || "", desc: m.desc || "" })));
     if (Array.isArray(data.languages) && data.languages.length) setLanguages(data.languages.map((l) => ({ code: l.code, label: l.label })));
     if (data.branding?.primary) setBranding({ primary: data.branding.primary });
+    if (data.savingsDetails && Object.keys(data.savingsDetails).length) {
+      const merged = { ...SAVINGS_DETAILS, ...data.savingsDetails };
+      setSavingsDetails(merged);
+      setRateTexts(Object.fromEntries(Object.entries(merged).map(([k, v]) => [k, serializeRate(v.rateTable)])));
+    }
   }, [data]);
 
   // ── Organigramme (arbre) : édition immuable par chemin ──
@@ -340,10 +399,59 @@ export const SettingsManager = () => {
         <TabsList className="flex h-auto flex-wrap justify-start gap-1 bg-muted/60 p-1">
           <TabsTrigger value="accueil">Accueil</TabsTrigger>
           <TabsTrigger value="apropos">À propos</TabsTrigger>
+          <TabsTrigger value="epargne">Fiches épargne</TabsTrigger>
           <TabsTrigger value="general">Général</TabsTrigger>
           <TabsTrigger value="interactions">Interactions</TabsTrigger>
           <TabsTrigger value="technique">Technique</TabsTrigger>
         </TabsList>
+
+        {/* ============================ FICHES ÉPARGNE ============================ */}
+        <TabsContent value="epargne" className="space-y-6 mt-0">
+          <Card className="border-border/40 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold flex items-center gap-2"><Wallet className="h-5 w-5 text-primary" /> Fiches détaillées épargne (« Voir plus »)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <p className="text-sm text-muted-foreground">Contenu affiché sur la page « Voir plus » de chaque produit d'épargne. Dans les listes, <strong>une ligne = un point</strong>.</p>
+              {Object.keys(savingsDetails).map((pid) => {
+                const d = savingsDetails[pid];
+                return (
+                  <div key={pid} className="rounded-xl border border-border p-4 space-y-4">
+                    <h3 className="font-display font-bold text-lg text-primary-dark">{SAVINGS_LABELS[pid] ?? pid}</h3>
+
+                    <div className="grid gap-2">
+                      <label className={label}>Introduction</label>
+                      <Textarea rows={3} value={d.intro} onChange={(e) => updateDetail(pid, { intro: e.target.value })} placeholder="Phrase de présentation du produit" />
+                    </div>
+
+                    {d.sections.map((sec, si) => (
+                      <div key={si} className="rounded-lg bg-muted/40 p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Input value={sec.heading} onChange={(e) => updateSection(pid, si, { heading: e.target.value })} placeholder="Titre de la section (ex. Conditions d'ouverture)" className="font-semibold" />
+                          <Button type="button" variant="ghost" size="icon" className={iconBtn} title="Supprimer la section" onClick={() => removeSection(pid, si)}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                        <Textarea rows={Math.max(3, sec.items.length + 1)} value={sec.items.join("\n")} onChange={(e) => updateSection(pid, si, { items: e.target.value.split("\n") })} placeholder="Un point par ligne" />
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => addSection(pid)}><Plus className="h-4 w-4 mr-1" /> Ajouter une section</Button>
+
+                    <div className="grid gap-2">
+                      <label className={label}>Barème de taux (optionnel)</label>
+                      <Textarea rows={4} value={rateTexts[pid] ?? ""} onChange={(e) => setRateTexts((r) => ({ ...r, [pid]: e.target.value }))} placeholder={"Durée | Montant | Taux\n6 mois à 1 an | ≤ 500 000 FCFA | 3,5%"} className="font-mono text-xs" />
+                      <p className="text-[11px] text-muted-foreground">Laisser vide si le produit n'a pas de barème. 1ʳᵉ ligne = en-têtes ; colonnes séparées par « | ».</p>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <label className={label}>Note « NB » (optionnel)</label>
+                      <Input value={d.note ?? ""} onChange={(e) => updateDetail(pid, { note: e.target.value })} placeholder="Remarque affichée en bas de fiche" />
+                    </div>
+                  </div>
+                );
+              })}
+              <Button onClick={saveSavingsDetails} disabled={save.isPending} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les fiches</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* ============================ ACCUEIL ============================ */}
         <TabsContent value="accueil" className="space-y-6 mt-0">

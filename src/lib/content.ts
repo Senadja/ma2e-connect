@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { NEWS, SAVINGS, CREDITS, type NewsArticle } from "@/data/site";
 import { MEDIA, FAQS, PARTNERS } from "@/data/institutional";
+import type { SavingsDetail } from "@/data/savingsDetails";
 
 export function slugify(input: string): string {
   return input
@@ -321,6 +322,7 @@ export interface SiteSettings {
   milestones?: { year: string; title: string; desc: string }[];
   languages?: { code: string; label: string }[];
   branding?: { primary?: string };
+  savingsDetails?: Record<string, SavingsDetail>; // fiches détaillées épargne (« Voir plus ») — repli : SAVINGS_DETAILS
 }
 
 const fallbackSettings: SiteSettings = {

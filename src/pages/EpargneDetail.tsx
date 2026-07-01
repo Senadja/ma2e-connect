@@ -3,7 +3,7 @@ import { PageHero } from "@/components/PageHero";
 import { SEO } from "@/components/SEO";
 import { ProductRequestForm } from "@/components/forms/ProductRequestForm";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { useProducts } from "@/lib/content";
+import { useProducts, useSettings } from "@/lib/content";
 import { SAVINGS_DETAILS } from "@/data/savingsDetails";
 import { Check, Download, ArrowLeft, CheckCircle2, Info } from "lucide-react";
 import { Link, useParams, useLocation, Navigate } from "react-router-dom";
@@ -18,8 +18,9 @@ const EpargneDetail = () => {
   const location = useLocation();
   const fromAdhesion = (location.state as { fromAdhesion?: boolean } | null)?.fromAdhesion;
   const { data: SAVINGS = [] } = useProducts("epargne");
+  const { data: settings } = useSettings();
   const product = SAVINGS.find((s) => s.id === slug) as any;
-  const detail = slug ? SAVINGS_DETAILS[slug] : undefined;
+  const detail = slug ? (settings?.savingsDetails?.[slug] ?? SAVINGS_DETAILS[slug]) : undefined;
 
   // Slug inconnu (une fois les données chargées) → retour à la liste des épargnes.
   if (SAVINGS.length > 0 && !product) return <Navigate to="/produits/epargne" replace />;
