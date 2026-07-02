@@ -6,7 +6,7 @@ import { SEO } from "@/components/SEO";
 import { useReveal, useCounter } from "@/hooks/useReveal";
 import { cn } from "@/lib/utils";
 import { STATS as DEFAULT_STATS, MILESTONES } from "@/data/site";
-import { useArticles, useSettings } from "@/lib/content";
+import { useArticles, useSettings, useProducts } from "@/lib/content";
 import { api } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 
@@ -157,9 +157,11 @@ const Index = () => {
       });
   }, []);
 
+  const savings = useProducts("epargne");
+  const credits = useProducts("credit");
   const products = [
-    { icon: Wallet, title: t("home.prodSavingsTitle"), desc: t("home.prodSavingsDesc"), to: "/produits/epargne" },
-    { icon: Landmark, title: t("home.prodCreditTitle"), desc: t("home.prodCreditDesc"), to: "/produits/credits" },
+    { icon: Wallet, title: t("home.prodSavingsTitle"), desc: t("home.prodSavingsDesc"), to: "/produits/epargne", subs: (savings.data ?? []) as { id: string; name: string }[] },
+    { icon: Landmark, title: t("home.prodCreditTitle"), desc: t("home.prodCreditDesc"), to: "/produits/credits", subs: (credits.data ?? []) as { id: string; name: string }[] },
   ];
 
   const statIcons = [Users, Award, TrendingUp, Coins];
@@ -241,22 +243,39 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 max-w-4xl">
+          <div className="mt-12 grid gap-6 md:gap-8 md:grid-cols-2">
             {products.map((p, i) => (
               <Link
                 key={p.title}
                 to={p.to}
-                className="group relative rounded-2xl bg-card border border-border p-8 shadow-sm hover:shadow-elegant hover:-translate-y-1 transition-bounce border-l-4 border-l-primary overflow-hidden"
+                className="group relative flex flex-col rounded-3xl bg-card border border-border p-8 md:p-10 shadow-sm hover:shadow-elegant hover:-translate-y-1 transition-bounce border-l-4 border-l-primary overflow-hidden"
                 style={{ animationDelay: `${i * 80}ms` }}
               >
-                <div className="absolute top-0 right-0 h-32 w-32 bg-gradient-primary opacity-5 rounded-full blur-2xl group-hover:opacity-20 transition-smooth" />
-                <div className="relative">
-                  <div className="inline-flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-primary text-white">
-                    <p.icon className="h-7 w-7" />
+                <div className="absolute top-0 right-0 h-56 w-56 bg-gradient-primary opacity-5 rounded-full blur-3xl group-hover:opacity-20 transition-smooth" />
+                <div className="relative flex flex-col h-full">
+                  <div className="flex items-center gap-5">
+                    <div className="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-primary text-white shadow-gold/0">
+                      <p.icon className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <h3 className="font-display text-2xl md:text-3xl font-bold leading-tight">{p.title}</h3>
+                      <span className="text-sm text-primary font-mono font-semibold">{p.subs.length} {t("home.solutionsCountLabel")}</span>
+                    </div>
                   </div>
-                  <h3 className="mt-6 font-display text-2xl font-bold">{p.title}</h3>
-                  <p className="mt-3 text-muted-foreground">{p.desc}</p>
-                  <span className="mt-6 inline-flex items-center gap-1 text-primary font-semibold">
+                  <p className="mt-6 text-muted-foreground text-lg leading-relaxed">{p.desc}</p>
+
+                  {p.subs.length > 0 && (
+                    <ul className="mt-7 grid sm:grid-cols-2 gap-x-6 gap-y-3">
+                      {p.subs.map((s) => (
+                        <li key={s.id} className="flex items-start gap-2 text-sm">
+                          <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                          <span>{s.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <span className="mt-auto pt-8 inline-flex items-center gap-2 text-primary font-semibold">
                     {t("home.explore")} <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </span>
                 </div>
