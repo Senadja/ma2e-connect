@@ -61,14 +61,13 @@ const About = () => {
       {/* Vision du fondateur — texte à gauche, photo à droite (empilé sur mobile) */}
       <section className="py-12 md:py-20">
         <div className="container max-w-6xl px-4 md:px-6">
-          <div ref={r1} className="reveal grid md:grid-cols-5 items-center gap-8 md:gap-12 rounded-2xl md:rounded-3xl bg-gradient-primary text-primary-foreground p-8 md:p-12 shadow-elegant relative overflow-hidden">
+          <div ref={r1} className="reveal grid md:grid-cols-5 items-start gap-8 md:gap-x-12 md:gap-y-8 rounded-2xl md:rounded-3xl bg-gradient-primary text-primary-foreground p-8 md:p-12 shadow-elegant relative overflow-hidden">
             <Quote className="absolute top-4 right-4 md:top-6 md:right-6 h-12 w-12 md:h-20 md:w-20 text-white/10" />
             <div className="relative order-2 md:order-1 md:col-span-3 text-center md:text-left">
               <span className="text-sm md:text-base font-mono font-semibold uppercase tracking-widest text-accent">{about?.founderVision || t("about.founderVision")}</span>
               <blockquote className="mt-4 font-display text-xl md:text-3xl lg:text-4xl italic leading-tight text-balance">
                 « {about?.founderQuote || t("about.founderQuote")} »
               </blockquote>
-              <div className="mt-6 text-sm md:text-base font-semibold">{founderName} <span className="font-normal text-white/70 block md:inline">— {about?.founderRole || t("about.founder")}</span></div>
             </div>
             <div className="order-1 md:order-2 md:col-span-2">
               {about?.founderPhoto ? (
@@ -79,16 +78,18 @@ const About = () => {
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Mot du fondateur — texte complet (rendu seulement si renseigné) */}
-          {founderMessage && (
-            <div className="mt-8 md:mt-10 max-w-3xl space-y-4 text-base md:text-lg leading-relaxed text-muted-foreground">
-              {founderMessage.split(/\n{2,}/).map((p, i) => (
-                <p key={i}>{p.trim()}</p>
-              ))}
+            {/* Texte complet du mot du fondateur — dans le cadre, pleine largeur */}
+            <div className="relative order-3 md:col-span-5">
+              {founderMessage && (
+                <div className="space-y-4 text-base md:text-lg leading-relaxed text-white/85 text-left">
+                  {founderMessage.split(/\n{2,}/).map((p, i) => (
+                    <p key={i}>{p.trim()}</p>
+                  ))}
+                </div>
+              )}
+              <div className="mt-6 text-sm md:text-base font-semibold text-center md:text-left">{founderName} <span className="font-normal text-white/70 block md:inline">— {about?.founderRole || t("about.founder")}</span></div>
             </div>
-          )}
+          </div>
         </div>
       </section>
 
