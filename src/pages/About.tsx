@@ -34,6 +34,7 @@ const About = () => {
   const about = settings?.aboutContent;
   const founderName = about?.founderName || "Marcel ZADI KESSY";
   const founderInitials = founderName.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  const founderMessage = about?.founderMessage || t("about.founderMessage", { defaultValue: "" });
   const milestones = settings?.milestones?.length
     ? settings.milestones
     : MILESTONES.map((m) => ({ year: m.year, title: t(`about.milestones.${m.year}.title`, { defaultValue: m.title }), desc: t(`about.milestones.${m.year}.desc`, { defaultValue: m.desc }) }));
@@ -63,7 +64,7 @@ const About = () => {
           <div ref={r1} className="reveal grid md:grid-cols-5 items-center gap-8 md:gap-12 rounded-2xl md:rounded-3xl bg-gradient-primary text-primary-foreground p-8 md:p-12 shadow-elegant relative overflow-hidden">
             <Quote className="absolute top-4 right-4 md:top-6 md:right-6 h-12 w-12 md:h-20 md:w-20 text-white/10" />
             <div className="relative order-2 md:order-1 md:col-span-3 text-center md:text-left">
-              <span className="text-[10px] md:text-xs font-mono uppercase tracking-widest text-accent">{about?.founderVision || t("about.founderVision")}</span>
+              <span className="text-sm md:text-base font-mono font-semibold uppercase tracking-widest text-accent">{about?.founderVision || t("about.founderVision")}</span>
               <blockquote className="mt-4 font-display text-xl md:text-3xl lg:text-4xl italic leading-tight text-balance">
                 « {about?.founderQuote || t("about.founderQuote")} »
               </blockquote>
@@ -79,6 +80,15 @@ const About = () => {
               )}
             </div>
           </div>
+
+          {/* Mot du fondateur — texte complet (rendu seulement si renseigné) */}
+          {founderMessage && (
+            <div className="mt-8 md:mt-10 max-w-3xl space-y-4 text-base md:text-lg leading-relaxed text-muted-foreground">
+              {founderMessage.split(/\n{2,}/).map((p, i) => (
+                <p key={i}>{p.trim()}</p>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

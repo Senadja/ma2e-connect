@@ -141,6 +141,7 @@ export const SettingsManager = () => {
   const [homeHero, setHomeHero] = useState<Record<string, string>>(heroDefaults);
   const aboutDefaults: Record<string, string> = {
     founderVision: t("about.founderVision"), founderQuote: t("about.founderQuote"),
+    founderMessage: t("about.founderMessage", { defaultValue: "" }),
     founderName: "Marcel ZADI KESSY", founderRole: t("about.founder"),
     mission1Title: t("about.mission1Title"), mission1Desc: t("about.mission1Desc"),
     mission2Title: t("about.mission2Title"), mission2Desc: t("about.mission2Desc"),
@@ -575,8 +576,10 @@ export const SettingsManager = () => {
           <Card className="border-border/40 shadow-sm">
             <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Quote className="h-5 w-5 text-primary" /> À propos — citation & mission</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-2"><label className={label}>Citation du fondateur</label>
+              <div className="grid gap-2"><label className={label}>Citation du fondateur (mise en avant)</label>
                 <textarea value={aboutContent.founderQuote} onChange={(e) => setAboutContent({ ...aboutContent, founderQuote: e.target.value })} rows={3} className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" /></div>
+              <div className="grid gap-2"><label className={label}>Message complet (affiché sous la citation)</label>
+                <textarea value={aboutContent.founderMessage || ""} onChange={(e) => setAboutContent({ ...aboutContent, founderMessage: e.target.value })} rows={8} placeholder="Texte intégral du mot du fondateur. Séparez les paragraphes par une ligne vide. Laisser vide pour n'afficher que la citation." className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/20" /></div>
               <div className="grid sm:grid-cols-3 gap-4">
                 <div className="grid gap-2"><label className={label}>Mention (au-dessus)</label><Input value={aboutContent.founderVision} onChange={(e) => setAboutContent({ ...aboutContent, founderVision: e.target.value })} /></div>
                 <div className="grid gap-2"><label className={label}>Nom du fondateur</label><Input value={aboutContent.founderName} onChange={(e) => setAboutContent({ ...aboutContent, founderName: e.target.value })} /></div>
