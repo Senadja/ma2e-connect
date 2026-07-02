@@ -78,16 +78,37 @@ const About = () => {
                 </div>
               )}
             </div>
-            {/* Texte complet du mot du fondateur — dans le cadre, pleine largeur */}
+            {/* Texte complet du mot du fondateur — panneau lisible, dans le cadre */}
             <div className="relative order-3 md:col-span-5">
-              {founderMessage && (
-                <div className="space-y-4 text-base md:text-lg leading-relaxed text-white/85 text-left">
-                  {founderMessage.split(/\n{2,}/).map((p, i) => (
-                    <p key={i}>{p.trim()}</p>
-                  ))}
+              {founderMessage ? (
+                <div className="rounded-2xl bg-primary-foreground/[0.06] ring-1 ring-white/10 p-6 md:p-8 lg:p-10">
+                  <div className="text-base md:text-lg leading-relaxed text-white/90 lg:columns-2 lg:gap-12 [&>p]:mb-5 [&>p:last-child]:mb-0 [&>p]:break-inside-avoid">
+                    {founderMessage.split(/\n{2,}/).map((p, i) => (
+                      <p
+                        key={i}
+                        className={i === 0 ? "first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:font-display first-letter:text-5xl md:first-letter:text-6xl first-letter:font-bold first-letter:leading-none first-letter:text-accent" : undefined}
+                      >
+                        {p.trim()}
+                      </p>
+                    ))}
+                  </div>
+                  <div className="mt-7 pt-5 border-t border-white/15 flex items-center gap-3">
+                    <span className="h-9 w-1.5 rounded-full bg-accent" aria-hidden />
+                    <div className="text-sm md:text-base leading-tight">
+                      <div className="font-semibold">{founderName}</div>
+                      <div className="text-white/70">{about?.founderRole || t("about.founder")}</div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 text-sm md:text-base">
+                  <span className="h-9 w-1.5 rounded-full bg-accent" aria-hidden />
+                  <div className="leading-tight">
+                    <div className="font-semibold">{founderName}</div>
+                    <div className="text-white/70">{about?.founderRole || t("about.founder")}</div>
+                  </div>
                 </div>
               )}
-              <div className="mt-6 text-sm md:text-base font-semibold text-center md:text-left">{founderName} <span className="font-normal text-white/70 block md:inline">— {about?.founderRole || t("about.founder")}</span></div>
             </div>
           </div>
         </div>
