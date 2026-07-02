@@ -34,8 +34,8 @@ const SOCIETES = ["CIE", "SODECI", "MA2E", "CIPREL", "ATINKOU", "AWALE", "GS2E",
 const CATEGORIES = [
   { value: "Cadre supérieur", montant: 10000 },
   { value: "Cadre", montant: 5000 },
-  { value: "Agent de maîtrise", montant: 3000 },
-  { value: "Employé / Ouvrier", montant: 1500 },
+  { value: "Maître", montant: 3000 },
+  { value: "EO", montant: 1500 },
 ];
 const fmtFcfa = (n: number) => n.toLocaleString("fr-FR");
 
