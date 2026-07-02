@@ -10,7 +10,7 @@ import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Tras
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { MILESTONES } from "@/data/site";
-import { DEFAULT_ORG_TREE, DEFAULT_PERSONNEL, DEFAULT_ORG_UNITS, type OrgNode, type OrgUnit } from "@/lib/content";
+import { DEFAULT_ORG_TREE, DEFAULT_PERSONNEL, DEFAULT_ORG_UNITS, useProducts, type OrgNode, type OrgUnit } from "@/lib/content";
 import { SAVINGS_DETAILS, type SavingsDetail, type SavingsRateTable } from "@/data/savingsDetails";
 import { OrgChartSvg } from "@/components/OrgChartSvg";
 import { FocalPointPicker } from "@/components/admin/FocalPointPicker";
@@ -186,7 +186,9 @@ export const SettingsManager = () => {
     save.mutate({ key: "branding", value: { primary: DEFAULT_BRAND_HEX } }, { onSuccess: refreshPublic });
   };
 
-  // Fiches détaillées épargne (« Voir plus ») — repli SAVINGS_DETAILS, fusionné avec le CMS.
+  // Fiches détaillées épargne (« Voir plus ») — la liste est pilotée par les vrais produits d'épargne ;
+  // le contenu vient du CMS (clé savingsDetails), avec repli sur SAVINGS_DETAILS pour les 5 produits d'origine.
+  const { data: epargneProducts } = useProducts("epargne");
   const [savingsDetails, setSavingsDetails] = useState<Record<string, SavingsDetail>>(SAVINGS_DETAILS);
   const [rateTexts, setRateTexts] = useState<Record<string, string>>(() =>
     Object.fromEntries(Object.entries(SAVINGS_DETAILS).map(([k, v]) => [k, serializeRate(v.rateTable)]))
@@ -199,6 +201,10 @@ export const SettingsManager = () => {
     setSavingsDetails((d) => ({ ...d, [pid]: { ...d[pid], sections: [...d[pid].sections, { heading: "", items: [] }] } }));
   const removeSection = (pid: string, si: number) =>
     setSavingsDetails((d) => ({ ...d, [pid]: { ...d[pid], sections: d[pid].sections.filter((_, i) => i !== si) } }));
+  const addFiche = (pid: string) => {
+    setSavingsDetails((d) => ({ ...d, [pid]: { intro: "", sections: [] } }));
+    setRateTexts((r) => ({ ...r, [pid]: "" }));
+  };
   const saveSavingsDetails = () => {
     const cleaned: Record<string, SavingsDetail> = {};
     for (const [pid, d] of Object.entries(savingsDetails)) {
@@ -413,39 +419,51 @@ export const SettingsManager = () => {
               <CardTitle className="text-lg font-bold flex items-center gap-2"><Wallet className="h-5 w-5 text-primary" /> Fiches détaillées épargne (« Voir plus »)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <p className="text-sm text-muted-foreground">Contenu affiché sur la page « Voir plus » de chaque produit d'épargne. Dans les listes, <strong>une ligne = un point</strong>.</p>
-              {Object.keys(savingsDetails).map((pid) => {
+              <p className="text-sm text-muted-foreground">La liste ci-dessous reprend automatiquement <strong>vos produits d'épargne</strong>. Pour chaque produit, la fiche alimente la page « Voir plus ». Dans les listes, <strong>une ligne = un point</strong>. Un nouveau produit apparaît ici tout seul : cliquez sur « Créer la fiche » pour le rendre éditable.</p>
+              {(epargneProducts ?? []).map((p: { id: string; name: string }) => {
+                const pid = p.id;
                 const d = savingsDetails[pid];
                 return (
                   <div key={pid} className="rounded-xl border border-border p-4 space-y-4">
-                    <h3 className="font-display font-bold text-lg text-primary-dark">{SAVINGS_LABELS[pid] ?? pid}</h3>
-
-                    <div className="grid gap-2">
-                      <label className={label}>Introduction</label>
-                      <Textarea rows={3} value={d.intro} onChange={(e) => updateDetail(pid, { intro: e.target.value })} placeholder="Phrase de présentation du produit" />
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="font-display font-bold text-lg text-primary-dark">{p.name || SAVINGS_LABELS[pid] || pid}</h3>
+                      {!d && (
+                        <Button type="button" variant="outline" size="sm" className="rounded-full shrink-0" onClick={() => addFiche(pid)}><Plus className="h-4 w-4 mr-1" /> Créer la fiche</Button>
+                      )}
                     </div>
 
-                    {d.sections.map((sec, si) => (
-                      <div key={si} className="rounded-lg bg-muted/40 p-3 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Input value={sec.heading} onChange={(e) => updateSection(pid, si, { heading: e.target.value })} placeholder="Titre de la section (ex. Conditions d'ouverture)" className="font-semibold" />
-                          <Button type="button" variant="ghost" size="icon" className={iconBtn} title="Supprimer la section" onClick={() => removeSection(pid, si)}><Trash2 className="h-4 w-4" /></Button>
+                    {!d ? (
+                      <p className="text-sm text-muted-foreground">Aucune fiche « Voir plus » pour ce produit. Créez-la pour afficher le bouton « Voir plus » sur le site.</p>
+                    ) : (
+                      <>
+                        <div className="grid gap-2">
+                          <label className={label}>Introduction</label>
+                          <Textarea rows={3} value={d.intro} onChange={(e) => updateDetail(pid, { intro: e.target.value })} placeholder="Phrase de présentation du produit" />
                         </div>
-                        <Textarea rows={Math.max(3, sec.items.length + 1)} value={sec.items.join("\n")} onChange={(e) => updateSection(pid, si, { items: e.target.value.split("\n") })} placeholder="Un point par ligne" />
-                      </div>
-                    ))}
-                    <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => addSection(pid)}><Plus className="h-4 w-4 mr-1" /> Ajouter une section</Button>
 
-                    <div className="grid gap-2">
-                      <label className={label}>Barème de taux (optionnel)</label>
-                      <Textarea rows={4} value={rateTexts[pid] ?? ""} onChange={(e) => setRateTexts((r) => ({ ...r, [pid]: e.target.value }))} placeholder={"Durée | Montant | Taux\n6 mois à 1 an | ≤ 500 000 FCFA | 3,5%"} className="font-mono text-xs" />
-                      <p className="text-[11px] text-muted-foreground">Laisser vide si le produit n'a pas de barème. 1ʳᵉ ligne = en-têtes ; colonnes séparées par « | ».</p>
-                    </div>
+                        {d.sections.map((sec, si) => (
+                          <div key={si} className="rounded-lg bg-muted/40 p-3 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Input value={sec.heading} onChange={(e) => updateSection(pid, si, { heading: e.target.value })} placeholder="Titre de la section (ex. Conditions d'ouverture)" className="font-semibold" />
+                              <Button type="button" variant="ghost" size="icon" className={iconBtn} title="Supprimer la section" onClick={() => removeSection(pid, si)}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                            <Textarea rows={Math.max(3, sec.items.length + 1)} value={sec.items.join("\n")} onChange={(e) => updateSection(pid, si, { items: e.target.value.split("\n") })} placeholder="Un point par ligne" />
+                          </div>
+                        ))}
+                        <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => addSection(pid)}><Plus className="h-4 w-4 mr-1" /> Ajouter une section</Button>
 
-                    <div className="grid gap-2">
-                      <label className={label}>Note « NB » (optionnel)</label>
-                      <Input value={d.note ?? ""} onChange={(e) => updateDetail(pid, { note: e.target.value })} placeholder="Remarque affichée en bas de fiche" />
-                    </div>
+                        <div className="grid gap-2">
+                          <label className={label}>Barème de taux (optionnel)</label>
+                          <Textarea rows={4} value={rateTexts[pid] ?? ""} onChange={(e) => setRateTexts((r) => ({ ...r, [pid]: e.target.value }))} placeholder={"Durée | Montant | Taux\n6 mois à 1 an | ≤ 500 000 FCFA | 3,5%"} className="font-mono text-xs" />
+                          <p className="text-[11px] text-muted-foreground">Laisser vide si le produit n'a pas de barème. 1ʳᵉ ligne = en-têtes ; colonnes séparées par « | ».</p>
+                        </div>
+
+                        <div className="grid gap-2">
+                          <label className={label}>Note « NB » (optionnel)</label>
+                          <Input value={d.note ?? ""} onChange={(e) => updateDetail(pid, { note: e.target.value })} placeholder="Remarque affichée en bas de fiche" />
+                        </div>
+                      </>
+                    )}
                   </div>
                 );
               })}
