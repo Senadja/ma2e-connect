@@ -61,55 +61,50 @@ const About = () => {
       {/* Vision du fondateur — texte à gauche, photo à droite (empilé sur mobile) */}
       <section className="py-12 md:py-20">
         <div className="container max-w-6xl px-4 md:px-6">
-          <div ref={r1} className="reveal grid md:grid-cols-5 items-stretch gap-8 md:gap-x-12 md:gap-y-8 rounded-2xl md:rounded-3xl bg-gradient-primary text-primary-foreground p-8 md:p-12 shadow-elegant relative overflow-hidden">
+          <div ref={r1} className="reveal rounded-2xl md:rounded-3xl bg-gradient-primary text-primary-foreground p-8 md:p-12 shadow-elegant relative overflow-hidden">
             <Quote className="absolute top-4 right-4 md:top-6 md:right-6 h-12 w-12 md:h-20 md:w-20 text-white/10" />
-            <div className="relative order-2 md:order-1 md:col-span-3 text-center md:text-left">
-              <span className="text-sm md:text-base font-mono font-semibold uppercase tracking-widest text-accent">{about?.founderVision || t("about.founderVision")}</span>
-              <blockquote className="mt-4 font-display text-xl md:text-3xl lg:text-4xl italic leading-tight text-balance">
-                « {about?.founderQuote || t("about.founderQuote")} »
-              </blockquote>
-            </div>
-            <div className="order-1 md:order-2 md:col-span-2 relative mx-auto w-full max-w-[16rem] aspect-[3/4] md:mx-0 md:max-w-none md:aspect-auto">
-              {about?.founderPhoto ? (
-                <img src={about.founderPhoto} alt={founderName} style={{ objectPosition: about?.founderPhotoPos || "50% 20%" }} className="absolute inset-0 h-full w-full rounded-2xl object-cover ring-4 ring-white/15 shadow-lg" />
-              ) : (
-                <div className="absolute inset-0 rounded-2xl bg-white/10 ring-4 ring-white/15 grid place-items-center" aria-hidden>
-                  <span className="font-display text-6xl font-bold text-white/80">{founderInitials}</span>
-                </div>
-              )}
-            </div>
-            {/* Texte complet du mot du fondateur — panneau lisible, dans le cadre */}
-            <div className="relative order-3 md:col-span-5">
-              {founderMessage ? (
-                <div className="rounded-2xl bg-primary-foreground/[0.06] ring-1 ring-white/10 p-6 md:p-8 lg:p-10">
-                  <div className="text-base md:text-lg leading-relaxed text-white/90 lg:columns-2 lg:gap-12 [&>p]:mb-5 [&>p:last-child]:mb-0 [&>p]:break-inside-avoid">
-                    {founderMessage.split(/\n{2,}/).map((p, i) => (
-                      <p
-                        key={i}
-                        className={i === 0 ? "first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:font-display first-letter:text-5xl md:first-letter:text-6xl first-letter:font-bold first-letter:leading-none first-letter:text-accent" : undefined}
-                      >
-                        {p.trim()}
-                      </p>
-                    ))}
-                  </div>
-                  <div className="mt-7 pt-5 border-t border-white/15 flex items-center gap-3">
-                    <span className="h-9 w-1.5 rounded-full bg-accent" aria-hidden />
-                    <div className="text-sm md:text-base leading-tight">
-                      <div className="font-semibold">{founderName}</div>
-                      <div className="text-white/70">{about?.founderRole || t("about.founder")}</div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 text-sm md:text-base">
+
+            {/* En-tête : citation & portrait */}
+            <div className="grid md:grid-cols-5 items-center gap-8 md:gap-12">
+              <div className="order-2 md:order-1 md:col-span-3 text-center md:text-left">
+                <span className="text-sm md:text-base font-mono font-semibold uppercase tracking-widest text-accent">{about?.founderVision || t("about.founderVision")}</span>
+                <blockquote className="mt-4 font-display text-2xl md:text-3xl lg:text-4xl italic leading-tight text-balance">
+                  « {about?.founderQuote || t("about.founderQuote")} »
+                </blockquote>
+                <div className="mt-6 flex items-center justify-center md:justify-start gap-3">
                   <span className="h-9 w-1.5 rounded-full bg-accent" aria-hidden />
-                  <div className="leading-tight">
+                  <div className="text-left text-sm md:text-base leading-tight">
                     <div className="font-semibold">{founderName}</div>
                     <div className="text-white/70">{about?.founderRole || t("about.founder")}</div>
                   </div>
                 </div>
-              )}
+              </div>
+              <div className="order-1 md:order-2 md:col-span-2 mx-auto w-full max-w-[15rem] md:max-w-none">
+                {about?.founderPhoto ? (
+                  <img src={about.founderPhoto} alt={founderName} style={{ objectPosition: about?.founderPhotoPos || "50% 20%" }} className="w-full aspect-[4/5] rounded-2xl object-cover ring-4 ring-white/15 shadow-lg" />
+                ) : (
+                  <div className="w-full aspect-[4/5] rounded-2xl bg-white/10 ring-4 ring-white/15 grid place-items-center" aria-hidden>
+                    <span className="font-display text-6xl font-bold text-white/80">{founderInitials}</span>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Lettre complète — deux colonnes, séparée par un filet */}
+            {founderMessage && (
+              <div className="relative mt-8 md:mt-10 pt-8 md:pt-10 border-t border-white/15">
+                <div className="text-base md:text-lg leading-relaxed text-white/90 lg:columns-2 lg:gap-12 [&>p]:mb-5 [&>p:last-child]:mb-0 [&>p]:break-inside-avoid">
+                  {founderMessage.split(/\n{2,}/).map((p, i) => (
+                    <p
+                      key={i}
+                      className={i === 0 ? "first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:font-display first-letter:text-5xl md:first-letter:text-6xl first-letter:font-bold first-letter:leading-none first-letter:text-accent" : undefined}
+                    >
+                      {p.trim()}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
