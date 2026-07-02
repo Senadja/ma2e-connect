@@ -61,7 +61,7 @@ const About = () => {
       {/* Vision du fondateur — texte à gauche, photo à droite (empilé sur mobile) */}
       <section className="py-12 md:py-20">
         <div className="container max-w-6xl px-4 md:px-6">
-          <div ref={r1} className="reveal grid md:grid-cols-5 items-start gap-8 md:gap-x-12 md:gap-y-8 rounded-2xl md:rounded-3xl bg-gradient-primary text-primary-foreground p-8 md:p-12 shadow-elegant relative overflow-hidden">
+          <div ref={r1} className="reveal grid md:grid-cols-5 items-stretch gap-8 md:gap-x-12 md:gap-y-8 rounded-2xl md:rounded-3xl bg-gradient-primary text-primary-foreground p-8 md:p-12 shadow-elegant relative overflow-hidden">
             <Quote className="absolute top-4 right-4 md:top-6 md:right-6 h-12 w-12 md:h-20 md:w-20 text-white/10" />
             <div className="relative order-2 md:order-1 md:col-span-3 text-center md:text-left">
               <span className="text-sm md:text-base font-mono font-semibold uppercase tracking-widest text-accent">{about?.founderVision || t("about.founderVision")}</span>
@@ -69,11 +69,11 @@ const About = () => {
                 « {about?.founderQuote || t("about.founderQuote")} »
               </blockquote>
             </div>
-            <div className="order-1 md:order-2 md:col-span-2">
+            <div className="order-1 md:order-2 md:col-span-2 relative mx-auto w-full max-w-[16rem] aspect-[3/4] md:mx-0 md:max-w-none md:aspect-auto">
               {about?.founderPhoto ? (
-                <img src={about.founderPhoto} alt={founderName} style={{ objectPosition: about?.founderPhotoPos || "50% 20%" }} className="mx-auto w-full max-w-[16rem] md:max-w-none aspect-[3/4] rounded-2xl object-cover ring-4 ring-white/15 shadow-lg" />
+                <img src={about.founderPhoto} alt={founderName} style={{ objectPosition: about?.founderPhotoPos || "50% 20%" }} className="absolute inset-0 h-full w-full rounded-2xl object-cover ring-4 ring-white/15 shadow-lg" />
               ) : (
-                <div className="mx-auto w-full max-w-[16rem] md:max-w-none aspect-[3/4] rounded-2xl bg-white/10 ring-4 ring-white/15 grid place-items-center" aria-hidden>
+                <div className="absolute inset-0 rounded-2xl bg-white/10 ring-4 ring-white/15 grid place-items-center" aria-hidden>
                   <span className="font-display text-6xl font-bold text-white/80">{founderInitials}</span>
                 </div>
               )}
