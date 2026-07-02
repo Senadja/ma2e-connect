@@ -23,14 +23,14 @@ const LEGAL_TEXT =
   "Institution Mutualiste d'Épargne et de Crédit sans but lucratif — Régie par l'ordonnance N°2011-367 du 3 novembre 2011 — Agrément N°A-1.1.9/09-03. Siège Social : 34 Avenue Houdaille, Plateau, 6ème étage, Immeuble SIDAM — 18 BP 1210 Abidjan 18.";
 
 // Montant mensuel de l'épargne Expresse (obligatoire à l'adhésion) selon la catégorie — modèle officiel MA2E :
-// Cadre supérieur 10 000 / Cadre 5 000 / Maîtrise 5 000 / Employé-Ouvrier 1 500. Inconnu => vierge.
+// Cadre supérieur 10 000 / Cadre 5 000 / Maîtrise 3 000 / Employé-Ouvrier 1 500. Inconnu => vierge.
 function expresseAmountByCategory(cat: string): string {
   const c = cat.toLowerCase().trim();
   if (!c) return "";
   if (/cadre/.test(c) && /sup/.test(c)) return "10 000";
   if (/hors\s*cat|hc/.test(c)) return "10 000";
   if (/cadre/.test(c)) return "5 000";
-  if (/ma[iî]tr/.test(c)) return "5 000";
+  if (/ma[iî]tr/.test(c)) return "3 000";
   if (/employ|ouvr|eo|ex[eé]c/.test(c)) return "1 500";
   return "";
 }

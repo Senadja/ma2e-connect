@@ -28,6 +28,25 @@ import { useTranslation } from "react-i18next";
 // Sociétés membres (liste déroulante du champ « Société »).
 const SOCIETES = ["CIE", "SODECI", "MA2E", "CIPREL", "ATINKOU", "AWALE", "GS2E", "SGA2E", "SIVE", "Smart Energy", "Autre"];
 
+// Catégories professionnelles + montant mensuel de l'Épargne Expresse (obligatoire à l'adhésion),
+// selon le modèle officiel MA2E. Les libellés doivent rester reconnus par expresseAmountByCategory()
+// dans src/lib/adhesionPdf.ts (le PDF recalcule le montant à partir de la catégorie).
+const CATEGORIES = [
+  { value: "Cadre supérieur", montant: 10000 },
+  { value: "Cadre", montant: 5000 },
+  { value: "Agent de maîtrise", montant: 3000 },
+  { value: "Employé / Ouvrier", montant: 1500 },
+];
+const fmtFcfa = (n: number) => n.toLocaleString("fr-FR");
+
+// Onglet auquel appartient chaque champ pouvant échouer à la validation
+// (pour amener l'utilisateur sur le bon onglet en cas d'erreur au submit).
+const ERR_TAB: Record<string, string> = {
+  fullName: "personal", email: "personal", phone: "personal",
+  matricule: "professional", societe: "professional", categorie: "professional",
+  acceptTerms: "documents",
+};
+
 // Pièces à téléverser : un champ distinct par type de document.
 const DOC_SLOTS = [
   { key: "cniRecto", label: "CNI — Recto" },
@@ -55,7 +74,7 @@ const formSchema = z.object({
   matricule: z.string().min(1, "Le matricule est requis"),
   societe: z.string().min(1, "La société est requise"),
   fonction: z.string().optional(),
-  categorie: z.string().optional(),
+  categorie: z.string().min(1, "La catégorie est requise"),
   direction: z.string().optional(),
   service: z.string().optional(),
   exploitation: z.string().optional(),
@@ -112,6 +131,18 @@ const Adhesion = () => {
     },
   });
 
+  // Montant mensuel de l'Épargne Expresse (obligatoire à l'adhésion) déduit de la catégorie choisie.
+  const categorie = form.watch("categorie");
+  const montantExpresse = CATEGORIES.find((c) => c.value === categorie)?.montant;
+
+  // En cas d'erreur de validation, basculer sur l'onglet contenant le premier champ en erreur.
+  const onInvalid = (errors: Record<string, unknown>) => {
+    const tab = ["personal", "professional", "proches", "documents"].find((tb) =>
+      Object.keys(errors).some((f) => ERR_TAB[f] === tb)
+    );
+    if (tab) setActiveTab(tab);
+  };
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
@@ -138,6 +169,7 @@ const Adhesion = () => {
             fonction: values.fonction,
             societe: values.societe,
             categorie: values.categorie,
+            epargneExpresseMensuel: montantExpresse ?? null,
             direction: values.direction,
             service: values.service,
             exploitation: values.exploitation,
@@ -157,7 +189,7 @@ const Adhesion = () => {
       });
       toast.success(`Demande d'adhésion envoyée — référence ${appId} !`);
       // Étape suivante : l'Épargne Expresse est obligatoire à l'adhésion → on redirige vers son formulaire.
-      navigate("/produits/epargne/expresse", { state: { fromAdhesion: true, ref: appId } });
+      navigate("/produits/epargne/expresse", { state: { fromAdhesion: true, ref: appId, montantExpresse: montantExpresse ?? null } });
     } catch (e: any) {
       toast.error(e?.message || t("adhesion.errorToast"));
     } finally {
@@ -203,7 +235,7 @@ const Adhesion = () => {
                 </div>
 
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                  <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-8">
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                       <TabsList className="grid w-full grid-cols-4 mb-10">
                         <TabsTrigger value="personal" className="flex items-center gap-2"><User className="h-4 w-4" /><span className="hidden sm:inline">Personnel</span></TabsTrigger>
@@ -295,9 +327,22 @@ const Adhesion = () => {
                             <FormItem><FormLabel>Fonction</FormLabel><FormControl><Input placeholder="Intitulé du poste" {...field} /></FormControl><FormMessage /></FormItem>
                           )} />
                           <FormField control={form.control} name="categorie" render={({ field }) => (
-                            <FormItem><FormLabel>Catégorie</FormLabel><FormControl><Input placeholder="Cadre, Agent de maîtrise…" {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Catégorie *</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Choisir votre catégorie" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.value}</SelectItem>)}
+                                </SelectContent>
+                              </Select><FormMessage /></FormItem>
                           )} />
                         </div>
+                        {montantExpresse != null && (
+                          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm">
+                            À l'adhésion, l'<strong>Épargne Expresse</strong> est obligatoire. Pour la catégorie
+                            {" "}« {categorie} », la retenue mensuelle est de{" "}
+                            <strong className="text-primary">{fmtFcfa(montantExpresse)} FCFA / mois</strong>.
+                          </div>
+                        )}
                         <div className="grid md:grid-cols-2 gap-6">
                           <FormField control={form.control} name="direction" render={({ field }) => (
                             <FormItem><FormLabel>Direction</FormLabel><FormControl><Input placeholder="DG / DAGF…" {...field} /></FormControl><FormMessage /></FormItem>
@@ -404,6 +449,13 @@ const Adhesion = () => {
                               <FormLabel className="text-sm font-normal">Souscription à la part sociale — <strong>5 000 FCFA</strong></FormLabel>
                             </FormItem>
                           )} />
+                          <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+                            <span>Épargne Expresse — obligatoire à l'adhésion, montant selon votre catégorie :{" "}
+                              {montantExpresse != null
+                                ? <strong>{fmtFcfa(montantExpresse)} FCFA / mois</strong>
+                                : <em className="text-muted-foreground">choisissez votre catégorie (onglet « Professionnel »)</em>}
+                            </span>
+                          </div>
                         </div>
 
                         <FormField control={form.control} name="acceptTerms" render={({ field }) => (
