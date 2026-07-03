@@ -296,9 +296,36 @@ export const DEFAULT_PERSONNEL: { name: string; role: string; photo?: string; po
   { name: "KONAN François Léopold", role: "Chauffeur DAGF" },
 ];
 
+// Sociétés (employeurs) proposées dans le formulaire d'adhésion — repli ; éditable au CMS.
+export const DEFAULT_SOCIETES = ["CIE", "SODECI", "MA2E", "CIPREL", "ATINKOU", "AWALE", "GS2E", "SGA2E", "SIVE", "Smart Energy", "Autre"];
+
+// Chiffre clé (bandeau accueil + page À propos) — source unique éditable au CMS.
+export interface StatItem {
+  value: number;
+  label: string;
+  suffix?: string;
+}
+
+// Famille de produits affichée dans « Nos solutions » (accueil) — éditable au CMS.
+export interface SolutionFamily {
+  title: string;
+  desc: string;
+  type: "epargne" | "credit" | "immobilier"; // détermine les sous-produits et le lien
+  icon?: string; // nom d'icône (voir SOLUTION_ICONS)
+}
+
 export interface SiteSettings {
   flashBanner?: { enabled: boolean; text: string; link?: string };
   flashInfos?: { enabled: boolean; speed?: number; items: { text: string; url?: string }[] };
+  stats?: StatItem[];
+  solutions?: { kicker?: string; title?: string; lead?: string; families?: SolutionFamily[] };
+  adhesion?: {
+    categories?: { label: string; montant: number }[];
+    expresseNote?: string; // gabarit ; accepte {categorie} et {montant}
+    feeAdhesion?: number;  // montant « droit d'adhésion » (case d'engagement)
+    feePart?: number;      // montant « part sociale » (case d'engagement)
+  };
+  societes?: string[]; // liste des employeurs du formulaire d'adhésion
   contact?: { address: string; phone: string; email: string; hours?: string; dcpEmail?: string; mapLat?: string; mapLng?: string };
   links?: { ebanking?: string; playstore?: string };
   social?: { facebook: string; linkedin: string; twitter: string };

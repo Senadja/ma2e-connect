@@ -23,20 +23,22 @@ import { toast } from "sonner";
 import { FileText, UserPlus, CheckCircle2, Upload, Briefcase, User, X, Users } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { useSettings, DEFAULT_SOCIETES } from "@/lib/content";
 import { useTranslation } from "react-i18next";
 
-// Sociétés membres (liste déroulante du champ « Société »).
-const SOCIETES = ["CIE", "SODECI", "MA2E", "CIPREL", "ATINKOU", "AWALE", "GS2E", "SGA2E", "SIVE", "Smart Energy", "Autre"];
-
 // Catégories professionnelles + montant mensuel de l'Épargne Expresse (obligatoire à l'adhésion),
-// selon le modèle officiel MA2E. Les libellés doivent rester reconnus par expresseAmountByCategory()
-// dans src/lib/adhesionPdf.ts (le PDF recalcule le montant à partir de la catégorie).
-const CATEGORIES = [
+// selon le modèle officiel MA2E. Valeurs par défaut : la liste réelle est éditable au CMS
+// (Paramètres › Adhésion). Le montant retenu est enregistré dans la demande puis repris tel quel
+// par le PDF (src/lib/adhesionPdf.ts), donc les libellés peuvent être libres.
+const DEFAULT_CATEGORIES = [
   { value: "Cadre supérieur", montant: 10000 },
   { value: "Cadre", montant: 5000 },
   { value: "Maître", montant: 3000 },
   { value: "EO", montant: 1500 },
 ];
+// Gabarit du texte affiché sous le choix de catégorie ({categorie} et {montant} sont remplacés).
+const DEFAULT_EXPRESSE_NOTE =
+  "À l'adhésion, l'Épargne Expresse est obligatoire. Pour la catégorie « {categorie} », la retenue mensuelle est de {montant} FCFA / mois.";
 const fmtFcfa = (n: number) => n.toLocaleString("fr-FR");
 
 // Onglet auquel appartient chaque champ pouvant échouer à la validation
@@ -44,7 +46,7 @@ const fmtFcfa = (n: number) => n.toLocaleString("fr-FR");
 const ERR_TAB: Record<string, string> = {
   fullName: "personal", email: "personal", phone: "personal",
   matricule: "professional", societe: "professional", categorie: "professional",
-  acceptTerms: "documents",
+  intentionAdhesion: "documents", intentionPart: "documents", acceptTerms: "documents",
 };
 
 // Pièces à téléverser : un champ distinct par type de document.
@@ -86,9 +88,9 @@ const formSchema = z.object({
   contactPrevenir: z.string().optional(),
   ayantsDroit: z.string().optional(),
   contactAyantsDroit: z.string().optional(),
-  // Engagement
-  intentionAdhesion: z.boolean().optional(),
-  intentionPart: z.boolean().optional(),
+  // Engagement — les deux cases de prélèvement sont obligatoires (autorisation de prélèvement).
+  intentionAdhesion: z.boolean().refine((val) => val === true, "Cochez le droit d'adhésion pour continuer"),
+  intentionPart: z.boolean().refine((val) => val === true, "Cochez la souscription à la part sociale pour continuer"),
   acceptTerms: z.boolean().refine((val) => val === true, "Vous devez accepter les conditions"),
 });
 
@@ -131,9 +133,20 @@ const Adhesion = () => {
     },
   });
 
+  // Paramètres d'adhésion éditables au CMS (catégories, montants des cases, texte), avec repli sur les valeurs par défaut.
+  const { data: settings } = useSettings();
+  const categories = settings?.adhesion?.categories?.length
+    ? settings.adhesion.categories.map((c) => ({ value: c.label, montant: c.montant }))
+    : DEFAULT_CATEGORIES;
+  const feeAdhesion = settings?.adhesion?.feeAdhesion ?? 1000;
+  const feePart = settings?.adhesion?.feePart ?? 5000;
+  const expresseNote = settings?.adhesion?.expresseNote || DEFAULT_EXPRESSE_NOTE;
+  // Sociétés (employeurs) — liste éditable au CMS, repli sur la liste par défaut.
+  const societes = settings?.societes?.length ? settings.societes : DEFAULT_SOCIETES;
+
   // Montant mensuel de l'Épargne Expresse (obligatoire à l'adhésion) déduit de la catégorie choisie.
   const categorie = form.watch("categorie");
-  const montantExpresse = CATEGORIES.find((c) => c.value === categorie)?.montant;
+  const montantExpresse = categories.find((c) => c.value === categorie)?.montant;
 
   // En cas d'erreur de validation, basculer sur l'onglet contenant le premier champ en erreur.
   const onInvalid = (errors: Record<string, unknown>) => {
@@ -170,6 +183,8 @@ const Adhesion = () => {
             societe: values.societe,
             categorie: values.categorie,
             epargneExpresseMensuel: montantExpresse ?? null,
+            feeAdhesion,
+            feePart,
             direction: values.direction,
             service: values.service,
             exploitation: values.exploitation,
@@ -188,8 +203,9 @@ const Adhesion = () => {
         },
       });
       toast.success(`Demande d'adhésion envoyée — référence ${appId} !`);
-      // Étape suivante : l'Épargne Expresse est obligatoire à l'adhésion → on redirige vers son formulaire.
-      navigate("/produits/epargne/expresse", { state: { fromAdhesion: true, ref: appId, montantExpresse: montantExpresse ?? null } });
+      // Étape suivante : l'Épargne Expresse est mise en place automatiquement avec l'adhésion ;
+      // on redirige vers l'Épargne Ordinaire, dont la souscription reste facultative.
+      navigate("/produits/epargne/ordinaire", { state: { fromAdhesion: true, ref: appId } });
     } catch (e: any) {
       toast.error(e?.message || t("adhesion.errorToast"));
     } finally {
@@ -317,7 +333,7 @@ const Adhesion = () => {
                               <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Choisir votre société" /></SelectTrigger></FormControl>
                                 <SelectContent>
-                                  {SOCIETES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                  {societes.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                                 </SelectContent>
                               </Select><FormMessage /></FormItem>
                           )} />
@@ -331,16 +347,16 @@ const Adhesion = () => {
                               <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Choisir votre catégorie" /></SelectTrigger></FormControl>
                                 <SelectContent>
-                                  {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.value}</SelectItem>)}
+                                  {categories.map((c) => <SelectItem key={c.value} value={c.value}>{c.value}</SelectItem>)}
                                 </SelectContent>
                               </Select><FormMessage /></FormItem>
                           )} />
                         </div>
                         {montantExpresse != null && (
                           <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm">
-                            À l'adhésion, l'<strong>Épargne Expresse</strong> est obligatoire. Pour la catégorie
-                            {" "}« {categorie} », la retenue mensuelle est de{" "}
-                            <strong className="text-primary">{fmtFcfa(montantExpresse)} FCFA / mois</strong>.
+                            {expresseNote
+                              .replace(/\{categorie\}/g, categorie ?? "")
+                              .replace(/\{montant\}/g, fmtFcfa(montantExpresse))}
                           </div>
                         )}
                         <div className="grid md:grid-cols-2 gap-6">
@@ -436,17 +452,23 @@ const Adhesion = () => {
                         {/* Engagement de paiement (à la source) */}
                         <div className="rounded-2xl border border-border bg-secondary/20 p-5 space-y-3">
                           <p className="text-sm font-semibold">Engagement de paiement (prélèvement à la source)</p>
-                          <p className="text-xs text-muted-foreground">En cochant ci-dessous, vous marquez votre intention de payer. Aucun paiement n'est effectué en ligne : les règlements se font à la source.</p>
+                          <p className="text-xs text-muted-foreground">Ces deux engagements sont <strong>obligatoires</strong> pour valider l'adhésion (autorisation de prélèvement). Aucun paiement n'est effectué en ligne : les règlements se font à la source.</p>
                           <FormField control={form.control} name="intentionAdhesion" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center gap-3 space-y-0">
-                              <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                              <FormLabel className="text-sm font-normal">Droit d'adhésion — <strong>1 000 FCFA</strong></FormLabel>
+                            <FormItem className="space-y-1">
+                              <div className="flex flex-row items-center gap-3">
+                                <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                <FormLabel className="text-sm font-normal">Droit d'adhésion — <strong>{fmtFcfa(feeAdhesion)} FCFA</strong></FormLabel>
+                              </div>
+                              <FormMessage />
                             </FormItem>
                           )} />
                           <FormField control={form.control} name="intentionPart" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center gap-3 space-y-0">
-                              <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                              <FormLabel className="text-sm font-normal">Souscription à la part sociale — <strong>5 000 FCFA</strong></FormLabel>
+                            <FormItem className="space-y-1">
+                              <div className="flex flex-row items-center gap-3">
+                                <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                <FormLabel className="text-sm font-normal">Souscription à la part sociale — <strong>{fmtFcfa(feePart)} FCFA</strong></FormLabel>
+                              </div>
+                              <FormMessage />
                             </FormItem>
                           )} />
                           <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">

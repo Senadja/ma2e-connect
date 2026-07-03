@@ -6,11 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload, Languages, Send, Palette, RotateCcw, ChevronUp, ChevronDown, Wallet } from "lucide-react";
+import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload, Languages, Send, Palette, RotateCcw, ChevronUp, ChevronDown, Wallet, LayoutGrid, ClipboardList, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { MILESTONES } from "@/data/site";
-import { DEFAULT_ORG_TREE, DEFAULT_PERSONNEL, DEFAULT_ORG_UNITS, useProducts, type OrgNode, type OrgUnit } from "@/lib/content";
+import { DEFAULT_ORG_TREE, DEFAULT_PERSONNEL, DEFAULT_ORG_UNITS, DEFAULT_SOCIETES, useProducts, type OrgNode, type OrgUnit, type SolutionFamily } from "@/lib/content";
 import { SAVINGS_DETAILS, type SavingsDetail, type SavingsRateTable } from "@/data/savingsDetails";
 import { OrgChartSvg } from "@/components/OrgChartSvg";
 import { FocalPointPicker } from "@/components/admin/FocalPointPicker";
@@ -39,6 +39,10 @@ interface Settings {
   languages?: { code: string; label: string }[];
   branding?: { primary?: string };
   savingsDetails?: Record<string, SavingsDetail>;
+  personnel?: { name: string; role: string; photo?: string; pos?: string }[];
+  solutions?: { kicker?: string; title?: string; lead?: string; families?: SolutionFamily[] };
+  adhesion?: { categories?: { label: string; montant: number }[]; expresseNote?: string; feeAdhesion?: number; feePart?: number };
+  societes?: string[];
 }
 
 const DEFAULT_STATS: StatItem[] = [
@@ -47,6 +51,22 @@ const DEFAULT_STATS: StatItem[] = [
   { value: 20, label: "Années d'activités", suffix: "" },
   { value: 6.3, label: "Mds FCFA de crédits", suffix: "" },
 ];
+
+// « Nos solutions » (accueil) : icônes et types proposés à l'admin (doit rester aligné avec SOLUTION_ICONS de Index.tsx).
+const SOLUTION_ICON_NAMES = ["Wallet", "Landmark", "Home", "Building2", "Coins", "PiggyBank", "ShieldCheck", "TrendingUp", "Briefcase"];
+const SOLUTION_TYPES: { value: SolutionFamily["type"]; label: string }[] = [
+  { value: "epargne", label: "Épargne" },
+  { value: "credit", label: "Crédit" },
+  { value: "immobilier", label: "Immobilier" },
+];
+const DEFAULT_ADHESION_CATEGORIES = [
+  { label: "Cadre supérieur", montant: 10000 },
+  { label: "Cadre", montant: 5000 },
+  { label: "Maître", montant: 3000 },
+  { label: "EO", montant: 1500 },
+];
+const DEFAULT_EXPRESSE_NOTE =
+  "À l'adhésion, l'Épargne Expresse est obligatoire. Pour la catégorie « {categorie} », la retenue mensuelle est de {montant} FCFA / mois.";
 
 // Fiches détaillées épargne (« Voir plus ») : libellés + (dé)sérialisation du barème.
 const SAVINGS_LABELS: Record<string, string> = {
@@ -87,6 +107,68 @@ export const SettingsManager = () => {
   const [personnel, setPersonnel] = useState(DEFAULT_PERSONNEL);
   const updatePersonnel = (i: number, field: string, value: string) =>
     setPersonnel((arr) => arr.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)));
+  const addPersonnel = () => setPersonnel((arr) => [...arr, { name: "", role: "", photo: "", pos: "" }]);
+  const removePersonnel = (i: number) => setPersonnel((arr) => arr.filter((_, idx) => idx !== i));
+  const [uploadingPhoto, setUploadingPhoto] = useState<number | null>(null);
+  const uploadPersonnelPhoto = async (i: number, file: File) => {
+    setUploadingPhoto(i);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { path } = await api<{ path: string }>("/uploads", { method: "POST", auth: true, isForm: true, body: fd });
+      updatePersonnel(i, "photo", path);
+      toast.success("Photo téléversée. N'oubliez pas d'enregistrer.");
+    } catch (e: any) {
+      toast.error(e?.message || "Téléversement impossible.");
+    } finally {
+      setUploadingPhoto(null);
+    }
+  };
+  // « Nos solutions » (accueil) : en-tête + familles éditables.
+  const solutionsDefaults = { kicker: t("home.solutionsKicker"), title: t("home.solutionsTitle"), lead: t("home.solutionsLead") };
+  const defaultFamilies: SolutionFamily[] = [
+    { title: t("home.prodSavingsTitle"), desc: t("home.prodSavingsDesc"), type: "epargne", icon: "Wallet" },
+    { title: t("home.prodCreditTitle"), desc: t("home.prodCreditDesc"), type: "credit", icon: "Landmark" },
+  ];
+  const [solutions, setSolutions] = useState<{ kicker: string; title: string; lead: string; families: SolutionFamily[] }>({ ...solutionsDefaults, families: defaultFamilies });
+  const updateFamily = (i: number, patch: Partial<SolutionFamily>) =>
+    setSolutions((s) => ({ ...s, families: s.families.map((f, idx) => (idx === i ? { ...f, ...patch } : f)) }));
+  const addFamily = () => setSolutions((s) => ({ ...s, families: [...s.families, { title: "", desc: "", type: "epargne", icon: "Wallet" }] }));
+  const removeFamily = (i: number) => setSolutions((s) => ({ ...s, families: s.families.filter((_, idx) => idx !== i) }));
+  const moveFamily = (i: number, dir: -1 | 1) => setSolutions((s) => {
+    const arr = [...s.families];
+    const j = i + dir;
+    if (j < 0 || j >= arr.length) return s;
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    return { ...s, families: arr };
+  });
+  const saveSolutions = () => {
+    const families = solutions.families
+      .map((f) => ({ title: f.title.trim(), desc: f.desc.trim(), type: f.type, icon: f.icon || "Wallet" }))
+      .filter((f) => f.title);
+    save.mutate({ key: "solutions", value: { kicker: solutions.kicker.trim(), title: solutions.title.trim(), lead: solutions.lead.trim(), families } }, { onSuccess: refreshPublic });
+  };
+
+  // Adhésion : catégories, montants des cases d'engagement, texte affiché.
+  const [adhesion, setAdhesion] = useState<{ categories: { label: string; montant: number }[]; expresseNote: string; feeAdhesion: number; feePart: number }>({
+    categories: DEFAULT_ADHESION_CATEGORIES, expresseNote: DEFAULT_EXPRESSE_NOTE, feeAdhesion: 1000, feePart: 5000,
+  });
+  const updateCategory = (i: number, field: "label" | "montant", val: string) =>
+    setAdhesion((a) => ({ ...a, categories: a.categories.map((c, idx) => (idx === i ? { ...c, [field]: field === "montant" ? Number(val) || 0 : val } : c)) }));
+  const addCategory = () => setAdhesion((a) => ({ ...a, categories: [...a.categories, { label: "", montant: 0 }] }));
+  const removeCategory = (i: number) => setAdhesion((a) => ({ ...a, categories: a.categories.filter((_, idx) => idx !== i) }));
+  const saveAdhesion = () => {
+    const categories = adhesion.categories.map((c) => ({ label: c.label.trim(), montant: Number(c.montant) || 0 })).filter((c) => c.label);
+    save.mutate({ key: "adhesion", value: { categories, expresseNote: adhesion.expresseNote.trim(), feeAdhesion: Number(adhesion.feeAdhesion) || 0, feePart: Number(adhesion.feePart) || 0 } }, { onSuccess: refreshPublic });
+  };
+
+  // Sociétés (employeurs) du formulaire d'adhésion.
+  const [societes, setSocietes] = useState<string[]>(DEFAULT_SOCIETES);
+  const updateSociete = (i: number, val: string) => setSocietes((a) => a.map((s, idx) => (idx === i ? val : s)));
+  const addSociete = () => setSocietes((a) => [...a, ""]);
+  const removeSociete = (i: number) => setSocietes((a) => a.filter((_, idx) => idx !== i));
+  const saveSocietes = () => save.mutate({ key: "societes", value: societes.map((s) => s.trim()).filter(Boolean) }, { onSuccess: refreshPublic });
+
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>(DEFAULT_ORG_UNITS);
   const [orgImage, setOrgImage] = useState<string>("");
   const [uploadingOrg, setUploadingOrg] = useState(false);
@@ -259,6 +341,19 @@ export const SettingsManager = () => {
     if (data.links) setLinks({ ebanking: data.links.ebanking || "", playstore: data.links.playstore || "" });
     if (Array.isArray(data.stats) && data.stats.length) setStats(data.stats);
     if (Array.isArray(data.personnel) && data.personnel.length) setPersonnel(data.personnel);
+    if (data.solutions) setSolutions((s) => ({
+      kicker: data.solutions!.kicker ?? s.kicker,
+      title: data.solutions!.title ?? s.title,
+      lead: data.solutions!.lead ?? s.lead,
+      families: data.solutions!.families?.length ? data.solutions!.families : s.families,
+    }));
+    if (data.adhesion) setAdhesion((a) => ({
+      categories: data.adhesion!.categories?.length ? data.adhesion!.categories : a.categories,
+      expresseNote: data.adhesion!.expresseNote ?? a.expresseNote,
+      feeAdhesion: data.adhesion!.feeAdhesion ?? a.feeAdhesion,
+      feePart: data.adhesion!.feePart ?? a.feePart,
+    }));
+    if (Array.isArray(data.societes) && data.societes.length) setSocietes(data.societes);
     if (data.orgTree && data.orgTree.name) setOrgTree(data.orgTree);
     if (typeof data.orgImage === "string") setOrgImage(data.orgImage);
     if (Array.isArray(data.orgUnits) && data.orgUnits.length) setOrgUnits(data.orgUnits.map((u) => ({ name: u.name || "", note: u.note || "", members: (u.members || []).map((m) => ({ name: m.name || "", role: m.role || "", company: m.company || "" })) })));
@@ -406,6 +501,7 @@ export const SettingsManager = () => {
         <TabsList className="flex h-auto flex-wrap justify-start gap-1 bg-muted/60 p-1">
           <TabsTrigger value="accueil">Accueil</TabsTrigger>
           <TabsTrigger value="apropos">À propos</TabsTrigger>
+          <TabsTrigger value="adhesion">Adhésion</TabsTrigger>
           <TabsTrigger value="epargne">Fiches épargne</TabsTrigger>
           <TabsTrigger value="general">Général</TabsTrigger>
           <TabsTrigger value="interactions">Interactions</TabsTrigger>
@@ -520,6 +616,46 @@ export const SettingsManager = () => {
               ))}
               <p className="text-[11px] text-muted-foreground">Ces 4 chiffres s'affichent sur la page d'accueil (bandeau de statistiques).</p>
               <Button onClick={() => save.mutate({ key: "stats", value: stats })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les chiffres</Button>
+            </CardContent>
+          </Card>
+
+          {/* Nos solutions (accueil) */}
+          <Card className="border-border/40 shadow-sm">
+            <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><LayoutGrid className="h-5 w-5 text-primary" /> « Nos solutions » (accueil)</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-[11px] text-muted-foreground">En-tête et familles de produits de la section « Nos solutions ». Chaque famille affiche automatiquement les produits de son <strong>type</strong> (épargne, crédit, immobilier) et pointe vers la page correspondante. Ajoutez une famille pour présenter une nouvelle gamme.</p>
+              <div className="grid gap-2"><label className={label}>Sur-titre</label><Input value={solutions.kicker} onChange={(e) => setSolutions({ ...solutions, kicker: e.target.value })} /></div>
+              <div className="grid gap-2"><label className={label}>Titre</label><Input value={solutions.title} onChange={(e) => setSolutions({ ...solutions, title: e.target.value })} /></div>
+              <div className="grid gap-2"><label className={label}>Accroche</label><Input value={solutions.lead} onChange={(e) => setSolutions({ ...solutions, lead: e.target.value })} /></div>
+              <div className="h-px bg-border/60" />
+              {solutions.families.map((f, i) => (
+                <div key={i} className="rounded-xl border border-border/60 bg-secondary/20 p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Famille {i + 1}</span>
+                    <div className="flex items-center gap-1">
+                      <Button type="button" variant="ghost" size="icon" className={iconBtn} title="Monter" onClick={() => moveFamily(i, -1)}><ChevronUp className="h-4 w-4" /></Button>
+                      <Button type="button" variant="ghost" size="icon" className={iconBtn} title="Descendre" onClick={() => moveFamily(i, 1)}><ChevronDown className="h-4 w-4" /></Button>
+                      <Button type="button" variant="ghost" size="icon" className={`${iconBtn} hover:text-destructive`} title="Supprimer" onClick={() => removeFamily(i)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                  <div className="grid gap-2"><label className={label}>Titre</label><Input value={f.title} onChange={(e) => updateFamily(i, { title: e.target.value })} placeholder="Épargne rémunérée" /></div>
+                  <div className="grid gap-2"><label className={label}>Description</label><Textarea rows={2} value={f.desc} onChange={(e) => updateFamily(i, { desc: e.target.value })} placeholder="Phrase de présentation de la famille" /></div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="grid gap-2"><label className={label}>Type de produits</label>
+                      <select value={f.type} onChange={(e) => updateFamily(i, { type: e.target.value as SolutionFamily["type"] })} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+                        {SOLUTION_TYPES.map((tpe) => <option key={tpe.value} value={tpe.value}>{tpe.label}</option>)}
+                      </select>
+                    </div>
+                    <div className="grid gap-2"><label className={label}>Icône</label>
+                      <select value={f.icon || "Wallet"} onChange={(e) => updateFamily(i, { icon: e.target.value })} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+                        {SOLUTION_ICON_NAMES.map((n) => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={addFamily} className="w-fit rounded-full gap-2"><Plus className="h-4 w-4" /> Ajouter une famille</Button>
+              <div><Button onClick={saveSolutions} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les solutions</Button></div>
             </CardContent>
           </Card>
 
@@ -728,23 +864,98 @@ export const SettingsManager = () => {
           <Card className="border-border/40 shadow-sm">
             <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Users className="h-5 w-5 text-primary" /> Personnel de la MA2E</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-[11px] text-muted-foreground">Cartes affichées sur « À propos ». Collez le chemin d'une photo (téléversée via la Médiathèque) puis ajustez le <strong>cadrage</strong> avec les curseurs pour bien centrer le visage dans le cercle.</p>
-              <div className="space-y-3 max-h-[30rem] overflow-y-auto pr-1">
+              <p className="text-[11px] text-muted-foreground">Cartes affichées sur « À propos ». <strong>Téléversez</strong> la photo (ou collez un chemin), puis ajustez le <strong>cadrage</strong> avec les curseurs pour bien centrer le visage. Utilisez « Ajouter un membre » pour toute nouvelle personne.</p>
+              <div className="space-y-3 max-h-[34rem] overflow-y-auto pr-1">
                 {personnel.map((p, i) => (
                   <div key={i} className="rounded-xl border border-border/50 p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Membre {i + 1}</span>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removePersonnel(i)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                    </div>
                     <div className="grid sm:grid-cols-2 gap-3">
                       <div className="grid gap-1"><label className={label}>Nom</label><Input value={p.name} onChange={(e) => updatePersonnel(i, "name", e.target.value)} /></div>
                       <div className="grid gap-1"><label className={label}>Fonction</label><Input value={p.role} onChange={(e) => updatePersonnel(i, "role", e.target.value)} /></div>
                     </div>
-                    <div className="grid gap-1"><label className={label}>Photo (chemin)</label><Input value={p.photo || ""} onChange={(e) => updatePersonnel(i, "photo", e.target.value)} placeholder="/images/team/…" /></div>
+                    <div className="grid gap-1"><label className={label}>Photo</label>
+                      <div className="flex items-center gap-2">
+                        <Input value={p.photo || ""} onChange={(e) => updatePersonnel(i, "photo", e.target.value)} placeholder="/images/team/… ou téléversez →" />
+                        <label className="shrink-0 inline-flex items-center gap-1.5 h-10 px-3 rounded-md border border-input bg-background text-sm cursor-pointer hover:bg-secondary/40">
+                          <Upload className="h-4 w-4" />{uploadingPhoto === i ? "Envoi…" : "Téléverser"}
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPersonnelPhoto(i, f); e.target.value = ""; }} />
+                        </label>
+                      </div>
+                    </div>
                     {p.photo && <FocalPointPicker src={p.photo} value={p.pos} onChange={(pos) => updatePersonnel(i, "pos", pos)} shape="circle" />}
                   </div>
                 ))}
               </div>
-              <Button onClick={() => save.mutate({ key: "personnel", value: personnel })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer le personnel</Button>
+              <Button type="button" variant="outline" size="sm" onClick={addPersonnel} className="w-fit rounded-full gap-2"><Plus className="h-4 w-4" /> Ajouter un membre</Button>
+              <div><Button onClick={() => save.mutate({ key: "personnel", value: personnel })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer le personnel</Button></div>
             </CardContent>
           </Card>
 
+        </TabsContent>
+
+        {/* ============================ ADHÉSION ============================ */}
+        <TabsContent value="adhesion" className="space-y-6 mt-0">
+          <Card className="border-border/40 shadow-sm">
+            <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary" /> Formulaire d'adhésion</CardTitle></CardHeader>
+            <CardContent className="space-y-5">
+              <p className="text-[11px] text-muted-foreground">Catégories proposées dans le formulaire d'adhésion, montant mensuel de l'<strong>Épargne Expresse</strong> associé, montants des <strong>cases d'engagement</strong> et texte affiché. Le montant retenu est enregistré dans chaque demande et repris tel quel sur le PDF.</p>
+
+              <div className="space-y-2">
+                <label className={label}>Catégories & montant Épargne Expresse (mensuel)</label>
+                {adhesion.categories.map((c, i) => (
+                  <div key={i} className="grid grid-cols-12 gap-2 items-center">
+                    <Input className="col-span-7" value={c.label} onChange={(e) => updateCategory(i, "label", e.target.value)} placeholder="Cadre supérieur" />
+                    <div className="col-span-4 flex items-center gap-1">
+                      <Input type="number" value={c.montant} onChange={(e) => updateCategory(i, "montant", e.target.value)} placeholder="10000" />
+                      <span className="text-xs text-muted-foreground shrink-0">F</span>
+                    </div>
+                    <div className="col-span-1 flex justify-center">
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeCategory(i)} disabled={adhesion.categories.length <= 1} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={addCategory} className="w-fit rounded-full gap-2"><Plus className="h-4 w-4" /> Ajouter une catégorie</Button>
+              </div>
+
+              <div className="h-px bg-border/60" />
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid gap-2"><label className={label}>Droit d'adhésion (case)</label>
+                  <div className="flex items-center gap-1"><Input type="number" value={adhesion.feeAdhesion} onChange={(e) => setAdhesion({ ...adhesion, feeAdhesion: Number(e.target.value) || 0 })} /><span className="text-xs text-muted-foreground shrink-0">F</span></div>
+                </div>
+                <div className="grid gap-2"><label className={label}>Part sociale (case)</label>
+                  <div className="flex items-center gap-1"><Input type="number" value={adhesion.feePart} onChange={(e) => setAdhesion({ ...adhesion, feePart: Number(e.target.value) || 0 })} /><span className="text-xs text-muted-foreground shrink-0">F</span></div>
+                </div>
+              </div>
+
+              <div className="grid gap-2"><label className={label}>Texte sous le choix de catégorie</label>
+                <Textarea rows={3} value={adhesion.expresseNote} onChange={(e) => setAdhesion({ ...adhesion, expresseNote: e.target.value })} />
+                <p className="text-[11px] text-muted-foreground">Balises disponibles : <code>{"{categorie}"}</code> (catégorie choisie) et <code>{"{montant}"}</code> (montant Épargne Expresse). Laissez vide pour le texte par défaut.</p>
+              </div>
+
+              <Button onClick={saveAdhesion} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer l'adhésion</Button>
+            </CardContent>
+          </Card>
+
+          {/* Sociétés (employeurs) */}
+          <Card className="border-border/40 shadow-sm">
+            <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Briefcase className="h-5 w-5 text-primary" /> Sociétés (employeurs)</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-[11px] text-muted-foreground">Liste des employeurs proposée dans le champ « Société » du formulaire d'adhésion. Ajoutez les nouvelles entités, retirez celles qui sortent du périmètre.</p>
+              <div className="space-y-2">
+                {societes.map((s, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Input value={s} onChange={(e) => updateSociete(i, e.target.value)} placeholder="CIE" />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeSociete(i)} disabled={societes.length <= 1} className="shrink-0 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={addSociete} className="w-fit rounded-full gap-2"><Plus className="h-4 w-4" /> Ajouter une société</Button>
+              </div>
+              <Button onClick={saveSocietes} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les sociétés</Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ============================ GÉNÉRAL ============================ */}

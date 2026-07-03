@@ -51,7 +51,7 @@ const EpargneDetail = () => {
               <CheckCircle2 className="h-6 w-6 text-primary shrink-0" />
               <div>
                 <p className="font-bold text-foreground">Adhésion enregistrée ✓</p>
-                <p className="text-sm text-muted-foreground">Prochaine étape : ouvrez votre <strong>Épargne Expresse</strong>, obligatoire à l'adhésion. Renseignez le formulaire ci-dessous.</p>
+                <p className="text-sm text-muted-foreground">Votre <strong>Épargne Expresse</strong> est mise en place automatiquement avec l'adhésion. Si vous le souhaitez, vous pouvez souscrire à l'<strong>Épargne Ordinaire</strong> (facultatif) via le formulaire ci-dessous.</p>
               </div>
             </div>
           )}

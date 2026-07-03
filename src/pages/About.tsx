@@ -4,11 +4,8 @@ import { useReveal, useCounter } from "@/hooks/useReveal";
 import { MILESTONES, STATS } from "@/data/site";
 import { useSettings, DEFAULT_PERSONNEL, DEFAULT_ORG_UNITS } from "@/lib/content";
 import { useTranslation } from "react-i18next";
-import { Quote, ShieldCheck, Wallet, Briefcase, Users, Award, TrendingUp, Coins, Download } from "lucide-react";
+import { Quote, ShieldCheck, Wallet, Briefcase, Users, Award, TrendingUp, Coins } from "lucide-react";
 import { OrgChartSvg } from "@/components/OrgChartSvg";
-
-// Organigramme officiel — version vectorielle (disposition du PDF) + lien de téléchargement du PDF.
-const ORG_PDF = "/documents/institutionnel/Organigramme de la MA2E - MISE A JOUR LE 22-05-2026.pdf";
 
 const StatItem = ({ stat, icon: Icon }: { stat: typeof STATS[number]; icon: any }) => {
   const { ref, value } = useCounter<HTMLDivElement>(stat.value);
@@ -50,6 +47,10 @@ const About = () => {
   const orgUnits = settings?.orgUnits?.length ? settings.orgUnits : DEFAULT_ORG_UNITS;
   // Personnel de la MA2E — cartes avec photo, éditable au CMS.
   const personnel = settings?.personnel?.length ? settings.personnel : DEFAULT_PERSONNEL;
+  // Chiffres clés : même source que l'accueil (réglage CMS « stats »), repli sur les valeurs par défaut localisées.
+  const stats = settings?.stats?.length
+    ? settings.stats
+    : STATS.map((s, i) => ({ ...s, label: t(`about.statLabels.${i}`, { defaultValue: s.label }) }));
 
   return (
     <Layout>
@@ -155,7 +156,7 @@ const About = () => {
         <div className="container">
           <h2 className="font-display text-3xl font-bold text-center mb-10">{t("about.statsTitle")}</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {STATS.map((s, i) => <StatItem key={s.label} stat={{ ...s, label: t(`about.statLabels.${i}`, { defaultValue: s.label }) }} icon={statIcons[i]} />)}
+            {stats.map((s, i) => <StatItem key={i} stat={{ value: s.value, label: s.label, suffix: s.suffix ?? "" }} icon={statIcons[i] ?? Coins} />)}
           </div>
         </div>
       </section>
@@ -176,16 +177,6 @@ const About = () => {
                 <OrgChartSvg />
               )}
             </div>
-            <figcaption className="mt-4">
-              <a
-                href={ORG_PDF}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-              >
-                <Download className="h-4 w-4" /> Télécharger l'organigramme (PDF)
-              </a>
-            </figcaption>
           </figure>
         </div>
       </section>

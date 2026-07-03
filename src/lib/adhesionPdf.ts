@@ -56,6 +56,13 @@ export async function generateAdhesionPdf(app: AppLike) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str);
     return m ? `${m[3]}/${m[2]}/${m[1]}` : str;
   };
+  // Montants : repris tels quels de la demande (catégories & cases éditables au CMS) ;
+  // repli sur les valeurs par défaut / le calcul par catégorie pour les anciennes demandes.
+  const grp = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  const num = (v: unknown) => (typeof v === "number" && !Number.isNaN(v) ? v : null);
+  const feeAdh = num(d.feeAdhesion) != null ? grp(num(d.feeAdhesion)!) : FEE_ADHESION;
+  const feePrt = num(d.feePart) != null ? grp(num(d.feePart)!) : FEE_PART;
+  const expStored = num(d.epargneExpresseMensuel);
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = 210;
   const M = 15;
@@ -149,8 +156,8 @@ export async function generateAdhesionPdf(app: AppLike) {
     doc.setLineWidth(0.2);
     y += 7;
   };
-  checkbox(d.intentionAdhesion, FEE_ADHESION, "le règlement de mon droit d'adhésion");
-  checkbox(d.intentionPart, FEE_PART, "la libération de ma part sociale");
+  checkbox(d.intentionAdhesion, feeAdh, "le règlement de mon droit d'adhésion");
+  checkbox(d.intentionPart, feePrt, "la libération de ma part sociale");
   y += 6;
 
   // --- Contact (gauche) + Signature (droite) ---
@@ -312,8 +319,11 @@ export async function generateAdhesionPdf(app: AppLike) {
   doc.setTextColor(0);
   const empLabel = "Employé(e) à :";
   doc.text(empLabel, M, y);
-  const soc = s(d.societe).toLowerCase();
+  const socRaw = s(d.societe);
+  const soc = socRaw.toLowerCase();
   const employers = ["CIE", "SODECI", "GS2E", "CIPREL", "AWALE", "SIVE", "SGA2E", "MA2E", "Smart Energy", "Atinkou"];
+  // Société éventuellement ajoutée au CMS (hors liste standard) → on l'affiche quand même pour qu'elle soit cochée.
+  if (socRaw && !employers.some((e) => e.toLowerCase() === soc)) employers.push(socRaw);
   const empStartX = M + doc.getTextWidth(empLabel) + 4;
   let ex = empStartX;
   employers.forEach((emp) => {
@@ -341,7 +351,7 @@ export async function generateAdhesionPdf(app: AppLike) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9.5);
   doc.setTextColor(0);
-  const expAmt = expresseAmountByCategory(s(d.categorie));
+  const expAmt = expStored != null ? grp(expStored) : expresseAmountByCategory(s(d.categorie));
   const t1 = "Autorise le prélèvement au bénéfice de la MA2E d'une retenue mensuelle de";
   doc.text(t1, M, y);
   let px = M + doc.getTextWidth(t1) + 2;

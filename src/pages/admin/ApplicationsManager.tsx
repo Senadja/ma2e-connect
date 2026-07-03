@@ -4,7 +4,6 @@ import {
   Eye,
   CheckCircle2,
   XCircle,
-  Clock,
   FileText,
   Download,
   Mail,
@@ -561,42 +560,37 @@ export const ApplicationsManager = () => {
                         <Download className="h-4 w-4" /> Télécharger le formulaire (PDF)
                       </Button>
                     )}
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        disabled={statusMutation.isPending || selectedApp.status === "approved"}
-                        onClick={() => setStatus("APPROVED")}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-12 shadow-lg shadow-emerald-600/10"
-                      >
-                        <CheckCircle2 className="h-4 w-4 mr-2" /> Approuver
-                      </Button>
-                      <Button
-                        variant="outline"
-                        disabled={statusMutation.isPending || selectedApp.status === "rejected"}
-                        onClick={openReject}
-                        className="text-rose-600 border-rose-200 hover:bg-rose-50 rounded-xl h-12"
-                      >
-                        <XCircle className="h-4 w-4 mr-2" /> Rejeter
-                      </Button>
-                    </div>
-                    {selectedApp.status !== "reviewing" && selectedApp.status !== "approved" && selectedApp.status !== "rejected" && (
-                      <Button
-                        variant="secondary"
-                        disabled={statusMutation.isPending}
-                        onClick={() => setStatus("REVIEWING")}
-                        className="w-full rounded-xl h-11 gap-2 text-xs font-bold"
-                      >
-                        <Eye className="h-4 w-4" /> Mettre en examen
-                      </Button>
-                    )}
-                    {(selectedApp.status === "approved" || selectedApp.status === "rejected") && (
-                      <Button
-                        variant="ghost"
-                        disabled={statusMutation.isPending}
-                        onClick={() => setStatus("PENDING")}
-                        className="w-full rounded-xl h-10 gap-2 text-xs font-bold text-muted-foreground"
-                      >
-                        <Clock className="h-4 w-4" /> Rouvrir le dossier
-                      </Button>
+                    {/* Approuver / Rejeter — masqués dès que la demande est traitée (amendement n°11). */}
+                    {selectedApp.status !== "approved" && selectedApp.status !== "rejected" && (
+                      <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Button
+                            disabled={statusMutation.isPending}
+                            onClick={() => setStatus("APPROVED")}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-12 shadow-lg shadow-emerald-600/10"
+                          >
+                            <CheckCircle2 className="h-4 w-4 mr-2" /> Approuver
+                          </Button>
+                          <Button
+                            variant="outline"
+                            disabled={statusMutation.isPending}
+                            onClick={openReject}
+                            className="text-rose-600 border-rose-200 hover:bg-rose-50 rounded-xl h-12"
+                          >
+                            <XCircle className="h-4 w-4 mr-2" /> Rejeter
+                          </Button>
+                        </div>
+                        {selectedApp.status !== "reviewing" && (
+                          <Button
+                            variant="secondary"
+                            disabled={statusMutation.isPending}
+                            onClick={() => setStatus("REVIEWING")}
+                            className="w-full rounded-xl h-11 gap-2 text-xs font-bold"
+                          >
+                            <Eye className="h-4 w-4" /> Mettre en examen
+                          </Button>
+                        )}
+                      </>
                     )}
                     <div className="grid grid-cols-1 gap-2">
                       <Button

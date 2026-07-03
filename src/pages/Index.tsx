@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ChevronDown, Wallet, Landmark, Quote, TrendingUp, Users, Award, Coins, CheckCircle2, ShieldCheck, Info } from "lucide-react";
+import { ArrowRight, ChevronDown, Wallet, Landmark, Quote, TrendingUp, Users, Award, Coins, ShieldCheck, Info, Home, Building2, PiggyBank, Briefcase } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { SEO } from "@/components/SEO";
 import { useReveal, useCounter } from "@/hooks/useReveal";
 import { cn } from "@/lib/utils";
 import { STATS as DEFAULT_STATS, MILESTONES } from "@/data/site";
 import { useArticles, useSettings, useProducts } from "@/lib/content";
-import { api } from "@/lib/api";
 import { useTranslation } from "react-i18next";
+
+// Icônes proposées aux familles « Nos solutions » (le CMS enregistre le nom, on résout le composant ici).
+const SOLUTION_ICONS: Record<string, any> = { Wallet, Landmark, Home, Building2, Coins, PiggyBank, ShieldCheck, TrendingUp, Briefcase };
 
 const StatItem = ({ stat, icon: Icon }: { stat: typeof DEFAULT_STATS[number]; icon: any }) => {
   const { ref, value } = useCounter<HTMLDivElement>(stat.value);
@@ -122,11 +123,12 @@ const Index = () => {
   const newsRef = useReveal();
   const quoteRef = useReveal();
 
-  const [stats, setStats] = useState(DEFAULT_STATS);
   const { data: NEWS = [] } = useArticles();
   const { t } = useTranslation();
   const tCat = (c: string) => t(`newsPage.categories.${c}`, { defaultValue: c });
   const { data: settings } = useSettings();
+  // Chiffres clés : source unique éditable au CMS (réglage « stats »), partagée avec « À propos ».
+  const stats = settings?.stats?.length ? settings.stats : DEFAULT_STATS;
   const why = settings?.whyUs;
   const hero = settings?.homeHero;
   const milestones = settings?.milestones?.length
@@ -141,30 +143,36 @@ const Index = () => {
     ? { backgroundColor: pca.bgColor }
     : undefined;
 
-  useEffect(() => {
-    // Utilise le client API centralisé (URL configurable, compatible prod).
-    api<typeof DEFAULT_STATS>(`/stats?t=${Date.now()}`)
-      .then((data) => {
-        // On garde les libellés locaux (vocabulaire « sociétaire ») et on n'injecte
-        // que les valeurs chiffrées renvoyées par le backend (même ordre).
-        if (Array.isArray(data) && data.length > 0) {
-          setStats(DEFAULT_STATS.map((s, i) => ({ ...s, value: data[i]?.value ?? s.value })));
-        }
-      })
-      .catch((err) => {
-        console.error("Could not fetch stats:", err);
-        // Conserve DEFAULT_STATS en cas d'erreur.
-      });
-  }, []);
-
+  // « Nos solutions » : en-tête et familles éditables au CMS (réglage « solutions »).
+  // Chaque famille tire ses sous-produits du vrai catalogue selon son type.
   const savings = useProducts("epargne");
   const credits = useProducts("credit");
-  const products = [
-    { icon: Wallet, title: t("home.prodSavingsTitle"), desc: t("home.prodSavingsDesc"), to: "/produits/epargne", subs: (savings.data ?? []) as { id: string; name: string }[] },
-    { icon: Landmark, title: t("home.prodCreditTitle"), desc: t("home.prodCreditDesc"), to: "/produits/credits", subs: (credits.data ?? []) as { id: string; name: string }[] },
+  const realEstate = useProducts("immobilier");
+  const subsByType: Record<string, { id: string; name: string }[]> = {
+    epargne: (savings.data ?? []) as { id: string; name: string }[],
+    credit: (credits.data ?? []) as { id: string; name: string }[],
+    immobilier: (realEstate.data ?? []) as { id: string; name: string }[],
+  };
+  const linkByType: Record<string, string> = {
+    epargne: "/produits/epargne",
+    credit: "/produits/credits",
+    immobilier: "/produits",
+  };
+  const defaultFamilies = [
+    { title: t("home.prodSavingsTitle"), desc: t("home.prodSavingsDesc"), type: "epargne", icon: "Wallet" },
+    { title: t("home.prodCreditTitle"), desc: t("home.prodCreditDesc"), type: "credit", icon: "Landmark" },
   ];
-
-  const statIcons = [Users, Award, TrendingUp, Coins];
+  const families = settings?.solutions?.families?.length ? settings.solutions.families : defaultFamilies;
+  const products = families.map((f) => ({
+    icon: SOLUTION_ICONS[f.icon || ""] || Wallet,
+    title: f.title,
+    desc: f.desc,
+    to: linkByType[f.type] || "/produits",
+    subs: subsByType[f.type] || [],
+  }));
+  // ≥3 familles : 3 colonnes pleine largeur. 1–2 familles : 2 colonnes centrées et bornées
+  // pour éviter des cartes surdimensionnées (évite le « vide » après le retrait d'une famille).
+  const solGridCols = products.length >= 3 ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2 max-w-4xl mx-auto";
 
   return (
     <Layout>
@@ -236,47 +244,50 @@ const Index = () => {
       <section className="py-20 md:py-28">
         <div className="container">
           <div ref={productsRef} className="reveal max-w-2xl">
-            <span className="text-sm font-mono uppercase tracking-wider text-primary">{t("home.solutionsKicker")}</span>
-            <h2 className="mt-2 font-display text-4xl md:text-5xl font-bold">{t("home.solutionsTitle")}</h2>
+            <span className="text-sm font-mono uppercase tracking-wider text-primary">{settings?.solutions?.kicker || t("home.solutionsKicker")}</span>
+            <h2 className="mt-2 font-display text-4xl md:text-5xl font-bold">{settings?.solutions?.title || t("home.solutionsTitle")}</h2>
             <p className="mt-4 text-muted-foreground text-lg">
-              {t("home.solutionsLead")}
+              {settings?.solutions?.lead || t("home.solutionsLead")}
             </p>
           </div>
 
-          <div className="mt-12 grid gap-6 md:gap-8 md:grid-cols-2">
+          <div className={`mt-12 grid items-start gap-6 md:gap-8 ${solGridCols}`}>
             {products.map((p, i) => (
               <Link
                 key={p.title}
                 to={p.to}
-                className="group relative flex flex-col rounded-3xl bg-card border border-border p-8 md:p-10 shadow-sm hover:shadow-elegant hover:-translate-y-1 transition-bounce border-l-4 border-l-primary overflow-hidden"
+                className="group relative flex flex-col overflow-hidden rounded-3xl border border-border border-l-4 border-l-primary bg-card p-7 md:p-8 shadow-sm transition-bounce hover:-translate-y-1 hover:shadow-elegant"
                 style={{ animationDelay: `${i * 80}ms` }}
               >
-                <div className="absolute top-0 right-0 h-56 w-56 bg-gradient-primary opacity-5 rounded-full blur-3xl group-hover:opacity-20 transition-smooth" />
-                <div className="relative flex flex-col h-full">
-                  <div className="flex items-center gap-5">
-                    <div className="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-primary text-white shadow-gold/0">
-                      <p.icon className="h-8 w-8" />
+                <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-gradient-primary opacity-[0.04] blur-3xl transition-smooth group-hover:opacity-[0.14]" aria-hidden />
+                <div className="relative flex h-full flex-col">
+                  <div className="flex items-center gap-4">
+                    <div className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-primary text-white">
+                      <p.icon className="h-7 w-7" />
                     </div>
-                    <div>
-                      <h3 className="font-display text-2xl md:text-3xl font-bold leading-tight">{p.title}</h3>
-                      <span className="text-sm text-primary font-mono font-semibold">{p.subs.length} {t("home.solutionsCountLabel")}</span>
+                    <div className="min-w-0">
+                      <h3 className="font-display text-2xl font-bold leading-tight">{p.title}</h3>
+                      {p.subs.length > 0 && (
+                        <span className="text-xs font-mono font-semibold uppercase tracking-wider text-primary">{p.subs.length} {t("home.solutionsCountLabel")}</span>
+                      )}
                     </div>
                   </div>
-                  <p className="mt-6 text-muted-foreground text-lg leading-relaxed">{p.desc}</p>
+
+                  <p className="mt-5 text-muted-foreground leading-relaxed">{p.desc}</p>
 
                   {p.subs.length > 0 && (
-                    <ul className="mt-7 grid sm:grid-cols-2 gap-x-6 gap-y-3">
+                    <ul className="mt-6 flex flex-wrap gap-2">
                       {p.subs.map((s) => (
-                        <li key={s.id} className="flex items-start gap-2 text-sm">
-                          <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                          <span>{s.name}</span>
+                        <li key={s.id} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/40 px-3 py-1.5 text-xs font-medium text-foreground/80">
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                          {s.name}
                         </li>
                       ))}
                     </ul>
                   )}
 
-                  <span className="mt-auto pt-8 inline-flex items-center gap-2 text-primary font-semibold">
-                    {t("home.explore")} <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  <span className="mt-7 flex items-center gap-2 border-t border-border/70 pt-5 font-semibold text-primary">
+                    {t("home.explore")} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </span>
                 </div>
               </Link>
