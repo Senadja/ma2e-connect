@@ -26,6 +26,8 @@ RUN npx prisma generate
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/dist-seed ./dist-seed
 COPY docker-entrypoint.sh ./
-RUN chmod +x docker-entrypoint.sh && mkdir -p /app/uploads
+# Normalise les fins de ligne (robuste si le fichier a été récupéré en CRLF sous Windows)
+# puis rend l'entrypoint exécutable. Sans ça : « exec ./docker-entrypoint.sh: no such file or directory ».
+RUN sed -i 's/\r$//' docker-entrypoint.sh && chmod +x docker-entrypoint.sh && mkdir -p /app/uploads
 EXPOSE 3000
 ENTRYPOINT ["./docker-entrypoint.sh"]

@@ -458,7 +458,8 @@ export async function generateAdhesionPdf(app: AppLike) {
     const p = (v as { path?: unknown }).path;
     return typeof p === "string" ? p : "";
   };
-  const isImgPath = (p: string) => /\.(jpe?g|png|webp|gif)$/i.test(p);
+  // Autorise une éventuelle chaîne de requête (URL signée des pièces : « …jpg?e=…&s=… »).
+  const isImgPath = (p: string) => /\.(jpe?g|png|webp|gif)(\?.*)?$/i.test(p);
   const rectoP = slotPath("cniRecto");
   const versoP = slotPath("cniVerso");
   const passP = slotPath("passeport");

@@ -117,7 +117,7 @@ export const NewsManager = () => {
 
   const { data: articles = [], isLoading } = useQuery({
     queryKey: ["articles", "all"],
-    queryFn: () => api<ApiArticle[]>("/articles?status=all"),
+    queryFn: () => api<ApiArticle[]>("/articles?status=all", { auth: true }),
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["articles"] });

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 // Données d'amorçage (le front est en ESM, le backend en CommonJS :
 // on utilise une copie locale CommonJS pour initialiser la base).
 import { NEWS, SAVINGS, CREDITS, MEDIA, FAQS, SETTINGS_DEFAULTS, PARTNERS, TEAM } from './seed-data';
@@ -37,22 +38,38 @@ function slugify(input: string): string {
     .slice(0, 80);
 }
 
+const IS_PROD = (process.env.NODE_ENV ?? 'development') === 'production';
+
+// Mot de passe initial : variable d'env si fournie ; sinon en PROD on génère un aléatoire
+// (jamais de mot de passe public connu comme « admin123 » en production) ; en dev, valeur simple.
+function initialPassword(envVar: string, devDefault: string): { pwd: string; generated: boolean } {
+  const fromEnv = process.env[envVar];
+  if (fromEnv) return { pwd: fromEnv, generated: false };
+  if (IS_PROD) return { pwd: crypto.randomBytes(12).toString('base64url'), generated: true };
+  return { pwd: devDefault, generated: false };
+}
+
 async function seedUsers() {
   const users = [
-    { email: 'admin@ma2e.ci', password: 'admin123', name: 'Administrateur MA2E', role: 'ADMIN' as const, permissions: ALL_PERMISSIONS },
-    { email: 'editor@ma2e.ci', password: 'editor123', name: 'Éditeur Com', role: 'EDITOR' as const, permissions: ['news:write', 'faq:write'] },
+    { email: 'admin@ma2e.ci', envVar: 'ADMIN_INITIAL_PASSWORD', devDefault: 'admin123', name: 'Administrateur MA2E', role: 'ADMIN' as const, permissions: ALL_PERMISSIONS },
+    { email: 'editor@ma2e.ci', envVar: 'EDITOR_INITIAL_PASSWORD', devDefault: 'editor123', name: 'Éditeur Com', role: 'EDITOR' as const, permissions: ['news:write', 'faq:write'] },
   ];
   for (const u of users) {
-    const password = await bcrypt.hash(u.password, 10);
-    await prisma.user.upsert({
-      where: { email: u.email },
-      // On NE réinitialise PAS le mot de passe d'un compte existant (sinon le mot de passe
-      // changé au back-office serait écrasé à chaque redémarrage). Le mot de passe par défaut
-      // n'est posé qu'à la création initiale du compte.
-      update: { name: u.name, role: u.role, permissions: u.permissions },
-      create: { email: u.email, password, name: u.name, role: u.role, permissions: u.permissions },
-    });
-    console.log(`✓ user ${u.email} (${u.role})`);
+    const existing = await prisma.user.findUnique({ where: { email: u.email } });
+    if (existing) {
+      // Compte déjà présent : on ne réinitialise JAMAIS le mot de passe (celui changé au back-office est préservé).
+      await prisma.user.update({ where: { email: u.email }, data: { name: u.name, role: u.role, permissions: u.permissions } });
+      console.log(`✓ user ${u.email} (${u.role}) — existant, mot de passe conservé`);
+      continue;
+    }
+    const { pwd, generated } = initialPassword(u.envVar, u.devDefault);
+    const password = await bcrypt.hash(pwd, 10);
+    await prisma.user.create({ data: { email: u.email, password, name: u.name, role: u.role, permissions: u.permissions } });
+    if (generated) {
+      console.log(`⚠️  ${u.email} : mot de passe initial ALÉATOIRE → « ${pwd} » (changez-le immédiatement dans le back-office)`);
+    } else {
+      console.log(`✓ user ${u.email} (${u.role}) créé`);
+    }
   }
 }
 

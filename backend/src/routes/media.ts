@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { requireAuth, requirePermission } from '../middleware/auth';
@@ -15,14 +16,17 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR
   : path.resolve(__dirname, '../../../public/documents/uploads');
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
+// Médiathèque : documents/visuels publics. On bloque .svg/.html/.js… (XSS stockée first-party).
+const ALLOWED_EXT = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.gif', '.doc', '.docx', '.xls', '.xlsx']);
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-    cb(null, `${Date.now()}-${safe}`);
-  },
+  filename: (_req, file, cb) => cb(null, `${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase()}`),
 });
-const upload = multer({ storage, limits: { fileSize: 15 * 1024 * 1024 } });
+const upload = multer({
+  storage,
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => cb(null, ALLOWED_EXT.has(path.extname(file.originalname).toLowerCase())),
+});
 
 // GET public — uniquement les documents PUBLIÉS de la médiathèque.
 mediaRouter.get('/', async (req, res) => {

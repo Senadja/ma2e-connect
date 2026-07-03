@@ -3,6 +3,7 @@ import { Facebook, Linkedin, Twitter, MapPin, Phone, Mail, Smartphone } from "lu
 import { useTranslation } from "react-i18next";
 import { useSettings } from "@/lib/content";
 import { PLAYSTORE_URL } from "@/data/site";
+import { safeHref } from "@/lib/safeUrl";
 import { Logo } from "../Logo";
 
 export const Footer = () => {
@@ -13,7 +14,7 @@ export const Footer = () => {
     { Icon: Facebook, url: settings?.social?.facebook, label: "Facebook" },
     { Icon: Linkedin, url: settings?.social?.linkedin, label: "LinkedIn" },
     { Icon: Twitter, url: settings?.social?.twitter, label: "X (Twitter)" },
-  ].filter((s) => s.url);
+  ].filter((s) => safeHref(s.url)); // n'affiche que les liens http(s) valides (anti javascript:)
   return (
     <footer className="relative bg-primary-dark text-white/80 overflow-hidden">
       <div className="absolute inset-0 grid-pattern-light opacity-50" aria-hidden />
@@ -25,7 +26,7 @@ export const Footer = () => {
             {socials.length > 0 && (
               <div className="mt-6 flex gap-3">
                 {socials.map(({ Icon, url, label }) => (
-                  <a key={label} href={url} target="_blank" rel="noreferrer noopener" aria-label={`${t("common.socialNetwork")} — ${label}`} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 hover:bg-accent hover:text-accent-foreground transition-smooth">
+                  <a key={label} href={safeHref(url)} target="_blank" rel="noreferrer noopener" aria-label={`${t("common.socialNetwork")} — ${label}`} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 hover:bg-accent hover:text-accent-foreground transition-smooth">
                     <Icon className="h-4 w-4" />
                   </a>
                 ))}
@@ -38,7 +39,7 @@ export const Footer = () => {
               <div className="flex items-center gap-4">
                 <img src="/images/app-qr.png" alt="QR code de l'application mobile MA2E" className="h-20 w-20 shrink-0 rounded-lg bg-white p-1.5" />
                 <a
-                  href={settings?.links?.playstore || PLAYSTORE_URL}
+                  href={safeHref(settings?.links?.playstore) || PLAYSTORE_URL}
                   target="_blank"
                   rel="noreferrer noopener"
                   className="inline-flex items-center gap-2 rounded-xl bg-white/10 hover:bg-accent hover:text-accent-foreground px-4 py-2.5 text-sm font-semibold text-white transition-smooth"

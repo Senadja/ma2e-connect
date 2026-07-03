@@ -2,18 +2,32 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-function required(name: string, fallback?: string): string {
-  const v = process.env[name] ?? fallback;
-  if (v === undefined) {
+const nodeEnv = process.env.NODE_ENV ?? 'development';
+
+function required(name: string): string {
+  const v = process.env[name];
+  if (v === undefined || v === '') {
     throw new Error(`Variable d'environnement manquante : ${name}`);
   }
   return v;
 }
 
+// JWT_SECRET : AUCUNE valeur par défaut. Un secret par défaut public permettrait à quiconque
+// de forger des jetons admin → l'app DOIT refuser de démarrer si la variable est absente
+// (fail-fast). En production, on rejette aussi les secrets manifestement faibles/connus.
+function requireJwtSecret(): string {
+  const secret = required('JWT_SECRET');
+  const weak = secret.length < 32 || secret.startsWith('dev-') || secret.startsWith('change-me');
+  if (nodeEnv === 'production' && weak) {
+    throw new Error('JWT_SECRET trop faible : fournissez une chaîne aléatoire d’au moins 32 caractères en production.');
+  }
+  return secret;
+}
+
 export const env = {
   port: Number(process.env.PORT ?? 3000),
-  nodeEnv: process.env.NODE_ENV ?? 'development',
-  jwtSecret: required('JWT_SECRET', 'dev-ma2e-secret-change-me'),
+  nodeEnv,
+  jwtSecret: requireJwtSecret(),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '8h',
   corsOrigins: (process.env.CORS_ORIGIN ?? 'http://localhost:8080,http://localhost:5173')
     .split(',')

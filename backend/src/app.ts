@@ -21,6 +21,11 @@ import { auditMiddleware } from './lib/audit';
 
 export const app = express();
 
+// Derrière le reverse proxy (Caddy/OVH, Vercel), fait confiance à 1 hop pour que req.ip
+// reflète la vraie IP client (sinon le rate-limit login partage un unique bucket → DoS/lockout).
+// Nombre exact de proxys, PAS `true` (sinon X-Forwarded-For serait usurpable).
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(
   cors({
@@ -41,7 +46,22 @@ app.use(auditMiddleware);
 const UPLOAD_DIR = process.env.UPLOAD_DIR
   ? path.resolve(process.env.UPLOAD_DIR)
   : path.resolve(__dirname, '../../public/documents/uploads');
-app.use('/documents/uploads', express.static(UPLOAD_DIR));
+// Sert UNIQUEMENT les visuels publics (produits, articles, splash, photos d'équipe…).
+// Les pièces justificatives sensibles (CNI/passeport/photo d'identité) ne sont PAS ici :
+// elles vont dans un dossier privé servi par une route signée (voir routes/applications.ts).
+app.use(
+  '/documents/uploads',
+  express.static(UPLOAD_DIR, {
+    setHeaders: (res, filePath) => {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      // Défense en profondeur : tout fichier au type « exécutable en navigateur » est forcé
+      // en téléchargement (neutralise une éventuelle XSS stockée via un .html/.svg résiduel).
+      if (/\.(html?|svg|xml|xht(ml)?)$/i.test(filePath)) {
+        res.setHeader('Content-Disposition', 'attachment');
+      }
+    },
+  })
+);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', message: 'MA2E Connect Backend API is running' });

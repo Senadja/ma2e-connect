@@ -18,9 +18,25 @@ const productSchema = z.object({
   order: z.number().int().default(0),
 });
 
+// Schéma d'update SANS .default() : en Zod v4, .partial() réinjecte les défauts sur les clés
+// absentes → un PUT { active:false } écraserait description/features/order. Ici seules les
+// clés réellement envoyées sont mises à jour (pas de perte de données du catalogue).
+const productUpdateSchema = z.object({
+  type: z.enum(['epargne', 'credit', 'immobilier']).optional(),
+  name: z.string().min(2).optional(),
+  description: z.string().optional(),
+  features: z.array(z.string()).optional(),
+  meta: z.record(z.string(), z.any()).optional(),
+  image: z.string().optional(),
+  form: z.string().optional(),
+  active: z.boolean().optional(),
+  order: z.number().int().optional(),
+});
+
 // GET public — filtrable par type, uniquement les produits actifs.
 productsRouter.get('/', async (req, res) => {
-  const type = req.query.type as string | undefined;
+  // Coercition en string (évite l'injection d'opérateur Prisma via ?type[gt]=…).
+  const type = req.query.type !== undefined ? String(req.query.type) : undefined;
   const includeInactive = req.query.all === 'true';
   const where: Record<string, unknown> = {};
   if (type) where.type = type;
@@ -45,7 +61,7 @@ productsRouter.post('/', async (req, res) => {
 });
 
 productsRouter.put('/:id', async (req, res) => {
-  const parsed = productSchema.partial().safeParse(req.body);
+  const parsed = productUpdateSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
   const d = parsed.data;
   const data = { ...d, ...(d.name ? { slug: slugify(d.name) } : {}) };

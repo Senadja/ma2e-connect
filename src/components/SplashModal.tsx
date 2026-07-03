@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSettings } from "@/lib/content";
+import { safeHref, isExternalHref } from "@/lib/safeUrl";
 import { X } from "lucide-react";
 
 const SESSION_KEY = "ma2e-splash-seen";
@@ -41,10 +42,10 @@ export const SplashModal = () => {
         >
           <X className="h-5 w-5" />
         </button>
-        {splash!.link ? (
+        {safeHref(splash!.link) ? (
           <a
-            href={splash!.link}
-            target={splash!.link.startsWith("http") ? "_blank" : undefined}
+            href={safeHref(splash!.link)}
+            target={isExternalHref(splash!.link) ? "_blank" : undefined}
             rel="noopener noreferrer"
             onClick={close}
           >

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { requireAuth, requirePermission } from '../middleware/auth';
+import { publicWriteLimiter } from '../lib/rateLimit';
 import { sendApplicationNotification } from '../lib/mailer';
 
 export const contactRouter = Router();
@@ -14,8 +15,8 @@ const createSchema = z.object({
   message: z.string().min(5),
 });
 
-// POST public — message de contact depuis le site.
-contactRouter.post('/', async (req, res) => {
+// POST public (rate-limité) — message de contact depuis le site.
+contactRouter.post('/', publicWriteLimiter, async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
   const d = parsed.data;

@@ -3,25 +3,32 @@ import { z } from 'zod';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
 import { requireAuth, requirePermission } from '../middleware/auth';
+import { publicWriteLimiter } from '../lib/rateLimit';
+import { signDoc, verifyDoc } from '../lib/docSign';
 import { sendApplicationNotification, sendApplicationDecision } from '../lib/mailer';
 
 export const applicationsRouter = Router();
 
-// --- Upload PUBLIC des pièces jointes d'une demande (le formulaire est public) ---
-const UPLOAD_DIR = process.env.UPLOAD_DIR
+// --- Pièces justificatives (CNI, passeport, photo) : données personnelles SENSIBLES ---
+// Stockées dans un dossier PRIVÉ (jamais servi par l'express.static public de app.ts) et
+// accessibles uniquement via une URL signée à durée limitée (voir GET /documents/:file).
+const PUBLIC_UPLOAD_DIR = process.env.UPLOAD_DIR
   ? path.resolve(process.env.UPLOAD_DIR)
   : path.resolve(__dirname, '../../../public/documents/uploads');
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const APP_DOCS_DIR = process.env.APP_DOCS_DIR
+  ? path.resolve(process.env.APP_DOCS_DIR)
+  : path.resolve(PUBLIC_UPLOAD_DIR, '..', 'app-docs');
+fs.mkdirSync(APP_DOCS_DIR, { recursive: true });
 
 const ALLOWED_EXT = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx']);
+const DOC_FILE_RE = /^[A-Za-z0-9._-]+$/;
 const docStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-    cb(null, `${Date.now()}-${safe}`);
-  },
+  destination: (_req, _file, cb) => cb(null, APP_DOCS_DIR),
+  // Nom NON devinable (pas d'énumération de masse) : UUID + extension d'origine validée.
+  filename: (_req, file, cb) => cb(null, `${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase()}`),
 });
 const docUpload = multer({
   storage: docStorage,
@@ -29,11 +36,51 @@ const docUpload = multer({
   fileFilter: (_req, file, cb) => cb(null, ALLOWED_EXT.has(path.extname(file.originalname).toLowerCase())),
 });
 
-// Public : reçoit une pièce justificative et renvoie son chemin (rattaché à la demande ensuite).
-applicationsRouter.post('/documents', docUpload.single('file'), (req, res) => {
+// Public (rate-limité) : reçoit une pièce et renvoie une référence d'API (non résolvable sans signature).
+applicationsRouter.post('/documents', publicWriteLimiter, docUpload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Fichier requis (PDF, image ou Word, 8 Mo max).' });
-  res.status(201).json({ path: `/documents/uploads/${req.file.filename}`, name: req.file.originalname });
+  res.status(201).json({ path: `/api/applications/documents/${req.file.filename}`, name: req.file.originalname });
 });
+
+// Sert une pièce justificative UNIQUEMENT avec une signature valide et non expirée
+// (fournie à l'admin authentifié par GET /). Bloque tout accès public/IDOR aux pièces d'identité.
+applicationsRouter.get('/documents/:file', (req, res) => {
+  const file = req.params.file;
+  if (!DOC_FILE_RE.test(file) || file.includes('..')) {
+    return res.status(400).json({ error: 'Nom de fichier invalide' });
+  }
+  if (!verifyDoc(file, String(req.query.e ?? ''), String(req.query.s ?? ''))) {
+    return res.status(403).json({ error: 'Lien expiré ou invalide' });
+  }
+  const full = path.join(APP_DOCS_DIR, file);
+  if (!full.startsWith(APP_DOCS_DIR + path.sep)) {
+    return res.status(400).json({ error: 'Chemin invalide' });
+  }
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.sendFile(full, (err) => {
+    if (err && !res.headersSent) res.status(404).json({ error: 'Fichier introuvable' });
+  });
+});
+
+// Ajoute une signature courte aux chemins des pièces d'une demande (nouveau schéma d'API),
+// pour que seul l'admin authentifié — et le temps de la signature — puisse les afficher.
+function signApplicationDocs<T extends { data?: unknown }>(appRow: T): T {
+  const data = appRow?.data;
+  if (!data || typeof data !== 'object') return appRow;
+  const docs = (data as Record<string, unknown>).documents;
+  if (!docs || typeof docs !== 'object') return appRow;
+  const signed: Record<string, unknown> = {};
+  for (const [slot, v] of Object.entries(docs as Record<string, unknown>)) {
+    const p = v && typeof v === 'object' ? (v as { path?: unknown }).path : undefined;
+    if (typeof p === 'string') {
+      const m = p.match(/\/api\/applications\/documents\/([A-Za-z0-9._-]+)$/);
+      signed[slot] = m ? { ...(v as object), path: `${p}${signDoc(m[1])}` } : v;
+    } else {
+      signed[slot] = v;
+    }
+  }
+  return { ...appRow, data: { ...(data as object), documents: signed } };
+}
 
 const createSchema = z.object({
   category: z.string().min(1), // épargne | crédit | immobilier | adhésion
@@ -52,8 +99,8 @@ async function nextAppId(): Promise<string> {
   return `MA2E-${year}-${String(count + 1).padStart(4, '0')}`;
 }
 
-// POST public — réception d'une demande depuis le site.
-applicationsRouter.post('/', async (req, res) => {
+// POST public (rate-limité) — réception d'une demande depuis le site.
+applicationsRouter.post('/', publicWriteLimiter, async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0].message });
@@ -99,7 +146,7 @@ applicationsRouter.get('/', async (req, res) => {
     where,
     orderBy: { createdAt: 'desc' },
   });
-  res.json(applications);
+  res.json(applications.map(signApplicationDocs));
 });
 
 const patchSchema = z.object({

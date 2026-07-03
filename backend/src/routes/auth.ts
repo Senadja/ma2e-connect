@@ -21,6 +21,10 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Mot de passe requis'),
 });
 
+// Hash factice : on compare TOUJOURS avec bcrypt, même si l'utilisateur n'existe pas,
+// pour égaliser le temps de réponse et supprimer l'oracle temporel d'énumération d'utilisateurs.
+const DUMMY_HASH = bcrypt.hashSync('ma2e-timing-equalizer-not-a-real-password', 10);
+
 function toAuthUser(u: {
   id: string;
   email: string;
@@ -45,8 +49,8 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
   const { email, password } = parsed.data;
 
   const user = await prisma.user.findUnique({ where: { email } });
-  // Comparaison systématique pour limiter l'oracle temporel (user enum).
-  const ok = user ? await bcrypt.compare(password, user.password) : false;
+  // Comparaison bcrypt systématique (hash factice si l'utilisateur n'existe pas) → temps constant.
+  const ok = await bcrypt.compare(password, user?.password ?? DUMMY_HASH);
   if (!user || !ok) {
     return res.status(401).json({ error: 'Identifiants invalides' });
   }

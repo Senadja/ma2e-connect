@@ -45,6 +45,28 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+// Authentification facultative : renseigne req.user si un jeton valide est fourni,
+// mais ne bloque jamais (pour les routes publiques qui adaptent leur réponse à l'auth,
+// ex. GET /articles qui ne révèle les brouillons qu'aux rédacteurs authentifiés).
+export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
+  const header = req.headers.authorization;
+  if (header?.startsWith('Bearer ')) {
+    try {
+      const payload = jwt.verify(header.slice('Bearer '.length), env.jwtSecret) as AuthUser;
+      req.user = {
+        id: payload.id,
+        email: payload.email,
+        name: payload.name,
+        role: payload.role,
+        permissions: payload.permissions || [],
+      };
+    } catch {
+      /* jeton invalide → traité comme non authentifié */
+    }
+  }
+  next();
+}
+
 // RBAC par rôle (insensible à la casse).
 export function requireRole(...roles: string[]) {
   const allowed = roles.map((r) => r.toLowerCase());

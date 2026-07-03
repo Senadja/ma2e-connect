@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { requireAuth, requirePermission } from '../middleware/auth';
+import { requireAuth, requirePermission, optionalAuth } from '../middleware/auth';
 import { slugify } from '../lib/slug';
 
 export const articlesRouter = Router();
@@ -25,10 +25,27 @@ const articleSchema = z.object({
   status: z.enum(['draft', 'published']).default('draft'),
 });
 
-// GET public — par défaut uniquement les articles publiés.
-articlesRouter.get('/', async (req, res) => {
-  const status = req.query.status as string | undefined;
-  const where = status === 'all' ? {} : { status: status ?? 'published' };
+// Schéma d'update SANS .default() : évite qu'un PUT partiel réinjecte content=[]/tags=[]/status=draft
+// (perte de données / dépublication silencieuse sous Zod v4).
+const articleUpdateSchema = z.object({
+  title: z.string().min(3).optional(),
+  excerpt: z.string().min(3).optional(),
+  category: z.string().min(1).optional(),
+  content: z.array(blockSchema).optional(),
+  image: z.string().optional(),
+  author: z.string().optional(),
+  readTime: z.string().optional(),
+  date: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  status: z.enum(['draft', 'published']).optional(),
+});
+
+// GET public — ne renvoie QUE les articles publiés. Les brouillons (status/all) ne sont visibles
+// qu'aux rédacteurs authentifiés (optionalAuth) : sinon un simple ?status=draft les divulguerait.
+articlesRouter.get('/', optionalAuth, async (req, res) => {
+  const canSeeAll = !!req.user && (req.user.role.toLowerCase() === 'admin' || (req.user.permissions || []).includes('news:write'));
+  const status = req.query.status !== undefined ? String(req.query.status) : undefined;
+  const where = canSeeAll ? (status && status !== 'all' ? { status } : {}) : { status: 'published' };
   const articles = await prisma.article.findMany({ where, orderBy: { createdAt: 'desc' } });
   res.json(articles);
 });
@@ -69,7 +86,7 @@ articlesRouter.post('/', async (req, res) => {
 });
 
 articlesRouter.put('/:id', async (req, res) => {
-  const parsed = articleSchema.partial().safeParse(req.body);
+  const parsed = articleUpdateSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
   const existing = await prisma.article.findUnique({ where: { id: req.params.id } });
   if (!existing) return res.status(404).json({ error: 'Article introuvable' });

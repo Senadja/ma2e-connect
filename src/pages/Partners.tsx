@@ -2,6 +2,7 @@ import { Building2, Handshake } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { PageHero } from "@/components/PageHero";
 import { usePartners } from "@/lib/content";
+import { safeHref } from "@/lib/safeUrl";
 import { useTranslation } from "react-i18next";
 
 // Logos fournis directement dans le projet (affichés tant qu'aucun logo n'est défini via le CMS).
@@ -62,7 +63,7 @@ const Partners = () => {
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               {items.map((p) => {
                 const logo = (p as any).logo || LOGO_MAP[p.name];
-                const url = (p as any).url as string | undefined;
+                const url = safeHref((p as any).url as string | undefined); // anti javascript:/data:
                 const cardCls = "block rounded-2xl border bg-card p-6 shadow-sm transition-smooth hover:-translate-y-1 hover:shadow-lg hover:border-accent/40";
                 const inner = (
                   <>
@@ -101,9 +102,10 @@ const Partners = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
             {memberCompanies.map((c) => {
               const cls = "flex h-32 items-center justify-center rounded-2xl border bg-card p-6 shadow-sm transition-smooth hover:-translate-y-1 hover:shadow-lg hover:border-accent/40";
+              const memberUrl = safeHref(c.url); // anti javascript:/data:
               const img = <img src={c.logo} alt={c.name} loading="lazy" className="max-h-full max-w-full object-contain" />;
-              return c.url ? (
-                <a key={c.name} href={c.url} target="_blank" rel="noopener noreferrer" title={c.name} className={cls}>{img}</a>
+              return memberUrl ? (
+                <a key={c.name} href={memberUrl} target="_blank" rel="noopener noreferrer" title={c.name} className={cls}>{img}</a>
               ) : (
                 <div key={c.name} title={c.name} className={cls}>{img}</div>
               );

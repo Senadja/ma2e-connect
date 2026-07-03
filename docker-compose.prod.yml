@@ -33,7 +33,7 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://ma2e_admin:${DB_PASSWORD}@db:5432/ma2edb?schema=public
       PORT: "3000"
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis — chaîne aléatoire >= 32 caractères (openssl rand -hex 32)}
       JWT_EXPIRES_IN: "8h"
       # Origines autorisées (front Vercel). Les rewrites Vercel passent par le serveur,
       # mais on autorise quand même l'origine pour tout appel direct.

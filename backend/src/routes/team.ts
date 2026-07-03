@@ -21,6 +21,16 @@ const schema = z.object({
   order: z.number().int().default(0),
 });
 
+// Update sans .default() : évite d'écraser category/order sur un PUT partiel (Zod v4).
+const updateSchema = z.object({
+  name: z.string().min(1).optional(),
+  role: z.string().min(1).optional(),
+  initials: z.string().min(1).max(4).optional(),
+  photo: z.string().optional(),
+  category: z.string().optional(),
+  order: z.number().int().optional(),
+});
+
 teamRouter.post('/', async (req, res) => {
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
@@ -28,7 +38,7 @@ teamRouter.post('/', async (req, res) => {
 });
 
 teamRouter.put('/:id', async (req, res) => {
-  const parsed = schema.partial().safeParse(req.body);
+  const parsed = updateSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
   const m = await prisma.teamMember.update({ where: { id: req.params.id }, data: parsed.data }).catch(() => null);
   if (!m) return res.status(404).json({ error: 'Membre introuvable' });

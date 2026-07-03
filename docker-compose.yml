@@ -28,7 +28,7 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://ma2e_admin:${DB_PASSWORD:-ma2e_password}@db:5432/ma2edb?schema=public
       PORT: "3000"
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-please}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis — générez une chaîne aléatoire >= 32 caractères (ex. openssl rand -hex 32) et mettez-la dans .env}
       JWT_EXPIRES_IN: "8h"
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
       UPLOAD_DIR: /app/uploads
