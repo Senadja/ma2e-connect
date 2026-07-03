@@ -511,44 +511,6 @@ export const ApplicationsManager = () => {
                     </div>
                   )}
 
-                  {/* Décision rendue */}
-                  {(selectedApp.status === "approved" || selectedApp.status === "rejected") && (
-                    <div
-                      className={cn(
-                        "pt-6 border-t space-y-2",
-                      )}
-                    >
-                      <div className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Décision</div>
-                      <div
-                        className={cn(
-                          "rounded-xl p-4 text-sm border",
-                          selectedApp.status === "approved"
-                            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                            : "bg-rose-50 border-rose-200 text-rose-800",
-                        )}
-                      >
-                        <div className="font-bold flex items-center gap-2">
-                          {selectedApp.status === "approved" ? (
-                            <CheckCircle2 className="h-4 w-4" />
-                          ) : (
-                            <AlertTriangle className="h-4 w-4" />
-                          )}
-                          {selectedApp.status === "approved" ? "Demande approuvée" : "Demande rejetée"}
-                        </div>
-                        {selectedApp.decisionReason && (
-                          <p className="mt-1.5 leading-relaxed">
-                            <span className="font-semibold">{selectedApp.status === "approved" ? "Note : " : "Motif : "}</span>
-                            {selectedApp.decisionReason}
-                          </p>
-                        )}
-                        <p className="mt-2 text-[11px] opacity-70">
-                          {selectedApp.decidedBy ? `Par ${selectedApp.decidedBy} · ` : ""}
-                          {fmtDateTime(selectedApp.decidedAt)}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Traitement du dossier */}
                   <div className="pt-6 border-t space-y-4">
                     <div className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Traitement du dossier</div>
