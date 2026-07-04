@@ -39,6 +39,9 @@ services:
       # mais on autorise quand même l'origine pour tout appel direct.
       CORS_ORIGIN: ${CORS_ORIGIN}
       UPLOAD_DIR: /app/uploads
+      # Pièces d'identité (CNI/passeport) : dossier PRIVÉ, servi uniquement via URL signée.
+      # DOIT être sur un volume persistant distinct de /app/uploads (qui est servi publiquement).
+      APP_DOCS_DIR: /app/app-docs
       SEED_ON_START: ${SEED_ON_START:-true}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
@@ -48,6 +51,7 @@ services:
       MAIL_TO_APPLICATIONS: ${MAIL_TO_APPLICATIONS:-contact@ma2e.ci}
     volumes:
       - ma2e_uploads:/app/uploads
+      - ma2e_appdocs:/app/app-docs
     expose:
       - "3000"
 
@@ -68,5 +72,6 @@ services:
 volumes:
   ma2e_pgdata:
   ma2e_uploads:
+  ma2e_appdocs:
   caddy_data:
   caddy_config:
