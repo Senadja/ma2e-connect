@@ -1,9 +1,6 @@
 import { useState } from "react";
 import {
   Search,
-  Eye,
-  CheckCircle2,
-  XCircle,
   FileText,
   Download,
   Mail,
@@ -15,27 +12,16 @@ import {
   Coins,
   History,
   MessageSquare,
-  AlertTriangle,
+  XCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { generateAdhesionPdf } from "@/lib/adhesionPdf";
 
@@ -52,9 +38,6 @@ interface ApiApplication {
   status: "PENDING" | "REVIEWING" | "APPROVED" | "REJECTED";
   priority: "LOW" | "MEDIUM" | "HIGH";
   data: Record<string, unknown>;
-  decisionReason: string | null;
-  decidedAt: string | null;
-  decidedBy: string | null;
   createdAt: string;
 }
 
@@ -106,15 +89,6 @@ const DATA_LABELS: Record<string, string> = {
   intentionPart: "Intention — part sociale (5 000 F)",
 };
 
-// Causes de refus pré-définies (cases à cocher) — accélèrent la saisie de l'admin.
-const REJECT_CAUSES = [
-  "Dossier incomplet (pièces manquantes)",
-  "Matricule introuvable ou non vérifiable",
-  "Conditions d'éligibilité non remplies",
-  "Informations erronées ou incohérentes",
-  "Demande en doublon",
-];
-
 // Normalise un enregistrement API vers la forme attendue par l'UI.
 function mapApp(a: ApiApplication) {
   return {
@@ -126,33 +100,14 @@ function mapApp(a: ApiApplication) {
     matricule: a.matricule,
     email: a.email,
     phone: a.phone,
-    status: a.status.toLowerCase(),
     priority: a.priority.toLowerCase(),
     data: a.data || {},
-    decisionReason: a.decisionReason,
-    decidedAt: a.decidedAt,
-    decidedBy: a.decidedBy,
     createdAt: a.createdAt,
     date: fmtDate(a.createdAt),
   };
 }
 
 type UiApp = ReturnType<typeof mapApp>;
-
-const StatusBadge = ({ status }: { status: string }) => {
-  switch (status) {
-    case "pending":
-      return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none">En attente</Badge>;
-    case "reviewing":
-      return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none">En examen</Badge>;
-    case "approved":
-      return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none">Approuvé</Badge>;
-    case "rejected":
-      return <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 border-none">Rejeté</Badge>;
-    default:
-      return <Badge variant="outline">{status}</Badge>;
-  }
-};
 
 const CategoryIcon = ({ category }: { category: string }) => {
   switch (category) {
@@ -170,11 +125,6 @@ const CategoryIcon = ({ category }: { category: string }) => {
 export const ApplicationsManager = () => {
   const [search, setSearch] = useState("");
   const [selectedApp, setSelectedApp] = useState<UiApp | null>(null);
-  const [activeTab, setActiveTab] = useState("all");
-  const [rejectOpen, setRejectOpen] = useState(false);
-  const [rejectCauses, setRejectCauses] = useState<string[]>([]);
-  const [rejectNote, setRejectNote] = useState("");
-  const queryClient = useQueryClient();
 
   const { data: applications = [], isLoading } = useQuery({
     queryKey: ["applications"],
@@ -184,92 +134,30 @@ export const ApplicationsManager = () => {
     },
   });
 
-  const statusMutation = useMutation({
-    mutationFn: ({ dbId, status, reason }: { dbId: string; status: string; reason?: string }) =>
-      api(`/applications/${dbId}`, { method: "PATCH", auth: true, body: { status, reason } }),
-    onSuccess: (updated: any, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["applications"] });
-      setSelectedApp((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: vars.status.toLowerCase(),
-              decisionReason: updated?.decisionReason ?? prev.decisionReason,
-              decidedAt: updated?.decidedAt ?? prev.decidedAt,
-              decidedBy: updated?.decidedBy ?? prev.decidedBy,
-            }
-          : prev,
-      );
-      const labels: Record<string, string> = {
-        APPROVED: "Demande approuvée — le demandeur a été notifié.",
-        REJECTED: "Demande rejetée — le motif a été transmis au demandeur.",
-        REVIEWING: "Demande mise en examen.",
-        PENDING: "Demande remise en attente.",
-      };
-      toast.success(labels[vars.status] || "Statut mis à jour.");
-    },
-    onError: (e: any) => toast.error(e?.message || "Échec de la mise à jour."),
-  });
-
-  const openReject = () => {
-    setRejectCauses([]);
-    setRejectNote("");
-    setRejectOpen(true);
-  };
-
-  const toggleCause = (cause: string) =>
-    setRejectCauses((prev) => (prev.includes(cause) ? prev.filter((c) => c !== cause) : [...prev, cause]));
-
-  const confirmReject = () => {
-    if (!selectedApp) return;
-    const reason = [...rejectCauses, rejectNote.trim()].filter(Boolean).join(" — ");
-    if (reason.length < 3) {
-      toast.error("Sélectionnez au moins une cause ou précisez le motif.");
-      return;
-    }
-    statusMutation.mutate(
-      { dbId: selectedApp.dbId, status: "REJECTED", reason },
-      { onSuccess: () => setRejectOpen(false) },
-    );
-  };
-
-  const setStatus = (status: string) => {
-    if (!selectedApp) return;
-    statusMutation.mutate({ dbId: selectedApp.dbId, status });
-  };
-
   const filteredApps = applications.filter((app) => {
-    const matchesSearch =
-      app.name.toLowerCase().includes(search.toLowerCase()) || app.id.toLowerCase().includes(search.toLowerCase());
-    if (activeTab === "all") return matchesSearch;
-    return matchesSearch && app.status === activeTab;
+    const q = search.toLowerCase();
+    return (
+      app.name.toLowerCase().includes(q) ||
+      app.id.toLowerCase().includes(q) ||
+      app.matricule.toLowerCase().includes(q)
+    );
   });
 
-  const STATUS_FR: Record<string, string> = {
-    pending: "En attente",
-    reviewing: "En examen",
-    approved: "Approuvé",
-    rejected: "Rejeté",
-  };
-
-  // Export CSV des demandes affichées (respecte l'onglet et la recherche en cours).
+  // Export CSV des demandes affichées (respecte la recherche en cours).
   const exportCsv = () => {
     if (filteredApps.length === 0) {
       toast.error("Aucune demande à exporter.");
       return;
     }
     const headers = [
-      "Référence", "Catégorie", "Type", "Nom", "Matricule", "Email", "Téléphone",
-      "Statut", "Motif décision", "Décidé par", "Date décision", "Date réception",
+      "Référence", "Catégorie", "Type", "Nom", "Matricule", "Email", "Téléphone", "Date réception",
     ];
     const esc = (v: unknown) => {
       const s = v == null ? "" : String(v);
       return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const rows = filteredApps.map((a) => [
-      a.id, a.category, a.type, a.name, a.matricule, a.email, a.phone,
-      STATUS_FR[a.status] || a.status, a.decisionReason || "", a.decidedBy || "",
-      fmtDateTime(a.decidedAt), fmtDateTime(a.createdAt),
+      a.id, a.category, a.type, a.name, a.matricule, a.email, a.phone, fmtDateTime(a.createdAt),
     ]);
     // Séparateur « ; » + BOM UTF-8 → Excel FR ouvre proprement les accents.
     const csv = "﻿" + [headers, ...rows].map((r) => r.map(esc).join(";")).join("\r\n");
@@ -277,7 +165,7 @@ export const ApplicationsManager = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `demandes-ma2e-${activeTab}.csv`;
+    link.download = "demandes-ma2e.csv";
     link.click();
     URL.revokeObjectURL(url);
     toast.success(`${filteredApps.length} demande(s) exportée(s).`);
@@ -303,7 +191,7 @@ export const ApplicationsManager = () => {
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div>
           <h2 className="text-3xl font-display font-bold text-primary-dark">Gestion des Demandes</h2>
-          <p className="text-muted-foreground">Suivez et traitez les formulaires reçus via le site.</p>
+          <p className="text-muted-foreground">Consultez les demandes reçues via le site.</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={exportCsv} className="rounded-full gap-2">
@@ -314,85 +202,77 @@ export const ApplicationsManager = () => {
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="bg-secondary/40 p-1 rounded-xl mb-4 flex-wrap h-auto">
-              <TabsTrigger value="all" className="rounded-lg">Toutes</TabsTrigger>
-              <TabsTrigger value="pending" className="rounded-lg">En attente</TabsTrigger>
-              <TabsTrigger value="reviewing" className="rounded-lg">En examen</TabsTrigger>
-              <TabsTrigger value="approved" className="rounded-lg">Approuvées</TabsTrigger>
-              <TabsTrigger value="rejected" className="rounded-lg">Rejetées</TabsTrigger>
-            </TabsList>
-
-            <Card className="border-border/40 shadow-sm overflow-hidden">
-              <CardHeader className="p-4 border-b bg-card">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Rechercher par nom, matricule ou ID..."
-                    className="pl-9 rounded-full bg-secondary/20 border-none"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y divide-border/40">
-                  {isLoading ? (
-                    <div className="p-12 text-center text-muted-foreground italic text-sm">Chargement des demandes…</div>
-                  ) : filteredApps.length > 0 ? (
-                    filteredApps.map((app) => (
-                      <div
-                        key={app.id}
-                        className={cn(
-                          "flex items-center justify-between p-4 hover:bg-secondary/10 cursor-pointer transition-colors group",
-                          selectedApp?.id === app.id && "bg-primary/5 border-l-4 border-l-primary",
-                        )}
-                        onClick={() => setSelectedApp(app)}
-                      >
-                        <div className="flex items-center gap-4 min-w-0">
-                          <div
-                            className={cn(
-                              "h-12 w-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105",
-                              app.category === "Adhésion" ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent-foreground",
-                            )}
-                          >
-                            <CategoryIcon category={app.category} />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-[10px] font-mono text-muted-foreground">{app.id}</span>
-                              <Badge variant="outline" className="text-[9px] font-bold uppercase py-0 h-4 border-primary/20 text-primary">
-                                {app.type}
-                              </Badge>
-                            </div>
-                            <h4 className="font-bold truncate text-sm">{app.name}</h4>
-                            <p className="text-[11px] text-muted-foreground flex items-center gap-2">
-                              <span>Matricule: {app.matricule}</span>
-                              <span className="h-1 w-1 rounded-full bg-border" />
-                              <span>{app.date}</span>
-                            </p>
-                          </div>
+          <Card className="border-border/40 shadow-sm overflow-hidden">
+            <CardHeader className="p-4 border-b bg-card">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher par nom, matricule ou ID..."
+                  className="pl-9 rounded-full bg-secondary/20 border-none"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-border/40">
+                {isLoading ? (
+                  <div className="p-12 text-center text-muted-foreground italic text-sm">Chargement des demandes…</div>
+                ) : filteredApps.length > 0 ? (
+                  filteredApps.map((app) => (
+                    <div
+                      key={app.id}
+                      className={cn(
+                        "flex items-center justify-between p-4 hover:bg-secondary/10 cursor-pointer transition-colors group",
+                        selectedApp?.id === app.id && "bg-primary/5 border-l-4 border-l-primary",
+                      )}
+                      onClick={() => setSelectedApp(app)}
+                    >
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div
+                          className={cn(
+                            "h-12 w-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105",
+                            app.category === "Adhésion" ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent-foreground",
+                          )}
+                        >
+                          <CategoryIcon category={app.category} />
                         </div>
-                        <div className="flex items-center gap-4">
-                          <StatusBadge status={app.status} />
-                          <ChevronRight
-                            className={cn(
-                              "h-4 w-4 text-muted-foreground/30 transition-transform",
-                              selectedApp?.id === app.id && "translate-x-1 text-primary",
-                            )}
-                          />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-[10px] font-mono text-muted-foreground">{app.id}</span>
+                            <Badge variant="outline" className="text-[9px] font-bold uppercase py-0 h-4 border-primary/20 text-primary">
+                              {app.type}
+                            </Badge>
+                          </div>
+                          <h4 className="font-bold truncate text-sm">{app.name}</h4>
+                          <p className="text-[11px] text-muted-foreground flex items-center gap-2">
+                            <span>Matricule: {app.matricule}</span>
+                            <span className="h-1 w-1 rounded-full bg-border" />
+                            <span>{app.date}</span>
+                          </p>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <div className="p-12 text-center text-muted-foreground italic text-sm">
-                      Aucune demande ne correspond à vos critères.
+                      <div className="flex items-center gap-4">
+                        {app.priority === "high" && (
+                          <Badge variant="destructive" className="text-[10px]">Priorité Haute</Badge>
+                        )}
+                        <ChevronRight
+                          className={cn(
+                            "h-4 w-4 text-muted-foreground/30 transition-transform",
+                            selectedApp?.id === app.id && "translate-x-1 text-primary",
+                          )}
+                        />
+                      </div>
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </Tabs>
+                  ))
+                ) : (
+                  <div className="p-12 text-center text-muted-foreground italic text-sm">
+                    Aucune demande ne correspond à vos critères.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="space-y-6">
@@ -413,12 +293,11 @@ export const ApplicationsManager = () => {
                     <XCircle className="h-5 w-5" />
                   </Button>
                 </div>
-                <div className="flex items-center gap-3">
-                  <StatusBadge status={selectedApp.status} />
-                  {selectedApp.priority === "high" && (
+                {selectedApp.priority === "high" && (
+                  <div className="flex items-center gap-3">
                     <Badge variant="destructive" className="text-[10px] animate-pulse">Priorité Haute</Badge>
-                  )}
-                </div>
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="p-0">
                 <div className="p-6 space-y-6">
@@ -511,9 +390,9 @@ export const ApplicationsManager = () => {
                     </div>
                   )}
 
-                  {/* Traitement du dossier */}
+                  {/* Actions */}
                   <div className="pt-6 border-t space-y-4">
-                    <div className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Traitement du dossier</div>
+                    <div className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Actions</div>
                     {selectedApp.category === "Adhésion" && (
                       <Button
                         onClick={() => { void generateAdhesionPdf(selectedApp).catch(() => toast.error("Échec de la génération du PDF.")); }}
@@ -522,50 +401,16 @@ export const ApplicationsManager = () => {
                         <Download className="h-4 w-4" /> Télécharger le formulaire (PDF)
                       </Button>
                     )}
-                    {/* Approuver / Rejeter — masqués dès que la demande est traitée (amendement n°11). */}
-                    {selectedApp.status !== "approved" && selectedApp.status !== "rejected" && (
-                      <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Button
-                            disabled={statusMutation.isPending}
-                            onClick={() => setStatus("APPROVED")}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-12 shadow-lg shadow-emerald-600/10"
-                          >
-                            <CheckCircle2 className="h-4 w-4 mr-2" /> Approuver
-                          </Button>
-                          <Button
-                            variant="outline"
-                            disabled={statusMutation.isPending}
-                            onClick={openReject}
-                            className="text-rose-600 border-rose-200 hover:bg-rose-50 rounded-xl h-12"
-                          >
-                            <XCircle className="h-4 w-4 mr-2" /> Rejeter
-                          </Button>
-                        </div>
-                        {selectedApp.status !== "reviewing" && (
-                          <Button
-                            variant="secondary"
-                            disabled={statusMutation.isPending}
-                            onClick={() => setStatus("REVIEWING")}
-                            className="w-full rounded-xl h-11 gap-2 text-xs font-bold"
-                          >
-                            <Eye className="h-4 w-4" /> Mettre en examen
-                          </Button>
-                        )}
-                      </>
-                    )}
-                    <div className="grid grid-cols-1 gap-2">
-                      <Button
-                        variant="ghost"
-                        asChild
-                        disabled={!selectedApp.email}
-                        className="w-full rounded-xl h-11 gap-2 text-xs font-bold text-muted-foreground"
-                      >
-                        <a href={selectedApp.email ? `mailto:${selectedApp.email}` : undefined}>
-                          <MessageSquare className="h-4 w-4" /> Contacter le demandeur
-                        </a>
-                      </Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      asChild
+                      disabled={!selectedApp.email}
+                      className="w-full rounded-xl h-11 gap-2 text-xs font-bold text-muted-foreground"
+                    >
+                      <a href={selectedApp.email ? `mailto:${selectedApp.email}` : undefined}>
+                        <MessageSquare className="h-4 w-4" /> Contacter le demandeur
+                      </a>
+                    </Button>
                   </div>
 
                   {/* Historique réel */}
@@ -584,31 +429,6 @@ export const ApplicationsManager = () => {
                           <p className="text-muted-foreground text-[10px]">{fmtDateTime(selectedApp.createdAt)}</p>
                         </div>
                       </div>
-                      {selectedApp.decidedAt && (
-                        <div className="flex gap-3 text-xs relative z-10">
-                          <div
-                            className={cn(
-                              "h-4 w-4 rounded-full flex items-center justify-center ring-4 ring-card",
-                              selectedApp.status === "approved" ? "bg-emerald-500" : "bg-rose-500",
-                            )}
-                          >
-                            {selectedApp.status === "approved" ? (
-                              <CheckCircle2 className="h-2 w-2 text-white" />
-                            ) : (
-                              <XCircle className="h-2 w-2 text-white" />
-                            )}
-                          </div>
-                          <div>
-                            <div className="font-bold">
-                              {selectedApp.status === "approved" ? "Dossier validé" : "Dossier rejeté"}
-                            </div>
-                            <p className="text-muted-foreground text-[10px]">
-                              {fmtDateTime(selectedApp.decidedAt)}
-                              {selectedApp.decidedBy ? ` · ${selectedApp.decidedBy}` : ""}
-                            </p>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -621,67 +441,12 @@ export const ApplicationsManager = () => {
               </div>
               <h3 className="font-display text-xl font-bold text-muted-foreground">Sélectionnez une demande</h3>
               <p className="text-sm text-muted-foreground mt-2 max-w-[200px]">
-                Consultez les détails, l'historique et gérez le statut des dossiers reçus.
+                Consultez les détails et les pièces des dossiers reçus.
               </p>
             </Card>
           )}
         </div>
       </div>
-
-      {/* Boîte de dialogue — refus motivé */}
-      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-rose-600">
-              <AlertTriangle className="h-5 w-5" /> Motiver le refus
-            </DialogTitle>
-            <DialogDescription>
-              Le motif sera enregistré et transmis au demandeur{selectedApp?.email ? ` (${selectedApp.email})` : ""}.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              {REJECT_CAUSES.map((cause) => (
-                <label key={cause} className="flex items-start gap-3 text-sm cursor-pointer rounded-lg p-2 hover:bg-secondary/40">
-                  <Checkbox
-                    checked={rejectCauses.includes(cause)}
-                    onCheckedChange={() => toggleCause(cause)}
-                    className="mt-0.5"
-                  />
-                  <span>{cause}</span>
-                </label>
-              ))}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="reject-note" className="text-xs font-bold uppercase text-muted-foreground tracking-widest">
-                Précisions (optionnel)
-              </Label>
-              <Textarea
-                id="reject-note"
-                value={rejectNote}
-                onChange={(e) => setRejectNote(e.target.value)}
-                placeholder="Détaillez le motif ou les pièces à fournir…"
-                className="resize-none"
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setRejectOpen(false)} className="rounded-full">
-              Annuler
-            </Button>
-            <Button
-              onClick={confirmReject}
-              disabled={statusMutation.isPending}
-              className="bg-rose-600 hover:bg-rose-700 text-white rounded-full"
-            >
-              <XCircle className="h-4 w-4 mr-2" /> Confirmer le refus
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
