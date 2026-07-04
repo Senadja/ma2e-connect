@@ -4,9 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { 
   LayoutDashboard, 
   Newspaper, 
-  FileText, 
-  Users, 
-  Settings, 
+  FileText,
+  Settings,
   LogOut, 
   Menu, 
   X, 
@@ -90,7 +89,6 @@ export const AdminLayout = () => {
       { to: "/admin/partners", icon: Handshake, label: "Partenaires", perm: "partners:write" },
     ] },
     { title: "Administration", items: [
-      { to: "/admin/users", icon: Users, label: "Utilisateurs", perm: "users:manage" },
       { to: "/admin/audit", icon: History, label: "Journal d'activité", perm: "users:manage" },
     ] },
   ];

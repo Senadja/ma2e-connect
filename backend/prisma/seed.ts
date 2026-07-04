@@ -52,7 +52,6 @@ function initialPassword(envVar: string, devDefault: string): { pwd: string; gen
 async function seedUsers() {
   const users = [
     { email: 'admin@ma2e.ci', envVar: 'ADMIN_INITIAL_PASSWORD', devDefault: 'admin123', name: 'Administrateur MA2E', role: 'ADMIN' as const, permissions: ALL_PERMISSIONS },
-    { email: 'editor@ma2e.ci', envVar: 'EDITOR_INITIAL_PASSWORD', devDefault: 'editor123', name: 'Éditeur Com', role: 'EDITOR' as const, permissions: ['news:write', 'faq:write'] },
   ];
   for (const u of users) {
     const existing = await prisma.user.findUnique({ where: { email: u.email } });
