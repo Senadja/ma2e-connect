@@ -93,11 +93,6 @@ const Login = () => {
           </p>
         </CardFooter>
       </Card>
-      <div className="mt-8 text-xs text-muted-foreground/60 max-w-xs text-center space-y-1">
-        <p><strong>Note pour le test :</strong></p>
-        <p>Email: admin@ma2e.ci / MDP: admin123</p>
-        <p>Email: editor@ma2e.ci / MDP: editor123</p>
-      </div>
     </div>
   );
 };
