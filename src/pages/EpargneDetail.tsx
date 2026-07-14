@@ -4,7 +4,7 @@ import { SEO } from "@/components/SEO";
 import { ProductRequestForm } from "@/components/forms/ProductRequestForm";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useProducts, useSettings } from "@/lib/content";
-import { SAVINGS_DETAILS } from "@/data/savingsDetails";
+import { resolveSavingsDetail } from "@/data/savingsDetails";
 import { Check, Download, ArrowLeft, CheckCircle2, Info } from "lucide-react";
 import { Link, useParams, useLocation, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -19,8 +19,11 @@ const EpargneDetail = () => {
   const fromAdhesion = (location.state as { fromAdhesion?: boolean } | null)?.fromAdhesion;
   const { data: SAVINGS = [] } = useProducts("epargne");
   const { data: settings } = useSettings();
-  const product = SAVINGS.find((s) => s.id === slug) as any;
-  const detail = slug ? (settings?.savingsDetails?.[slug] ?? SAVINGS_DETAILS[slug]) : undefined;
+  // Résolution tolérante au préfixe « epargne- » : le slug du produit est dérivé de son nom
+  // (« Épargne Ordinaire » → « epargne-ordinaire »), mais d'anciens liens/redirections pointent
+  // encore vers le slug court (« ordinaire »). On accepte les deux.
+  const product = SAVINGS.find((s) => s.id === slug || s.id === `epargne-${slug}`) as any;
+  const detail = resolveSavingsDetail(product?.id ?? slug, settings?.savingsDetails);
 
   // Slug inconnu (une fois les données chargées) → retour à la liste des épargnes.
   if (SAVINGS.length > 0 && !product) return <Navigate to="/produits/epargne" replace />;

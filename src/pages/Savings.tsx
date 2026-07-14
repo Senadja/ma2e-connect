@@ -5,7 +5,7 @@ import { SEO } from "@/components/SEO";
 import { ProductRequestForm } from "@/components/forms/ProductRequestForm";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useProducts, useSettings } from "@/lib/content";
-import { SAVINGS_DETAILS } from "@/data/savingsDetails";
+import { resolveSavingsDetail } from "@/data/savingsDetails";
 import { Check, Download, Mail, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,6 @@ const Savings = () => {
   const { t } = useTranslation();
   const { data: SAVINGS = [] } = useProducts("epargne");
   const { data: settings } = useSettings();
-  const details = { ...SAVINGS_DETAILS, ...(settings?.savingsDetails ?? {}) };
   const [active, setActive] = useState<string>("");
   const current = (SAVINGS.find((s) => s.id === active) ?? SAVINGS[0]) as any;
 
@@ -81,7 +80,7 @@ const Savings = () => {
                 ))}
               </ul>
 
-              {details[current.id] && (
+              {resolveSavingsDetail(current.id, settings?.savingsDetails) && (
                 <Link
                   to={`/produits/epargne/${current.id}`}
                   className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:brightness-110 transition-smooth"

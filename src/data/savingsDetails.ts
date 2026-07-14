@@ -232,3 +232,16 @@ export const SAVINGS_DETAILS: Record<string, SavingsDetail> = {
     ]
   }
 };
+
+// Résout la fiche détaillée d'un produit épargne en tolérant le préfixe « epargne- ».
+// Le slug d'un produit est dérivé de son nom (« Épargne Ordinaire » → « epargne-ordinaire »),
+// alors que les fiches sont indexées par le slug court (« ordinaire ») ; on tente donc
+// le slug tel quel PUIS sa version sans préfixe. `overrides` = éventuelles fiches du CMS.
+export function resolveSavingsDetail(
+  slug: string | undefined,
+  overrides?: Record<string, SavingsDetail>,
+): SavingsDetail | undefined {
+  if (!slug) return undefined;
+  const all = { ...SAVINGS_DETAILS, ...(overrides ?? {}) };
+  return all[slug] ?? all[slug.replace(/^epargne-/, "")];
+}
