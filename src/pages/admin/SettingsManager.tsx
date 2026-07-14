@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload, Languages, Send, Palette, RotateCcw, ChevronUp, ChevronDown, Wallet, LayoutGrid, ClipboardList, Briefcase, GripVertical } from "lucide-react";
+import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload, Languages, Send, Palette, RotateCcw, ChevronUp, ChevronDown, Wallet, LayoutGrid, ClipboardList, Briefcase, GripVertical, Scale } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { MILESTONES } from "@/data/site";
 import { DEFAULT_ORG_TREE, DEFAULT_PERSONNEL, DEFAULT_ORG_UNITS, DEFAULT_SOCIETES, useProducts, type OrgNode, type OrgUnit, type SolutionFamily } from "@/lib/content";
 import { SAVINGS_DETAILS, type SavingsDetail, type SavingsRateTable } from "@/data/savingsDetails";
+import { DEFAULT_LEGAL, type LegalContent, type LegalPage } from "@/data/legal";
 import { OrgChartSvg } from "@/components/OrgChartSvg";
 import { FocalPointPicker } from "@/components/admin/FocalPointPicker";
 import { ImageUploadInput } from "@/components/admin/ImageUploadInput";
@@ -41,6 +42,7 @@ interface Settings {
   languages?: { code: string; label: string }[];
   branding?: { primary?: string; logo?: string; qr?: string };
   savingsDetails?: Record<string, SavingsDetail>;
+  legal?: LegalContent;
   personnel?: { name: string; role: string; photo?: string; pos?: string }[];
   solutions?: { kicker?: string; title?: string; lead?: string; families?: SolutionFamily[] };
   adhesion?: { categories?: { label: string; montant: number }[]; expresseNote?: string; feeAdhesion?: number; feePart?: number };
@@ -265,6 +267,26 @@ export const SettingsManager = () => {
     save.mutate({ key: "branding", value: { ...branding, primary: DEFAULT_BRAND_HEX } }, { onSuccess: refreshPublic });
   };
 
+  // Pages légales (Mentions / CGU / DCP) : contenu éditable par section.
+  const [legal, setLegal] = useState<LegalContent>(DEFAULT_LEGAL);
+  const LEGAL_PAGES: { key: keyof LegalContent; label: string }[] = [
+    { key: "mentions", label: "Mentions légales" },
+    { key: "cgu", label: "Conditions générales d'utilisation" },
+    { key: "dcp", label: "Protection des données" },
+  ];
+  const patchLegalPage = (k: keyof LegalContent, patch: Partial<LegalPage>) =>
+    setLegal((l) => ({ ...l, [k]: { ...l[k], ...patch } }));
+  const updateLegalSection = (k: keyof LegalContent, si: number, field: "heading" | "body", val: string) =>
+    setLegal((l) => ({ ...l, [k]: { ...l[k], sections: l[k].sections.map((s, i) => (i === si ? { ...s, [field]: val } : s)) } }));
+  const addLegalSection = (k: keyof LegalContent) =>
+    setLegal((l) => ({ ...l, [k]: { ...l[k], sections: [...l[k].sections, { heading: "", body: "" }] } }));
+  const removeLegalSection = (k: keyof LegalContent, si: number) =>
+    setLegal((l) => ({ ...l, [k]: { ...l[k], sections: l[k].sections.filter((_, i) => i !== si) } }));
+  const moveLegalSection = (k: keyof LegalContent, from: number, to: number) =>
+    setLegal((l) => ({ ...l, [k]: { ...l[k], sections: reorder(l[k].sections, from, to) } }));
+  const [dragLegal, setDragLegal] = useState<{ k: keyof LegalContent; i: number } | null>(null);
+  const saveLegal = () => save.mutate({ key: "legal", value: legal }, { onSuccess: refreshPublic });
+
   // Fiches détaillées épargne (« Voir plus ») — la liste est pilotée par les vrais produits d'épargne ;
   // le contenu vient du CMS (clé savingsDetails), avec repli sur SAVINGS_DETAILS pour les 5 produits d'origine.
   const { data: epargneProducts } = useProducts("epargne");
@@ -367,6 +389,11 @@ export const SettingsManager = () => {
     if (Array.isArray(data.milestones) && data.milestones.length) setMilestones(data.milestones.map((m) => ({ year: m.year || "", title: m.title || "", desc: m.desc || "" })));
     if (Array.isArray(data.languages) && data.languages.length) setLanguages(data.languages.map((l) => ({ code: l.code, label: l.label })));
     if (data.branding) setBranding((b) => ({ primary: data.branding!.primary || b.primary, logo: data.branding!.logo, qr: data.branding!.qr }));
+    if (data.legal) setLegal({
+      mentions: data.legal.mentions ?? DEFAULT_LEGAL.mentions,
+      cgu: data.legal.cgu ?? DEFAULT_LEGAL.cgu,
+      dcp: data.legal.dcp ?? DEFAULT_LEGAL.dcp,
+    });
     if (data.savingsDetails && Object.keys(data.savingsDetails).length) {
       const merged = { ...SAVINGS_DETAILS, ...data.savingsDetails };
       setSavingsDetails(merged);
@@ -505,6 +532,7 @@ export const SettingsManager = () => {
           <TabsTrigger value="epargne">Fiches épargne</TabsTrigger>
           <TabsTrigger value="general">Général</TabsTrigger>
           <TabsTrigger value="interactions">Interactions</TabsTrigger>
+          <TabsTrigger value="legal">Légal</TabsTrigger>
           <TabsTrigger value="technique">Technique</TabsTrigger>
         </TabsList>
 
@@ -998,7 +1026,7 @@ export const SettingsManager = () => {
               <p className="text-[11px] text-muted-foreground">Le <strong>logo</strong> s'affiche dans l'en-tête et le pied de page ; le <strong>QR code</strong> s'affiche dans le pied de page (accès à l'application mobile). Laissez vide pour conserver les images par défaut du site.</p>
               <div className="grid gap-2">
                 <label className={label}>Logo MA2E</label>
-                <ImageUploadInput value={branding.logo || ""} onChange={(path) => setBranding((b) => ({ ...b, logo: path }))} previewClassName="h-16 w-auto min-w-[4rem]" hint="PNG à fond transparent recommandé." />
+                <ImageUploadInput value={branding.logo || ""} onChange={(path) => setBranding((b) => ({ ...b, logo: path }))} previewClassName="h-16 w-40" hint="PNG à fond transparent recommandé." />
               </div>
               <div className="grid gap-2">
                 <label className={label}>QR code (pied de page)</label>
@@ -1050,7 +1078,7 @@ export const SettingsManager = () => {
               <p className="text-[11px] text-muted-foreground">Image affichée une fois par session au 1er chargement du site. Désactivée : aucune pop-up.</p>
               <div className="grid gap-2">
                 <label className={label}>Image de la pop-up</label>
-                <ImageUploadInput value={splash.image} onChange={(path) => setSplash({ ...splash, image: path })} shape="rounded" previewClassName="h-28 w-auto min-w-[7rem]" hint="Format affiche/portrait recommandé." />
+                <ImageUploadInput value={splash.image} onChange={(path) => setSplash({ ...splash, image: path })} shape="rounded" previewClassName="h-36 w-28" hint="Format affiche/portrait recommandé." />
               </div>
               <div className="grid gap-2">
                 <label className={label}>Lien au clic (optionnel)</label>
@@ -1181,6 +1209,50 @@ export const SettingsManager = () => {
             </CardContent>
           </Card>
 
+        </TabsContent>
+
+        {/* ============================ LÉGAL ============================ */}
+        <TabsContent value="legal" className="space-y-6 mt-0">
+          <div className="rounded-xl border border-border/50 bg-secondary/20 p-4 text-[11px] text-muted-foreground">
+            Contenu des pages <strong>Mentions légales</strong>, <strong>CGU</strong> et <strong>Protection des données</strong> (liens du pied de page).
+            Mise en forme du texte : séparez les paragraphes par une <strong>ligne vide</strong> ; une suite de lignes commençant par «&nbsp;-&nbsp;» devient une <strong>liste à puces</strong>. Les e-mails et liens sont cliquables automatiquement. Les langues étrangères sont gérées par la traduction automatique du site.
+          </div>
+          {LEGAL_PAGES.map(({ key, label: pageLabel }) => {
+            const pg = legal[key];
+            return (
+              <Card key={key} className="border-border/40 shadow-sm">
+                <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Scale className="h-5 w-5 text-primary" /> {pageLabel}</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="grid gap-2"><label className={label}>Titre de la page</label>
+                      <Input value={pg.title} onChange={(e) => patchLegalPage(key, { title: e.target.value })} /></div>
+                    <div className="grid gap-2"><label className={label}>Sous-titre (optionnel)</label>
+                      <Input value={pg.subtitle || ""} onChange={(e) => patchLegalPage(key, { subtitle: e.target.value })} placeholder="Affiché sous le titre" /></div>
+                  </div>
+                  <div className="grid gap-2"><label className={label}>Encadré d'introduction (optionnel)</label>
+                    <textarea value={pg.intro || ""} onChange={(e) => patchLegalPage(key, { intro: e.target.value })} rows={2} placeholder="Texte mis en avant en tête de page. Laisser vide pour ne rien afficher." className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" /></div>
+                  <div className="h-px bg-border/60" />
+                  {pg.sections.map((s, si) => (
+                    <div
+                      key={si}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={() => { if (dragLegal && dragLegal.k === key) moveLegalSection(key, dragLegal.i, si); setDragLegal(null); }}
+                      className={cn("rounded-xl border border-border/50 p-3 space-y-2", dragLegal?.k === key && dragLegal.i === si && "opacity-50")}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span draggable onDragStart={() => setDragLegal({ k: key, i: si })} onDragEnd={() => setDragLegal(null)} className="cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-foreground" title="Glisser pour réordonner"><GripVertical className="h-4 w-4" /></span>
+                        <Input value={s.heading} onChange={(e) => updateLegalSection(key, si, "heading", e.target.value)} placeholder="Titre de la section" className="flex-1 font-semibold" />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeLegalSection(key, si)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                      <textarea value={s.body} onChange={(e) => updateLegalSection(key, si, "body", e.target.value)} rows={5} placeholder="Contenu de la section…" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" onClick={() => addLegalSection(key)} className="w-fit rounded-full gap-2"><Plus className="h-3.5 w-3.5" /> Ajouter une section</Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+          <div><Button onClick={saveLegal} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les pages légales</Button></div>
         </TabsContent>
 
         {/* ============================ TECHNIQUE ============================ */}

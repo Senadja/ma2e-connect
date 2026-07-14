@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { NEWS, SAVINGS, CREDITS, type NewsArticle } from "@/data/site";
 import { MEDIA, FAQS, PARTNERS } from "@/data/institutional";
 import type { SavingsDetail } from "@/data/savingsDetails";
+import type { LegalContent } from "@/data/legal";
 
 export function slugify(input: string): string {
   return input
@@ -350,6 +351,7 @@ export interface SiteSettings {
   languages?: { code: string; label: string }[];
   branding?: { primary?: string; logo?: string; qr?: string };
   savingsDetails?: Record<string, SavingsDetail>; // fiches détaillées épargne (« Voir plus ») — repli : SAVINGS_DETAILS
+  legal?: LegalContent; // pages légales éditables (Mentions / CGU / DCP) — repli : DEFAULT_LEGAL
 }
 
 const fallbackSettings: SiteSettings = {

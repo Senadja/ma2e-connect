@@ -42,7 +42,7 @@ export function ImageUploadInput({ value, onChange, hint, showPreview = true, sh
     <div className="flex items-center gap-3">
       {showPreview && (
         <div className={cn("shrink-0 overflow-hidden border border-border bg-secondary/30 grid place-items-center", shape === "circle" ? "rounded-full" : "rounded-xl", previewClassName || "h-20 w-20")}>
-          {value ? <img src={value} alt="" className="h-full w-full object-contain" /> : <ImageIcon className="h-6 w-6 text-muted-foreground/40" />}
+          {value ? <img src={value} alt="" className="max-h-full max-w-full object-contain" /> : <ImageIcon className="h-6 w-6 text-muted-foreground/40" />}
         </div>
       )}
       <div className="flex flex-col gap-1.5">
