@@ -119,7 +119,7 @@ export const PartnersManager = () => {
                     <Upload className="h-3.5 w-3.5" /> {uploading ? "Téléversement…" : "Téléverser"}
                     <input type="file" accept="image/*" disabled={uploading} className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogo(f); }} />
                   </label>
-                  <Input value={editing.logo} onChange={(e) => setEditing({ ...editing, logo: e.target.value })} placeholder="ou coller une URL / un chemin" className="text-xs flex-1 min-w-[160px]" />
+                  {editing.logo && <button type="button" onClick={() => setEditing({ ...editing, logo: "" })} className="text-xs text-muted-foreground hover:text-destructive">Retirer</button>}
                 </div>
               </div>
 

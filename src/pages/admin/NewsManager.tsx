@@ -35,6 +35,20 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { format, parseISO } from "date-fns";
+import { fr } from "date-fns/locale";
+
+// Date de publication : le site affiche un libellé FR (ex. « 20 novembre 2024 »).
+// On édite via un sélecteur de date (valeur ISO) et on convertit dans les deux sens.
+const FR_MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const isoToFr = (iso: string) => { try { return format(parseISO(iso), "d MMMM yyyy", { locale: fr }); } catch { return ""; } };
+const frToISO = (label: string) => {
+  const m = (label || "").trim().toLowerCase().match(/(\d{1,2})\s+([a-zà-ÿ]+)\s+(\d{4})/);
+  if (!m) return "";
+  const mo = FR_MONTHS.indexOf(m[2]);
+  if (mo < 0) return "";
+  return `${m[3]}-${String(mo + 1).padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+};
 
 interface Block { type: "p" | "h2" | "quote" | "list" | "gallery"; text?: string; items?: string[] }
 interface ApiArticle {
@@ -73,6 +87,7 @@ export const NewsManager = () => {
   const [title, setTitle] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [category, setCategory] = useState("Actualités");
+  const [date, setDate] = useState("");
   const [status, setStatus] = useState("draft");
   const [image, setImage] = useState("");
   const [imgUploading, setImgUploading] = useState(false);
@@ -147,6 +162,7 @@ export const NewsManager = () => {
     setExcerpt(article.excerpt || "");
     setContent(blocksToText(article.content));
     setCategory(article.category);
+    setDate(frToISO(article.date || "") || (article.createdAt ? article.createdAt.slice(0, 10) : ""));
     setStatus(article.status || "draft");
     setImage(article.image || "");
     setGallery(extractGallery(article.content));
@@ -159,6 +175,7 @@ export const NewsManager = () => {
     setExcerpt("");
     setContent("");
     setCategory("Actualités");
+    setDate(new Date().toISOString().slice(0, 10));
     setStatus("draft");
     setImage("");
     setGallery([]);
@@ -178,6 +195,7 @@ export const NewsManager = () => {
       content: finalContent,
       image: image || "",
       status: finalStatus,
+      ...(date ? { date: isoToFr(date) } : {}),
     });
   };
 
@@ -330,13 +348,14 @@ export const NewsManager = () => {
                   </div>
 
                   <div className="pt-4 border-t space-y-3">
-                    <label className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Options</label>
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/20">
-                      <span className="text-sm font-medium">Épingler en haut</span>
-                      <div className="h-5 w-10 bg-border rounded-full relative">
-                        <div className="absolute left-1 top-1 h-3 w-3 bg-white rounded-full shadow-sm" />
-                      </div>
+                    <label className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Date de publication</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="pl-10 rounded-xl" />
                     </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      {date ? <>Affichée sur le site : <strong>{isoToFr(date)}</strong></> : "Laissez vide pour ne pas afficher de date."}
+                    </p>
                   </div>
                 </div>
 

@@ -348,7 +348,7 @@ export interface SiteSettings {
   aboutContent?: { founderVision?: string; founderQuote?: string; founderName?: string; founderRole?: string; founderPhoto?: string; founderPhotoPos?: string; mission1Title?: string; mission1Desc?: string; mission2Title?: string; mission2Desc?: string; mission3Title?: string; mission3Desc?: string };
   milestones?: { year: string; title: string; desc: string }[];
   languages?: { code: string; label: string }[];
-  branding?: { primary?: string };
+  branding?: { primary?: string; logo?: string; qr?: string };
   savingsDetails?: Record<string, SavingsDetail>; // fiches détaillées épargne (« Voir plus ») — repli : SAVINGS_DETAILS
 }
 

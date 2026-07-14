@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload, Languages, Send, Palette, RotateCcw, ChevronUp, ChevronDown, Wallet, LayoutGrid, ClipboardList, Briefcase } from "lucide-react";
+import { Megaphone, MapPin, Share2, Save, BarChart3, Server, Network, Plus, Trash2, Users, Image as ImageIcon, MessageCircle, Sparkles, Quote, Upload, Languages, Send, Palette, RotateCcw, ChevronUp, ChevronDown, Wallet, LayoutGrid, ClipboardList, Briefcase, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { MILESTONES } from "@/data/site";
@@ -14,6 +15,7 @@ import { DEFAULT_ORG_TREE, DEFAULT_PERSONNEL, DEFAULT_ORG_UNITS, DEFAULT_SOCIETE
 import { SAVINGS_DETAILS, type SavingsDetail, type SavingsRateTable } from "@/data/savingsDetails";
 import { OrgChartSvg } from "@/components/OrgChartSvg";
 import { FocalPointPicker } from "@/components/admin/FocalPointPicker";
+import { ImageUploadInput } from "@/components/admin/ImageUploadInput";
 import { DEFAULT_LANGUAGES, LANGUAGE_PRESETS, BASE_LANG, type Language } from "@/lib/translate";
 import { DEFAULT_BRAND_HEX, applyBrandColor } from "@/lib/brandColor";
 
@@ -37,7 +39,7 @@ interface Settings {
   aboutContent?: Record<string, string>;
   milestones?: { year: string; title: string; desc: string }[];
   languages?: { code: string; label: string }[];
-  branding?: { primary?: string };
+  branding?: { primary?: string; logo?: string; qr?: string };
   savingsDetails?: Record<string, SavingsDetail>;
   personnel?: { name: string; role: string; photo?: string; pos?: string }[];
   solutions?: { kicker?: string; title?: string; lead?: string; families?: SolutionFamily[] };
@@ -109,21 +111,16 @@ export const SettingsManager = () => {
     setPersonnel((arr) => arr.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)));
   const addPersonnel = () => setPersonnel((arr) => [...arr, { name: "", role: "", photo: "", pos: "" }]);
   const removePersonnel = (i: number) => setPersonnel((arr) => arr.filter((_, idx) => idx !== i));
-  const [uploadingPhoto, setUploadingPhoto] = useState<number | null>(null);
-  const uploadPersonnelPhoto = async (i: number, file: File) => {
-    setUploadingPhoto(i);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const { path } = await api<{ path: string }>("/uploads", { method: "POST", auth: true, isForm: true, body: fd });
-      updatePersonnel(i, "photo", path);
-      toast.success("Photo téléversée. N'oubliez pas d'enregistrer.");
-    } catch (e: any) {
-      toast.error(e?.message || "Téléversement impossible.");
-    } finally {
-      setUploadingPhoto(null);
-    }
+  // Réordonnancement des listes par glisser-déposer (drag natif).
+  const reorder = <T,>(arr: T[], from: number, to: number) => {
+    if (from === to || from < 0 || to < 0 || from >= arr.length || to >= arr.length) return arr;
+    const copy = [...arr];
+    const [moved] = copy.splice(from, 1);
+    copy.splice(to, 0, moved);
+    return copy;
   };
+  const [dragPerson, setDragPerson] = useState<number | null>(null);
+  const movePersonnel = (from: number, to: number) => setPersonnel((arr) => reorder(arr, from, to));
   // « Nos solutions » (accueil) : en-tête + familles éditables.
   const solutionsDefaults = { kicker: t("home.solutionsKicker"), title: t("home.solutionsTitle"), lead: t("home.solutionsLead") };
   const defaultFamilies: SolutionFamily[] = [
@@ -254,18 +251,18 @@ export const SettingsManager = () => {
     save.mutate({ key: "languages", value: [base, ...rest] });
   };
 
-  // Couleur de marque : aperçu en direct, puis enregistrement (on rafraîchit aussi le cache public).
-  const [branding, setBranding] = useState({ primary: DEFAULT_BRAND_HEX });
+  // Identité visuelle : couleur de marque (aperçu en direct) + logo & QR code téléversables.
+  const [branding, setBranding] = useState<{ primary: string; logo?: string; qr?: string }>({ primary: DEFAULT_BRAND_HEX });
   const previewBrand = (hex: string) => {
-    setBranding({ primary: hex });
+    setBranding((b) => ({ ...b, primary: hex }));
     if (/^#?[0-9a-fA-F]{6}$/.test(hex.trim())) applyBrandColor(hex);
   };
   const refreshPublic = () => queryClient.invalidateQueries({ queryKey: ["public", "settings"] });
   const saveBranding = () => save.mutate({ key: "branding", value: branding }, { onSuccess: refreshPublic });
   const resetBranding = () => {
-    setBranding({ primary: DEFAULT_BRAND_HEX });
+    setBranding((b) => ({ ...b, primary: DEFAULT_BRAND_HEX }));
     applyBrandColor(DEFAULT_BRAND_HEX);
-    save.mutate({ key: "branding", value: { primary: DEFAULT_BRAND_HEX } }, { onSuccess: refreshPublic });
+    save.mutate({ key: "branding", value: { ...branding, primary: DEFAULT_BRAND_HEX } }, { onSuccess: refreshPublic });
   };
 
   // Fiches détaillées épargne (« Voir plus ») — la liste est pilotée par les vrais produits d'épargne ;
@@ -369,7 +366,7 @@ export const SettingsManager = () => {
     if (data.aboutContent) setAboutContent((a) => ({ ...a, ...data.aboutContent }));
     if (Array.isArray(data.milestones) && data.milestones.length) setMilestones(data.milestones.map((m) => ({ year: m.year || "", title: m.title || "", desc: m.desc || "" })));
     if (Array.isArray(data.languages) && data.languages.length) setLanguages(data.languages.map((l) => ({ code: l.code, label: l.label })));
-    if (data.branding?.primary) setBranding({ primary: data.branding.primary });
+    if (data.branding) setBranding((b) => ({ primary: data.branding!.primary || b.primary, logo: data.branding!.logo, qr: data.branding!.qr }));
     if (data.savingsDetails && Object.keys(data.savingsDetails).length) {
       const merged = { ...SAVINGS_DETAILS, ...data.savingsDetails };
       setSavingsDetails(merged);
@@ -456,6 +453,9 @@ export const SettingsManager = () => {
     setOrgUnits((u) => u.map((it, idx) => (idx === ui ? { ...it, members: (it.members || []).map((m, j) => (j === mi ? { ...m, [field]: val } : m)) } : it)));
   const removeMember = (ui: number, mi: number) =>
     setOrgUnits((u) => u.map((it, idx) => (idx === ui ? { ...it, members: (it.members || []).filter((_, j) => j !== mi) } : it)));
+  const moveMember = (ui: number, from: number, to: number) =>
+    setOrgUnits((u) => u.map((it, idx) => (idx === ui ? { ...it, members: reorder(it.members || [], from, to) } : it)));
+  const [dragMember, setDragMember] = useState<{ u: number; i: number } | null>(null);
   const saveUnits = () => {
     const cleaned = orgUnits
       .map((u) => ({
@@ -739,8 +739,8 @@ export const SettingsManager = () => {
                 <div className="grid gap-2"><label className={label}>Nom du fondateur</label><Input value={aboutContent.founderName} onChange={(e) => setAboutContent({ ...aboutContent, founderName: e.target.value })} /></div>
                 <div className="grid gap-2"><label className={label}>Fonction</label><Input value={aboutContent.founderRole} onChange={(e) => setAboutContent({ ...aboutContent, founderRole: e.target.value })} /></div>
               </div>
-              <div className="grid gap-2"><label className={label}>Photo du fondateur (chemin ou URL)</label>
-                <Input value={aboutContent.founderPhoto || ""} onChange={(e) => setAboutContent({ ...aboutContent, founderPhoto: e.target.value })} placeholder="/images/fondateur.jpg — téléversez via la Médiathèque puis collez le chemin ici" />
+              <div className="grid gap-2"><label className={label}>Photo du fondateur</label>
+                <ImageUploadInput value={aboutContent.founderPhoto || ""} onChange={(path) => setAboutContent({ ...aboutContent, founderPhoto: path })} showPreview={false} hint="JPG ou PNG. Ajustez ensuite le cadrage ci-dessous." />
                 {aboutContent.founderPhoto && (
                   <div className="mt-2 rounded-lg border border-border/60 bg-secondary/20 p-3">
                     <p className="text-[11px] text-muted-foreground mb-2">Cadrage : déplacez les curseurs pour bien centrer le visage.</p>
@@ -842,8 +842,14 @@ export const SettingsManager = () => {
                   <div className="space-y-2 border-t border-border/50 pt-3">
                     <label className={label}>Membres (nom · fonction · société)</label>
                     {(u.members || []).map((m, mi) => (
-                      <div key={mi} className="grid grid-cols-12 gap-2 items-center">
-                        <Input className="col-span-12 sm:col-span-5" value={m.name} onChange={(e) => updateMember(i, mi, "name", e.target.value)} placeholder="Nom et prénoms" />
+                      <div
+                        key={mi}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => { if (dragMember && dragMember.u === i) moveMember(i, dragMember.i, mi); setDragMember(null); }}
+                        className={cn("grid grid-cols-12 gap-2 items-center", dragMember?.u === i && dragMember.i === mi && "opacity-50")}
+                      >
+                        <span draggable onDragStart={() => setDragMember({ u: i, i: mi })} onDragEnd={() => setDragMember(null)} className="col-span-1 flex justify-center cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-foreground" title="Glisser pour réordonner"><GripVertical className="h-4 w-4" /></span>
+                        <Input className="col-span-11 sm:col-span-4" value={m.name} onChange={(e) => updateMember(i, mi, "name", e.target.value)} placeholder="Nom et prénoms" />
                         <Input className="col-span-6 sm:col-span-3" value={m.role || ""} onChange={(e) => updateMember(i, mi, "role", e.target.value)} placeholder="Fonction (Président…)" />
                         <Input className="col-span-5 sm:col-span-3" value={m.company || ""} onChange={(e) => updateMember(i, mi, "company", e.target.value)} placeholder="Société (CIE…)" />
                         <div className="col-span-1 flex justify-center">
@@ -867,9 +873,17 @@ export const SettingsManager = () => {
               <p className="text-[11px] text-muted-foreground">Cartes affichées sur « À propos ». <strong>Téléversez</strong> la photo (ou collez un chemin), puis ajustez le <strong>cadrage</strong> avec les curseurs pour bien centrer le visage. Utilisez « Ajouter un membre » pour toute nouvelle personne.</p>
               <div className="space-y-3 max-h-[34rem] overflow-y-auto pr-1">
                 {personnel.map((p, i) => (
-                  <div key={i} className="rounded-xl border border-border/50 p-3 space-y-2">
+                  <div
+                    key={i}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => { if (dragPerson !== null) movePersonnel(dragPerson, i); setDragPerson(null); }}
+                    className={cn("rounded-xl border border-border/50 p-3 space-y-2", dragPerson === i && "opacity-50")}
+                  >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Membre {i + 1}</span>
+                      <span className="flex items-center gap-1.5">
+                        <span draggable onDragStart={() => setDragPerson(i)} onDragEnd={() => setDragPerson(null)} className="cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-foreground" title="Glisser pour réordonner"><GripVertical className="h-4 w-4" /></span>
+                        <span className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Membre {i + 1}</span>
+                      </span>
                       <Button type="button" variant="ghost" size="icon" onClick={() => removePersonnel(i)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
                     </div>
                     <div className="grid sm:grid-cols-2 gap-3">
@@ -877,13 +891,7 @@ export const SettingsManager = () => {
                       <div className="grid gap-1"><label className={label}>Fonction</label><Input value={p.role} onChange={(e) => updatePersonnel(i, "role", e.target.value)} /></div>
                     </div>
                     <div className="grid gap-1"><label className={label}>Photo</label>
-                      <div className="flex items-center gap-2">
-                        <Input value={p.photo || ""} onChange={(e) => updatePersonnel(i, "photo", e.target.value)} placeholder="/images/team/… ou téléversez →" />
-                        <label className="shrink-0 inline-flex items-center gap-1.5 h-10 px-3 rounded-md border border-input bg-background text-sm cursor-pointer hover:bg-secondary/40">
-                          <Upload className="h-4 w-4" />{uploadingPhoto === i ? "Envoi…" : "Téléverser"}
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPersonnelPhoto(i, f); e.target.value = ""; }} />
-                        </label>
-                      </div>
+                      <ImageUploadInput value={p.photo || ""} onChange={(path) => updatePersonnel(i, "photo", path)} showPreview={false} />
                     </div>
                     {p.photo && <FocalPointPicker src={p.photo} value={p.pos} onChange={(pos) => updatePersonnel(i, "pos", pos)} shape="circle" />}
                   </div>
@@ -983,6 +991,23 @@ export const SettingsManager = () => {
             </CardContent>
           </Card>
 
+          {/* Identité visuelle : logo & QR code */}
+          <Card className="border-border/40 shadow-sm">
+            <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><ImageIcon className="h-5 w-5 text-primary" /> Logo & QR code</CardTitle></CardHeader>
+            <CardContent className="space-y-6">
+              <p className="text-[11px] text-muted-foreground">Le <strong>logo</strong> s'affiche dans l'en-tête et le pied de page ; le <strong>QR code</strong> s'affiche dans le pied de page (accès à l'application mobile). Laissez vide pour conserver les images par défaut du site.</p>
+              <div className="grid gap-2">
+                <label className={label}>Logo MA2E</label>
+                <ImageUploadInput value={branding.logo || ""} onChange={(path) => setBranding((b) => ({ ...b, logo: path }))} previewClassName="h-16 w-auto min-w-[4rem]" hint="PNG à fond transparent recommandé." />
+              </div>
+              <div className="grid gap-2">
+                <label className={label}>QR code (pied de page)</label>
+                <ImageUploadInput value={branding.qr || ""} onChange={(path) => setBranding((b) => ({ ...b, qr: path }))} previewClassName="h-20 w-20" hint="Image carrée du QR code." />
+              </div>
+              <Button onClick={saveBranding} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer le logo & QR</Button>
+            </CardContent>
+          </Card>
+
           {/* Flash infos (bandeau) */}
           <Card className="border-border/40 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -1024,14 +1049,13 @@ export const SettingsManager = () => {
             <CardContent className="space-y-4">
               <p className="text-[11px] text-muted-foreground">Image affichée une fois par session au 1er chargement du site. Désactivée : aucune pop-up.</p>
               <div className="grid gap-2">
-                <label className={label}>Image (chemin ou URL)</label>
-                <Input value={splash.image} onChange={(e) => setSplash({ ...splash, image: e.target.value })} placeholder="/images/splash-accueil.png" />
+                <label className={label}>Image de la pop-up</label>
+                <ImageUploadInput value={splash.image} onChange={(path) => setSplash({ ...splash, image: path })} shape="rounded" previewClassName="h-28 w-auto min-w-[7rem]" hint="Format affiche/portrait recommandé." />
               </div>
               <div className="grid gap-2">
                 <label className={label}>Lien au clic (optionnel)</label>
                 <Input value={splash.link} onChange={(e) => setSplash({ ...splash, link: e.target.value })} placeholder="/adhesion ou https://…" />
               </div>
-              {splash.image && <img src={splash.image} alt="" className="max-h-40 w-auto rounded-lg border border-border" />}
               <Button onClick={() => save.mutate({ key: "splash", value: splash })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer la pop-up</Button>
             </CardContent>
           </Card>

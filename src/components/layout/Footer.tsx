@@ -37,7 +37,7 @@ export const Footer = () => {
             <div className="mt-8">
               <h4 className="text-white font-display text-sm mb-3">Application mobile</h4>
               <div className="flex items-center gap-4">
-                <img src="/images/app-qr.png" alt="QR code de l'application mobile MA2E" className="h-20 w-20 shrink-0 rounded-lg bg-white p-1.5" />
+                <img src={settings?.branding?.qr || "/images/app-qr.png"} alt="QR code de l'application mobile MA2E" className="h-20 w-20 shrink-0 rounded-lg bg-white p-1.5 object-contain" />
                 <a
                   href={safeHref(settings?.links?.playstore) || PLAYSTORE_URL}
                   target="_blank"
