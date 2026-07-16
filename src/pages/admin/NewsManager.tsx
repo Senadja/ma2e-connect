@@ -195,7 +195,9 @@ export const NewsManager = () => {
       content: finalContent,
       image: image || "",
       status: finalStatus,
-      ...(date ? { date: isoToFr(date) } : {}),
+      // Toujours envoyer `date` : omettre la clé laisserait l'ancienne valeur en base,
+      // alors que vider le champ doit bien retirer la date affichée.
+      date: date ? isoToFr(date) : "",
     });
   };
 
