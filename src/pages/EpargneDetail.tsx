@@ -19,10 +19,13 @@ const EpargneDetail = () => {
   const fromAdhesion = (location.state as { fromAdhesion?: boolean } | null)?.fromAdhesion;
   const { data: SAVINGS = [] } = useProducts("epargne");
   const { data: settings } = useSettings();
-  // Résolution tolérante au préfixe « epargne- » : le slug du produit est dérivé de son nom
-  // (« Épargne Ordinaire » → « epargne-ordinaire »), mais d'anciens liens/redirections pointent
-  // encore vers le slug court (« ordinaire »). On accepte les deux.
-  const product = SAVINGS.find((s) => s.id === slug || s.id === `epargne-${slug}`) as any;
+  // Résolution tolérante au préfixe « epargne- » des DEUX côtés : le slug du produit est dérivé
+  // de son nom (« Épargne Ordinaire » → « epargne-ordinaire »), mais d'anciens liens pointent
+  // encore vers le slug court (« ordinaire »). Surtout, au premier rendu la liste vient du repli
+  // statique (ids courts) avant l'arrivée de l'API : comparer les slugs bruts ferait échouer la
+  // recherche et déclencherait le <Navigate> ci-dessous sur un rechargement direct de la fiche.
+  const unprefix = (v?: string) => (v || "").replace(/^epargne-/, "");
+  const product = SAVINGS.find((s) => unprefix(s.id) === unprefix(slug)) as any;
   const detail = resolveSavingsDetail(product?.id ?? slug, settings?.savingsDetails);
 
   // Slug inconnu (une fois les données chargées) → retour à la liste des épargnes.
