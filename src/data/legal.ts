@@ -25,25 +25,72 @@ export interface LegalContent {
   dcp: LegalPage;
 }
 
+// Sections du texte officiel MA2E communes aux « Mentions légales » et aux CGU.
+// ma2e.ci ne les fait figurer que dans ses CGU, mais la page « Mentions légales »
+// doit être autoportante : le domaine ma2e.ci pointera vers ce site. Le texte est
+// partagé (et non recopié) pour que les deux pages ne puissent pas diverger.
+const IDENTITE_MA2E =
+  "Mutuelle des Agents de l'Eau et de l'Électricité, en abrégé « MA2E ».\n\n" +
+  "- Société mutualiste au capital social (capital variable) de : 634 700 000 FCFA (six cent trente-quatre millions sept cent mille Francs CFA).\n" +
+  "- Siège social : Abidjan – Plateau – Avenue Houdaille – Immeuble SIDAM 6ème étage, Côte d'Ivoire, 18 BP 1210 Abidjan 18.\n" +
+  "- Compte contribuable : 1342324-D\n" +
+  "- Email : info@ma2e.ci\n" +
+  "- Tél. : +225 27 21 23 64 87";
+
+const DONNEES_PERSONNELLES =
+  "Dans le respect de la réglementation applicable, notamment à la loi N°2013-450 du 19 juin 2013 relative à la protection des données à caractère personnel en Côte d'Ivoire, des données à caractère personnel vous concernant pourront être collectées aux conditions indiquées dans la « Politique de protection des données personnelles ».\n\n" +
+  "Vous disposez d'un droit d'accès, d'opposition, de modification, de rectification et de suppression des données à caractère personnel que nous pourrions être amenés à collecter.\n\n" +
+  "Vous pouvez l'exercer à tout moment en contactant notre correspondant à la Protection des données à l'adresse suivante : PrivacyMA2E@ma2e.ci";
+
+const MENTIONS_COOKIES =
+  "L'Éditeur MA2E n'utilise pas de cookies et ne collecte pas les données de navigation de l'Utilisateur, à l'occasion de l'utilisation du site web https://ma2e.ci et de ses Services. Toutefois, l'Éditeur MA2E peut à tout moment les utiliser dans une évolution future du site web https://ma2e.ci. L'Utilisateur sera alors informé de ces procédés ainsi que de leur objet et aura la faculté d'y consentir et de s'y opposer.\n\n" +
+  "Les cookies : Les cookies sont de petits fichiers dont la fonction essentielle est de faciliter la navigation sur Internet. L'un de leurs principaux objectifs est de faire gagner du temps à l'Utilisateur, en indiquant au serveur web qu'il consulte à nouveau une page spécifique du site web.\n\n" +
+  "La navigation : Lorsque l'Utilisateur accède à un site web et utilise ses Services, les données de navigation sont les informations relatives à son adresse IP, son système d'exploitation, le type et la langue de son navigateur, ses temps d'accès, la date, l'heure et la requête de sa recherche, ou encore les adresses des sites que l'Utilisateur visite.";
+
+const PROPRIETE_INTELLECTUELLE =
+  "La structure générale du Site, ainsi que les textes, graphiques, images, sons, vidéos et plus généralement tous contenus la composant, sont la propriété de l'Éditeur à l'exception des marques de tiers qui pourraient y être citées et/ou représentées.\n\n" +
+  "Toute représentation et/ou reproduction et/ou exploitation partielle ou totale des contenus proposés par le Site, par quelque procédé que ce soit, sans l'autorisation préalable et par écrit de l'Éditeur est strictement interdite et serait susceptible de constituer une contrefaçon telle que prévue par les articles 37 et suivants de l'annexe III de l'accord de Bangui du 02 mars 1977, révisé le 24 février 1999, ou tout texte subséquent.\n\n" +
+  "Dans l'hypothèse où l'Utilisateur souhaiterait exploiter un des contenus du Site (texte, image, etc.), il s'engage à requérir l'autorisation préalable et écrite de l'Éditeur, en écrivant ou en utilisant le formulaire de contact.\n\n" +
+  "Néanmoins, la reproduction des textes sur un support papier est notamment autorisée dans le cadre d'information, sous réserve du respect des trois (3) conditions suivantes :\n\n" +
+  "- Gratuité de la diffusion ;\n" +
+  "- Respect de l'intégrité des documents reproduits (pas de modification ni d'altération) ;\n" +
+  "- Citation claire et lisible de la source sous la forme suivante : Ce document provient du site web « https://ma2e.ci », propriété de la Mutuelle des Agents de l'Eau et de l'Électricité (MA2E).\n\n" +
+  "Les droits de reproduction sont réservés et strictement limités.";
+
+const LIENS_HYPERTEXTES =
+  "Les liens hypertextes mis en place dans le cadre du Site en direction d'autres ressources présentes sur le réseau internet, notamment vers des partenaires, ont fait l'objet d'une autorisation préalable et expresse.\n\n" +
+  "Les Utilisateurs et visiteurs du Site ne peuvent en aucun cas mettre en place un lien hypertexte en direction du Site, sans l'autorisation écrite et préalable de la MA2E. Toute demande tendant à cette fin doit être adressée via le formulaire de contact.\n\n" +
+  "Le Site peut contenir des liens hypertextes renvoyant vers des sites qui ne sont pas édités par l'Éditeur. La MA2E n'étant pas l'éditeur de ces sites, elle ne peut en contrôler le contenu.\n\n" +
+  "Si l'Utilisateur choisit de consulter ces sites à partir de liens hypertextes accessibles depuis le Site, la MA2E lui conseille vivement de prendre connaissance, avant toute utilisation de leurs services, de leur rubrique relative aux données à caractère personnel.";
+
+const RESPONSABILITE =
+  "De l'Éditeur :\n\n" +
+  "Les informations et/ou documents figurant sur ce Site et/ou accessibles par ce Site proviennent de sources considérées comme étant fiables. Toutefois, ces informations et/ou documents sont susceptibles de contenir des inexactitudes techniques et des erreurs typographiques. L'Éditeur se réserve le droit de les corriger, dès que ces erreurs sont portées à sa connaissance.\n\n" +
+  "Il appartient à l'Utilisateur de vérifier l'exactitude et la pertinence des informations et/ou documents mis à disposition sur ce Site. Les informations et/ou documents disponibles sur ce Site sont susceptibles d'être modifiés à tout moment, et peuvent avoir fait l'objet de mises à jour.\n\n" +
+  "De l'Utilisateur :\n\n" +
+  "L'Utilisateur est le seul responsable du bon fonctionnement de son équipement nécessaire à l'accès et à l'utilisation du Site ainsi que de son accès à internet. Il appartient à l'Utilisateur de prendre toutes les mesures appropriées pour protéger ses propres données, ses systèmes informatiques et/ou logiciels de la contamination par d'éventuels virus.\n\n" +
+  "L'utilisation des informations et/ou documents disponibles sur ce Site se fait sous l'entière et seule responsabilité de l'Utilisateur, qui assume la totalité des conséquences pouvant en découler, sans que l'Éditeur puisse être recherché à ce titre, et sans recours contre ce dernier.";
+
+const DROIT_APPLICABLE =
+  "Les présentes Conditions Générales d'Utilisation du Site sont régies par le Droit en vigueur en République de Côte d'Ivoire. En cas de litige, et après une tentative de conciliation demeurée infructueuse, compétence expresse est attribuée aux Tribunaux Ivoiriens, nonobstant la pluralité de défendeurs ou l'appel en garantie, même pour les procédures d'urgence ou les procédures conservatoires, en référé ou à la requête.\n\n" +
+  "Pour toute question relative aux présentes Conditions Générales d'Utilisation du Site, vous pouvez nous écrire à l'adresse suivante : info@ma2e.ci";
+
 export const DEFAULT_LEGAL: LegalContent = {
   mentions: {
     title: "Mentions légales",
     intro: "MENTIONS LÉGALES DU SITE WEB « https://ma2e.ci »",
     sections: [
+      { heading: "1. Éditeur du site", body: IDENTITE_MA2E },
       {
-        heading: "Mentions légales",
-        body:
-          "Mutuelle des Agents de l'Eau et de l'Électricité, en abrégé « MA2E ».\n\n" +
-          "- Société mutualiste au capital social (capital variable) de : 634 700 000 FCFA (six cent trente-quatre millions sept cent mille Francs CFA).\n" +
-          "- Siège social : Abidjan – Plateau – Avenue Houdaille – Immeuble SIDAM 6ème étage, Côte d'Ivoire, 18 BP 1210 Abidjan 18.\n" +
-          "- Compte contribuable : 1342324-D\n" +
-          "- Email : info@ma2e.ci\n" +
-          "- Tél. : +225 27 21 23 64 87",
-      },
-      {
-        heading: "À propos",
+        heading: "2. À propos",
         body: "MA2E est une institution mutualiste d'Épargne et de Crédit sans but lucratif, régie par l'ordonnance N°2011-367 du 3 novembre 2011 portant réglementation des systèmes financiers décentralisés.",
       },
+      { heading: "3. Données à caractère personnel", body: DONNEES_PERSONNELLES },
+      { heading: "4. Mentions cookies", body: MENTIONS_COOKIES },
+      { heading: "5. Propriété intellectuelle", body: PROPRIETE_INTELLECTUELLE },
+      { heading: "6. Liens hypertextes", body: LIENS_HYPERTEXTES },
+      { heading: "7. Responsabilité", body: RESPONSABILITE },
+      { heading: "8. Droit applicable", body: DROIT_APPLICABLE },
     ],
   },
   cgu: {
@@ -59,27 +106,15 @@ export const DEFAULT_LEGAL: LegalContent = {
       },
       {
         heading: "1. Mentions légales",
-        body:
-          "Mutuelle des Agents de l'Eau et de l'Électricité, en abrégé « MA2E ».\n\n" +
-          "- Société mutualiste au capital social (capital variable) de : 634 700 000 FCFA (six cent trente-quatre millions sept cent mille Francs CFA).\n" +
-          "- Siège social : Abidjan – Plateau – Avenue Houdaille – Immeuble SIDAM 6ème étage, Côte d'Ivoire, 18 BP 1210 Abidjan 18.\n" +
-          "- Compte contribuable : 1342324-D\n" +
-          "- Email : info@ma2e.ci\n" +
-          "- Tél. : +225 27 21 23 64 87",
+        body: IDENTITE_MA2E,
       },
       {
         heading: "2. Données à caractère personnel",
-        body:
-          "Dans le respect de la réglementation applicable, notamment à la loi N°2013-450 du 19 juin 2013 relative à la protection des données à caractère personnel en Côte d'Ivoire, des données à caractère personnel vous concernant pourront être collectées aux conditions indiquées dans la « Politique de protection des données personnelles ».\n\n" +
-          "Vous disposez d'un droit d'accès, d'opposition, de modification, de rectification et de suppression des données à caractère personnel que nous pourrions être amenés à collecter.\n\n" +
-          "Vous pouvez l'exercer à tout moment en contactant notre correspondant à la Protection des données à l'adresse suivante : PrivacyMA2E@ma2e.ci",
+        body: DONNEES_PERSONNELLES,
       },
       {
         heading: "3. Mentions cookies",
-        body:
-          "L'Éditeur MA2E n'utilise pas de cookies et ne collecte pas les données de navigation de l'Utilisateur, à l'occasion de l'utilisation du site web https://ma2e.ci et de ses Services. Toutefois, l'Éditeur MA2E peut à tout moment les utiliser dans une évolution future du site web https://ma2e.ci. L'Utilisateur sera alors informé de ces procédés ainsi que de leur objet et aura la faculté d'y consentir et de s'y opposer.\n\n" +
-          "Les cookies : Les cookies sont de petits fichiers dont la fonction essentielle est de faciliter la navigation sur Internet. L'un de leurs principaux objectifs est de faire gagner du temps à l'Utilisateur, en indiquant au serveur web qu'il consulte à nouveau une page spécifique du site web.\n\n" +
-          "La navigation : Lorsque l'Utilisateur accède à un site web et utilise ses Services, les données de navigation sont les informations relatives à son adresse IP, son système d'exploitation, le type et la langue de son navigateur, ses temps d'accès, la date, l'heure et la requête de sa recherche, ou encore les adresses des sites que l'Utilisateur visite.",
+        body: MENTIONS_COOKIES,
       },
       {
         heading: "4. Conditions générales d'utilisation du site",
@@ -114,39 +149,19 @@ export const DEFAULT_LEGAL: LegalContent = {
       },
       {
         heading: "Article 5 – Propriété intellectuelle",
-        body:
-          "La structure générale du Site, ainsi que les textes, graphiques, images, sons, vidéos et plus généralement tous contenus la composant, sont la propriété de l'Éditeur à l'exception des marques de tiers qui pourraient y être citées et/ou représentées.\n\n" +
-          "Toute représentation et/ou reproduction et/ou exploitation partielle ou totale des contenus proposés par le Site, par quelque procédé que ce soit, sans l'autorisation préalable et par écrit de l'Éditeur est strictement interdite et serait susceptible de constituer une contrefaçon telle que prévue par les articles 37 et suivants de l'annexe III de l'accord de Bangui du 02 mars 1977, révisé le 24 février 1999, ou tout texte subséquent.\n\n" +
-          "Dans l'hypothèse où l'Utilisateur souhaiterait exploiter un des contenus du Site (texte, image, etc.), il s'engage à requérir l'autorisation préalable et écrite de l'Éditeur, en écrivant ou en utilisant le formulaire de contact.\n\n" +
-          "Néanmoins, la reproduction des textes sur un support papier est notamment autorisée dans le cadre d'information, sous réserve du respect des trois (3) conditions suivantes :\n\n" +
-          "- Gratuité de la diffusion ;\n" +
-          "- Respect de l'intégrité des documents reproduits (pas de modification ni d'altération) ;\n" +
-          "- Citation claire et lisible de la source sous la forme suivante : Ce document provient du site web « https://ma2e.ci », propriété de la Mutuelle des Agents de l'Eau et de l'Électricité (MA2E).\n\n" +
-          "Les droits de reproduction sont réservés et strictement limités.",
+        body: PROPRIETE_INTELLECTUELLE,
       },
       {
         heading: "Article 6 – Liens hypertextes",
-        body:
-          "Les liens hypertextes mis en place dans le cadre du Site en direction d'autres ressources présentes sur le réseau internet, notamment vers des partenaires, ont fait l'objet d'une autorisation préalable et expresse.\n\n" +
-          "Les Utilisateurs et visiteurs du Site ne peuvent en aucun cas mettre en place un lien hypertexte en direction du Site, sans l'autorisation écrite et préalable de la MA2E. Toute demande tendant à cette fin doit être adressée via le formulaire de contact.\n\n" +
-          "Le Site peut contenir des liens hypertextes renvoyant vers des sites qui ne sont pas édités par l'Éditeur. La MA2E n'étant pas l'éditeur de ces sites, elle ne peut en contrôler le contenu.\n\n" +
-          "Si l'Utilisateur choisit de consulter ces sites à partir de liens hypertextes accessibles depuis le Site, la MA2E lui conseille vivement de prendre connaissance, avant toute utilisation de leurs services, de leur rubrique relative aux données à caractère personnel.",
+        body: LIENS_HYPERTEXTES,
       },
       {
         heading: "Article 7 – Responsabilité",
-        body:
-          "De l'Éditeur :\n\n" +
-          "Les informations et/ou documents figurant sur ce Site et/ou accessibles par ce Site proviennent de sources considérées comme étant fiables. Toutefois, ces informations et/ou documents sont susceptibles de contenir des inexactitudes techniques et des erreurs typographiques. L'Éditeur se réserve le droit de les corriger, dès que ces erreurs sont portées à sa connaissance.\n\n" +
-          "Il appartient à l'Utilisateur de vérifier l'exactitude et la pertinence des informations et/ou documents mis à disposition sur ce Site. Les informations et/ou documents disponibles sur ce Site sont susceptibles d'être modifiés à tout moment, et peuvent avoir fait l'objet de mises à jour.\n\n" +
-          "De l'Utilisateur :\n\n" +
-          "L'Utilisateur est le seul responsable du bon fonctionnement de son équipement nécessaire à l'accès et à l'utilisation du Site ainsi que de son accès à internet. Il appartient à l'Utilisateur de prendre toutes les mesures appropriées pour protéger ses propres données, ses systèmes informatiques et/ou logiciels de la contamination par d'éventuels virus.\n\n" +
-          "L'utilisation des informations et/ou documents disponibles sur ce Site se fait sous l'entière et seule responsabilité de l'Utilisateur, qui assume la totalité des conséquences pouvant en découler, sans que l'Éditeur puisse être recherché à ce titre, et sans recours contre ce dernier.",
+        body: RESPONSABILITE,
       },
       {
         heading: "Article 8 – Droit applicable",
-        body:
-          "Les présentes Conditions Générales d'Utilisation du Site sont régies par le Droit en vigueur en République de Côte d'Ivoire. En cas de litige, et après une tentative de conciliation demeurée infructueuse, compétence expresse est attribuée aux Tribunaux Ivoiriens, nonobstant la pluralité de défendeurs ou l'appel en garantie, même pour les procédures d'urgence ou les procédures conservatoires, en référé ou à la requête.\n\n" +
-          "Pour toute question relative aux présentes Conditions Générales d'Utilisation du Site, vous pouvez nous écrire à l'adresse suivante : info@ma2e.ci",
+        body: DROIT_APPLICABLE,
       },
     ],
   },
