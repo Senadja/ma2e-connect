@@ -171,7 +171,12 @@ export const AdminLayout = () => {
             
             <div className="h-8 w-px bg-border mx-1" />
             
-            <DropdownMenu>
+            {/* modal={false} est indispensable ici : en mode modal, Radix pose
+                `overflow: hidden` sur <body>, ce qui casse le `position: sticky` de cet
+                en-tête. Le bouton déclencheur repartait alors à sa position statique
+                (loin au-dessus de l'écran dès qu'on avait défilé) et le menu s'ouvrait
+                hors de vue, tout en rendant la page inerte — elle paraissait figée. */}
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-3 rounded-full p-1 hover:bg-secondary/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
                   <div className="text-right hidden sm:block">
