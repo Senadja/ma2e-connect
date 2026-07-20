@@ -5,7 +5,15 @@
 > Dernière mise à jour : 2026-07-20.
 
 ## MAJ 2026-07-20 — Authentification à double facteur (back-office)
-**Non commité, non déployé.** Ferme le point A07 de `SECURITE_OWASP.md` (« pas de MFA »).
+**DÉPLOYÉE ET ACTIVE** (commits `5ac212b` + `2d7dbce`, poussés sur `refonte-fullstack` et `main`).
+Front Vercel à jour ; backend serveur passé de `3e95e7d` à `2d7dbce` avec `MFA_ENABLED=true`.
+Ferme le point A07 de `SECURITE_OWASP.md` (« pas de MFA »).
+
+⚠️ **L'identifiant de connexion au back-office est désormais `gcoulibaly@ebenyx.com`**
+(`admin@ma2e.ci` renvoie 401). Le code à 6 chiffres part vers cette boîte — réception vérifiée.
+À rebasculer vers une adresse MA2E lors de la passation au client.
+Sauvegarde d'avant déploiement : `/home/ebenyx/ma2e-connect/backup-pre2fa.sql`.
+Retour arrière : `MFA_ENABLED=false` dans `.env.prod` + `docker compose … up -d backend`.
 
 - **Connexion en 2 temps** : `POST /auth/login` ne rend plus de JWT mais un *challenge*
   (`202 {challengeId, maskedEmail, expiresIn, emailSent}`) ; le jeton n'est délivré que par
