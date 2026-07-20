@@ -30,6 +30,8 @@ services:
       PORT: "3000"
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis — générez une chaîne aléatoire >= 32 caractères (ex. openssl rand -hex 32) et mettez-la dans .env}
       JWT_EXPIRES_IN: "8h"
+      # Coupe-circuit de la double authentification (voir .env.prod.example).
+      MFA_ENABLED: ${MFA_ENABLED:-true}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
       UPLOAD_DIR: /app/uploads
       SEED_ON_START: ${SEED_ON_START:-true}

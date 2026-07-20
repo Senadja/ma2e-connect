@@ -18,7 +18,8 @@ import {
   Handshake,
   Inbox,
   History,
-  KeyRound
+  KeyRound,
+  ShieldCheck
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChangePasswordDialog } from "@/components/admin/ChangePasswordDialog";
+import { BackupCodesDialog } from "@/components/admin/BackupCodesDialog";
 
 const SidebarLink = ({ to, icon: Icon, label, active, collapsed }: { to: string, icon: any, label: string, active: boolean, collapsed: boolean }) => (
   <Link
@@ -54,6 +56,7 @@ export const AdminLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
+  const [backupOpen, setBackupOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -186,6 +189,9 @@ export const AdminLayout = () => {
                 <DropdownMenuItem onClick={() => setPwOpen(true)}>
                   <KeyRound className="mr-2 h-4 w-4" /> Changer le mot de passe
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setBackupOpen(true)}>
+                  <ShieldCheck className="mr-2 h-4 w-4" /> Codes de secours
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" /> Déconnexion
                 </DropdownMenuItem>
@@ -226,6 +232,7 @@ export const AdminLayout = () => {
       )}
 
       <ChangePasswordDialog open={pwOpen} onOpenChange={setPwOpen} />
+      <BackupCodesDialog open={backupOpen} onOpenChange={setBackupOpen} />
     </div>
   );
 };

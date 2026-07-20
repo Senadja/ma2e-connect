@@ -10,35 +10,64 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(uuid())
-  email       String   @unique
-  password    String
-  name        String
-  role        Role     @default(USER)
+  id                   String    @id @default(uuid())
+  email                String    @unique
+  password             String
+  name                 String
+  role                 Role      @default(USER)
   // Permissions fines (ex. "news:write", "products:write"). ADMIN = toutes implicitement.
-  permissions String[] @default([])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  permissions          String[]  @default([])
+  // Codes de secours de la double authentification : on ne stocke QUE les empreintes bcrypt.
+  // Un code consommé est retiré du tableau ; la longueur = nombre de codes restants.
+  backupCodes          String[]  @default([])
+  backupCodesCreatedAt DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  loginChallenges LoginChallenge[]
+}
+
+// Étape 2 de la connexion : le mot de passe est validé, un code à 6 chiffres est envoyé
+// par e-mail et doit être confirmé avant l'émission du jeton JWT.
+// Le code n'est stocké que sous forme d'empreinte bcrypt : un vol de la base ne donne
+// aucun code exploitable.
+model LoginChallenge {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash    String
+  expiresAt   DateTime
+  // Tentatives de saisie erronées ; au-delà du plafond le challenge est brûlé.
+  attempts    Int       @default(0)
+  resendCount Int       @default(0)
+  // Horodatage du dernier envoi (cooldown entre deux « Renvoyer le code »).
+  lastSentAt  DateTime  @default(now())
+  // Non nul dès que le challenge a servi ou a été invalidé : un code ne vaut qu'une fois.
+  consumedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Application {
-  id          String   @id @default(uuid())
-  appId       String   @unique
-  type        String
-  category    String
-  name        String
-  matricule   String
-  email       String
-  phone       String
-  status      AppStatus @default(PENDING)
-  priority    Priority  @default(MEDIUM)
-  data        Json
+  id             String    @id @default(uuid())
+  appId          String    @unique
+  type           String
+  category       String
+  name           String
+  matricule      String
+  email          String
+  phone          String
+  status         AppStatus @default(PENDING)
+  priority       Priority  @default(MEDIUM)
+  data           Json
   // Traçabilité de la décision (validation / refus motivé).
-  decisionReason String?   // motif du refus ou note de validation
+  decisionReason String? // motif du refus ou note de validation
   decidedAt      DateTime? // horodatage de la décision
-  decidedBy      String?   // e-mail de l'admin ayant statué
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  decidedBy      String? // e-mail de l'admin ayant statué
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model Article {
@@ -47,11 +76,11 @@ model Article {
   title       String
   excerpt     String
   category    String
-  content     Json      // blocs { type: "p"|"h2"|"quote"|"list", text?, items? }
-  image       String?   // visuel à la une (chemin /documents/uploads/…)
+  content     Json // blocs { type: "p"|"h2"|"quote"|"list", text?, items? }
+  image       String? // visuel à la une (chemin /documents/uploads/…)
   author      String?
   readTime    String?
-  date        String?   // libellé humain conservé (ex. "12 mars 2025")
+  date        String? // libellé humain conservé (ex. "12 mars 2025")
   tags        String[]  @default([])
   status      String    @default("draft") // draft | published
   publishedAt DateTime?
@@ -62,13 +91,13 @@ model Article {
 model Product {
   id          String   @id @default(uuid())
   slug        String
-  type        String   // epargne | credit | immobilier
+  type        String // epargne | credit | immobilier
   name        String
   description String
   features    String[] @default([])
-  meta        Json?    // { taux, duree, montant, conditions, ... }
+  meta        Json? // { taux, duree, montant, conditions, ... }
   image       String?
-  form        String?  // chemin du formulaire à télécharger
+  form        String? // chemin du formulaire à télécharger
   active      Boolean  @default(true)
   order       Int      @default(0)
   createdAt   DateTime @default(now())
@@ -108,7 +137,7 @@ model Setting {
 model Partner {
   id        String   @id @default(uuid())
   name      String
-  type      String   // Tutelle | Partenaire institutionnel | Association professionnelle | Partenaire
+  type      String // Tutelle | Partenaire institutionnel | Association professionnelle | Partenaire
   desc      String
   logo      String?
   url       String?
@@ -122,7 +151,7 @@ model TeamMember {
   name      String
   role      String
   initials  String
-  photo     String?  // chemin /documents/uploads/… (repli sur les initiales si absent)
+  photo     String? // chemin /documents/uploads/… (repli sur les initiales si absent)
   category  String   @default("Gouvernance") // organe (CA, CC, CS, CED) ou Direction
   order     Int      @default(0)
   createdAt DateTime @default(now())

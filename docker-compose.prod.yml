@@ -35,6 +35,8 @@ services:
       PORT: "3000"
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis — chaîne aléatoire >= 32 caractères (openssl rand -hex 32)}
       JWT_EXPIRES_IN: "8h"
+      # Coupe-circuit de la double authentification (voir .env.prod.example).
+      MFA_ENABLED: ${MFA_ENABLED:-true}
       # Origines autorisées (front Vercel). Les rewrites Vercel passent par le serveur,
       # mais on autorise quand même l'origine pour tout appel direct.
       CORS_ORIGIN: ${CORS_ORIGIN}

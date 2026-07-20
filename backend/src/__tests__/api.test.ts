@@ -1,15 +1,57 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
+import bcrypt from 'bcrypt';
 import { app } from '../app';
+import { prisma } from '../lib/prisma';
 
 // Tests d'intégration de l'API (non destructifs).
 // Pré-requis : PostgreSQL démarré + seed exécuté (admin@ma2e.ci / admin123).
 
+const ADMIN_EMAIL = 'admin@ma2e.ci';
+const ADMIN_PASSWORD = 'admin123';
+
+// Chaque appel se présente avec une IP distincte. Le rate-limiter est keyé sur req.ip
+// (l'app fait `set('trust proxy', 1)`, donc X-Forwarded-For fait foi) : les tests ne se
+// gênent donc pas entre eux, et le limiteur reste pleinement actif en production.
+let ipSeed = 0;
+const nextIp = () => `10.1.0.${(ipSeed++ % 250) + 1}`;
+
+function startLogin(email: string, password: string) {
+  return request(app).post('/api/auth/login').set('X-Forwarded-For', nextIp()).send({ email, password });
+}
+
+function submitCode(challengeId: string, code: string) {
+  return request(app)
+    .post('/api/auth/verify')
+    .set('X-Forwarded-For', nextIp())
+    .send({ challengeId, code });
+}
+
+// Le code de vérification est stocké haché (bcrypt) : il est impossible de le relire,
+// y compris depuis un test. On réécrit donc l'empreinte du challenge avec un code connu.
+// Tout le chemin de vérification est ainsi exercé pour de vrai, sans jamais exposer de
+// code sur le réseau — même en développement.
+async function setChallengeCode(challengeId: string, code: string) {
+  await prisma.loginChallenge.update({
+    where: { id: challengeId },
+    data: { codeHash: await bcrypt.hash(code, 10) },
+  });
+}
+
+let cachedToken: string | null = null;
+
 async function adminToken(): Promise<string> {
-  const res = await request(app)
-    .post('/api/auth/login')
-    .send({ email: 'admin@ma2e.ci', password: 'admin123' });
-  return res.body.token;
+  if (cachedToken) return cachedToken;
+  const res = await startLogin(ADMIN_EMAIL, ADMIN_PASSWORD);
+  // Coupe-circuit MFA_ENABLED=false : le jeton arrive dès la première étape.
+  if (res.status === 200 && res.body.token) {
+    cachedToken = res.body.token;
+    return cachedToken;
+  }
+  await setChallengeCode(res.body.challengeId, '123456');
+  const verified = await submitCode(res.body.challengeId, '123456');
+  cachedToken = verified.body.token;
+  return cachedToken;
 }
 
 describe('Santé & Auth', () => {
@@ -20,24 +62,154 @@ describe('Santé & Auth', () => {
   });
 
   it('login refuse de mauvais identifiants → 401', async () => {
-    const res = await request(app)
-      .post('/api/auth/login')
-      .send({ email: 'admin@ma2e.ci', password: 'mauvais' });
+    const res = await startLogin(ADMIN_EMAIL, 'mauvais');
     expect(res.status).toBe(401);
   });
 
-  it('login valide → token JWT + rôle admin', async () => {
+  it('login rejette une entrée invalide → 400', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'admin@ma2e.ci', password: 'admin123' });
+      .set('X-Forwarded-For', nextIp())
+      .send({ email: 'pas-un-email' });
+    expect(res.status).toBe(400);
+  });
+
+  it('un mot de passe valide ouvre une session complète', async () => {
+    const token = await adminToken();
+    expect(token).toBeTruthy();
+    const me = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`);
+    expect(me.status).toBe(200);
+    expect(me.body.user.role).toBe('admin');
+  });
+});
+
+describe('Double authentification', () => {
+  it("le mot de passe seul ne délivre AUCUN jeton", async () => {
+    const res = await startLogin(ADMIN_EMAIL, ADMIN_PASSWORD);
+    expect(res.status).toBe(202);
+    expect(res.body.token).toBeUndefined();
+    expect(res.body.challengeId).toBeTruthy();
+    expect(res.body.expiresIn).toBe(300);
+  });
+
+  it("l'adresse de destination est masquée", async () => {
+    const res = await startLogin(ADMIN_EMAIL, ADMIN_PASSWORD);
+    expect(res.body.maskedEmail).toBe('a***@ma2e.ci');
+    expect(res.body.maskedEmail).not.toContain('dmin');
+  });
+
+  it('un code correct délivre le jeton', async () => {
+    const login = await startLogin(ADMIN_EMAIL, ADMIN_PASSWORD);
+    await setChallengeCode(login.body.challengeId, '424242');
+    const res = await submitCode(login.body.challengeId, '424242');
     expect(res.status).toBe(200);
     expect(res.body.token).toBeTruthy();
     expect(res.body.user.role).toBe('admin');
   });
 
-  it('login rejette une entrée invalide → 400', async () => {
-    const res = await request(app).post('/api/auth/login').send({ email: 'pas-un-email' });
-    expect(res.status).toBe(400);
+  it('un code ne sert qu\'une seule fois', async () => {
+    const login = await startLogin(ADMIN_EMAIL, ADMIN_PASSWORD);
+    await setChallengeCode(login.body.challengeId, '111222');
+    expect((await submitCode(login.body.challengeId, '111222')).status).toBe(200);
+    expect((await submitCode(login.body.challengeId, '111222')).status).toBe(401);
+  });
+
+  it('un code expiré est refusé', async () => {
+    const login = await startLogin(ADMIN_EMAIL, ADMIN_PASSWORD);
+    await setChallengeCode(login.body.challengeId, '333444');
+    await prisma.loginChallenge.update({
+      where: { id: login.body.challengeId },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+    const res = await submitCode(login.body.challengeId, '333444');
+    expect(res.status).toBe(401);
+  });
+
+  it('5 codes erronés brûlent la tentative de connexion', async () => {
+    const login = await startLogin(ADMIN_EMAIL, ADMIN_PASSWORD);
+    await setChallengeCode(login.body.challengeId, '999888');
+    for (let i = 0; i < 5; i++) {
+      expect((await submitCode(login.body.challengeId, '000000')).status).toBe(401);
+    }
+    // Plafond atteint : même le bon code ne passe plus.
+    const res = await submitCode(login.body.challengeId, '999888');
+    expect(res.status).toBe(429);
+  });
+
+  it('un challenge inconnu est refusé', async () => {
+    const res = await submitCode('11111111-1111-4111-8111-111111111111', '123456');
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('Codes de secours', () => {
+  const EMAIL = 'test-2fa@ma2e.local';
+  const PASSWORD = 'test-2fa-password';
+  let codes: string[] = [];
+
+  // Compte jetable : on ne touche pas aux codes de secours du compte admin réel.
+  beforeAll(async () => {
+    await prisma.user.deleteMany({ where: { email: EMAIL } });
+    await prisma.user.create({
+      data: { email: EMAIL, password: await bcrypt.hash(PASSWORD, 10), name: 'Test 2FA', role: 'USER' },
+    });
+  });
+
+  afterAll(async () => {
+    // La suppression en cascade emporte les challenges associés.
+    await prisma.user.deleteMany({ where: { email: EMAIL } });
+  });
+
+  async function tokenFor(): Promise<string> {
+    const login = await startLogin(EMAIL, PASSWORD);
+    if (login.status === 200 && login.body.token) return login.body.token;
+    await setChallengeCode(login.body.challengeId, '654321');
+    return (await submitCode(login.body.challengeId, '654321')).body.token;
+  }
+
+  it('la génération renvoie 8 codes, une seule fois', async () => {
+    const token = await tokenFor();
+    const res = await request(app)
+      .post('/api/auth/backup-codes')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: PASSWORD });
+    expect(res.status).toBe(200);
+    expect(res.body.codes).toHaveLength(8);
+    codes = res.body.codes;
+
+    // La base ne contient que des empreintes : aucun code n'y est lisible.
+    const stored = await prisma.user.findUnique({ where: { email: EMAIL } });
+    expect(stored!.backupCodes).toHaveLength(8);
+    expect(stored!.backupCodes).not.toContain(codes[0]);
+  });
+
+  it('la génération exige le mot de passe', async () => {
+    const token = await tokenFor();
+    const res = await request(app)
+      .post('/api/auth/backup-codes')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: 'mauvais' });
+    expect(res.status).toBe(401);
+  });
+
+  it('un code de secours remplace le code e-mail', async () => {
+    const login = await startLogin(EMAIL, PASSWORD);
+    const res = await submitCode(login.body.challengeId, codes[0]);
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeTruthy();
+    expect(res.body.backupCodesLeft).toBe(7);
+  });
+
+  it('un code de secours ne peut pas être rejoué', async () => {
+    const login = await startLogin(EMAIL, PASSWORD);
+    const res = await submitCode(login.body.challengeId, codes[0]);
+    expect(res.status).toBe(401);
+  });
+
+  it('la saisie tolère minuscules et absence de tiret', async () => {
+    const login = await startLogin(EMAIL, PASSWORD);
+    const res = await submitCode(login.body.challengeId, codes[1].replace('-', '').toLowerCase());
+    expect(res.status).toBe(200);
   });
 });
 

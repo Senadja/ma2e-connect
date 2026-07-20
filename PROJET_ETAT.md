@@ -2,7 +2,49 @@
 
 > Point de re-lecture unique pour reprendre le travail après un compactage de contexte
 > ou une nouvelle session. **À mettre à jour à la fin de chaque tâche significative.**
-> Dernière mise à jour : 2026-06-30.
+> Dernière mise à jour : 2026-07-20.
+
+## MAJ 2026-07-20 — Authentification à double facteur (back-office)
+**Non commité, non déployé.** Ferme le point A07 de `SECURITE_OWASP.md` (« pas de MFA »).
+
+- **Connexion en 2 temps** : `POST /auth/login` ne rend plus de JWT mais un *challenge*
+  (`202 {challengeId, maskedEmail, expiresIn, emailSent}`) ; le jeton n'est délivré que par
+  `POST /auth/verify`. Code à **6 chiffres**, **5 minutes**, **usage unique**, **5 tentatives**,
+  stocké **haché (bcrypt)** — un dump de base ne donne aucun code exploitable.
+  `POST /auth/resend` : cooldown 60 s, 3 renvois max, le compteur de tentatives n'est pas remis à zéro.
+- **Adresse masquée** côté serveur (`a***@ma2e.ci`) : l'API ne renvoie jamais l'adresse complète.
+- **Codes de secours** : 8 codes `XXXX-XXXX` (alphabet sans I/O/0/1), générés au back-office
+  (menu utilisateur → « Codes de secours »), affichés **une seule fois**, copiables/téléchargeables.
+  Seules les empreintes sont stockées (`User.backupCodes`). Ils s'utilisent à la place du code e-mail.
+  La régénération exige le mot de passe et invalide les 8 précédents.
+- **Coupe-circuit** `MFA_ENABLED=false` (env serveur, SSH + redémarrage) : retour au login en 1 étape.
+  Dernier recours si l'e-mail tombe **et** que les codes de secours sont perdus.
+- **Si l'envoi échoue**, le challenge reste ouvert et le front bascule sur la saisie d'un code de
+  secours au lieu d'afficher « code envoyé » à tort (`sendLoginCode` **propage** l'erreur, contrairement
+  aux notifications de demandes qui l'avalent volontairement).
+- **Schéma** : nouveau modèle `LoginChallenge` + `User.backupCodes/backupCodesCreatedAt`.
+  Appliqué par `prisma db push` au boot — **aucune migration à jouer à la main**.
+- **Vérifié** : 23 tests backend verts (12 nouveaux : code correct/faux/expiré/rejoué, plafond de
+  tentatives, codes de secours consommés puis refusés) + parcours navigateur complet avec un **vrai
+  envoi SMTP** (serveur jetable local) et connexion par code de secours.
+
+**Bug corrigé au passage (préexistant, sans lien avec la 2FA)** : le menu utilisateur du back-office
+(`AdminLayout.tsx`) était **inutilisable dès qu'on avait défilé**. En mode modal, Radix pose
+`overflow: hidden` sur `<body>`, ce qui **casse le `position: sticky` de l'en-tête** : le bouton
+repartait à sa position statique (ex. `top: -2832`) et le menu s'ouvrait hors écran, tout en rendant
+la page inerte — elle semblait figée (Échap la débloquait). « Changer le mot de passe » et
+« Déconnexion » étaient donc inaccessibles. Correctif : `<DropdownMenu modal={false}>`.
+Vérifié à 0 / 1 238 / 2 832 px de défilement sur 3 pages : menu toujours à `top: 60`.
+
+**Repli développement** : sans SMTP configuré et hors production, `sendLoginCode` **journalise** le
+code (`📧 [mailer désactivé] Code de connexion pour … : 123456`) au lieu d'échouer — sinon un poste
+de dev sans serveur e-mail ne pourrait plus accéder au back-office. En production, refus franc
+(jamais de code de connexion dans les journaux) : ce sont les codes de secours qui rattrapent.
+
+⚠️ **Avant d'activer en prod** : le code part vers **l'e-mail du compte** qui se connecte.
+Basculer le compte admin sur `gcoulibaly@ebenyx.com` (boîte réellement relevée), **puis générer les
+codes de secours et les imprimer** — sinon le back-office devient inaccessible au moindre incident
+e-mail. Il n'existe qu'**un seul compte admin** : aucun secours interne possible.
 
 ## MAJ 2026-06-30 (post-recette, suite)
 - **Chiffres unifiés** (commits `fa340ae`, `78e6679`) : 8 430 sociétaires / 6,3 Md / 20 ans PARTOUT

@@ -29,6 +29,11 @@ export const env = {
   nodeEnv,
   jwtSecret: requireJwtSecret(),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '8h',
+  // Double authentification par code envoyé par e-mail. Activée par défaut.
+  // MFA_ENABLED=false est un COUPE-CIRCUIT D'URGENCE : il ne sert que si l'envoi d'e-mail
+  // tombe en panne ET que les codes de secours sont perdus. Il exige un accès au serveur
+  // (SSH + redémarrage), donc il reste hors de portée d'un attaquant venant d'Internet.
+  mfaEnabled: (process.env.MFA_ENABLED ?? 'true').toLowerCase() !== 'false',
   corsOrigins: (process.env.CORS_ORIGIN ?? 'http://localhost:8080,http://localhost:5173')
     .split(',')
     .map((s) => s.trim())
