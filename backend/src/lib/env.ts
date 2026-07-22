@@ -37,18 +37,6 @@ export const env = {
   // tombe en panne ET que les codes de secours sont perdus. Il exige un accès au serveur
   // (SSH + redémarrage), donc il reste hors de portée d'un attaquant venant d'Internet.
   mfaEnabled: (process.env.MFA_ENABLED ?? 'true').toLowerCase() !== 'false',
-  // Rate limiting (anti brute-force sur le login 2FA + anti-spam sur les formulaires publics).
-  // Pilotable par variables d'env pour les audits de charge : RATE_LIMIT_DISABLED=true coupe
-  // TOUS les limiteurs, ou ajustez chaque plafond. Les défauts reproduisent le comportement
-  // historique. ⚠ À ne relâcher QUE sur un serveur de TEST et à restaurer après : une prod
-  // sans limite = brute-force ouvert sur le login. Un changement exige un redémarrage du backend.
-  rateLimit: {
-    disabled: (process.env.RATE_LIMIT_DISABLED ?? 'false').toLowerCase() === 'true',
-    windowMs: Number(process.env.RATE_LIMIT_WINDOW_MIN ?? 15) * 60 * 1000,
-    loginMax: Number(process.env.RATE_LIMIT_LOGIN_MAX ?? 10),
-    verifyMax: Number(process.env.RATE_LIMIT_VERIFY_MAX ?? 30),
-    publicWriteMax: Number(process.env.RATE_LIMIT_PUBLIC_WRITE_MAX ?? 20),
-  },
   corsOrigins: (process.env.CORS_ORIGIN ?? 'http://localhost:8080,http://localhost:5173')
     .split(',')
     .map((s) => s.trim())
