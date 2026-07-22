@@ -37,6 +37,14 @@ services:
       JWT_EXPIRES_IN: "8h"
       # Coupe-circuit de la double authentification (voir .env.prod.example).
       MFA_ENABLED: ${MFA_ENABLED:-true}
+      # Rate limiting — pilotable pour les audits de charge (voir .env.prod.example).
+      # RATE_LIMIT_DISABLED=true coupe TOUS les limiteurs. À ne relâcher que le temps d'un
+      # test, puis restaurer à false (sinon brute-force ouvert sur le login).
+      RATE_LIMIT_DISABLED: ${RATE_LIMIT_DISABLED:-false}
+      RATE_LIMIT_WINDOW_MIN: ${RATE_LIMIT_WINDOW_MIN:-15}
+      RATE_LIMIT_LOGIN_MAX: ${RATE_LIMIT_LOGIN_MAX:-10}
+      RATE_LIMIT_VERIFY_MAX: ${RATE_LIMIT_VERIFY_MAX:-30}
+      RATE_LIMIT_PUBLIC_WRITE_MAX: ${RATE_LIMIT_PUBLIC_WRITE_MAX:-20}
       # Origines autorisées (front Vercel). Les rewrites Vercel passent par le serveur,
       # mais on autorise quand même l'origine pour tout appel direct.
       CORS_ORIGIN: ${CORS_ORIGIN}
