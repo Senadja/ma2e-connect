@@ -2,6 +2,18 @@ import nodemailer from 'nodemailer';
 import { env } from './env';
 import { prisma } from './prisma';
 
+// Ajoute un nom affiché à l'expéditeur si la config n'en fournit pas (« a@b.c » →
+// « MA2E <a@b.c> »). Un expéditeur nommé passe mieux les filtres anti-spam qu'une adresse nue.
+function withDisplayName(from: string): string {
+  return from.includes('<') ? from : `MA2E <${from}>`;
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string)
+  );
+}
+
 interface ApplicationMail {
   appId: string;
   category: string;
@@ -136,6 +148,18 @@ export async function sendLoginCode(to: string, name: string, code: string): Pro
     'La Mutuelle des Agents de l\'Eau et de l\'Électricité (MA2E)',
   ].join('\n');
 
+  // Version HTML : un e-mail transactionnel multipart (texte + HTML) et un expéditeur
+  // nommé passent mieux les filtres anti-spam qu'un texte brut envoyé depuis une adresse nue.
+  const html =
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#222">' +
+    `<p>Bonjour ${escapeHtml(name)},</p>` +
+    '<p>Voici votre code de connexion au back-office MA2E :</p>' +
+    `<p style="font-size:28px;font-weight:bold;letter-spacing:4px;margin:16px 0;color:#0a7d3c">${code}</p>` +
+    "<p>Ce code est valable 5 minutes et ne peut servir qu'une seule fois.</p>" +
+    "<p style=\"color:#777;font-size:13px\">Si vous n'êtes pas à l'origine de cette connexion, ignorez ce message et changez votre mot de passe.</p>" +
+    "<p>La Mutuelle des Agents de l'Eau et de l'Électricité (MA2E)</p>" +
+    '</div>';
+
   // Délais courts : la réponse HTTP de /auth/login attend cet envoi, on ne peut pas
   // laisser l'utilisateur devant un écran figé si le serveur SMTP ne répond pas.
   const transporter = nodemailer.createTransport({
@@ -148,10 +172,11 @@ export async function sendLoginCode(to: string, name: string, code: string): Pro
     socketTimeout: 15_000,
   });
   await transporter.sendMail({
-    from: cfg.from,
+    from: withDisplayName(cfg.from),
     to,
     subject: 'Votre code de connexion — back-office MA2E',
     text,
+    html,
   });
 }
 
@@ -180,6 +205,18 @@ export async function sendStaffWelcome(to: string, name: string, roleLabel: stri
     "La Mutuelle des Agents de l'Eau et de l'Électricité (MA2E)",
   ].join('\n');
 
+  const html =
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#222">' +
+    `<p>Bonjour ${escapeHtml(name)},</p>` +
+    `<p>Vous avez été ajouté(e) en tant que personnel de la MA2E, avec le rôle « <b>${escapeHtml(roleLabel)}</b> ».</p>` +
+    `<p>Vous pouvez accéder au back-office ici :<br><a href="${loginUrl}">${loginUrl}</a></p>` +
+    `<p>Votre identifiant de connexion est votre adresse e-mail : <b>${escapeHtml(to)}</b>.<br>` +
+    'Votre mot de passe vous est communiqué directement par votre administrateur.</p>' +
+    '<p>À chaque connexion, un code à 6 chiffres vous sera envoyé sur cette adresse e-mail : ' +
+    'il complète votre mot de passe et empêche que quiconque se connecte à votre place.</p>' +
+    "<p>La Mutuelle des Agents de l'Eau et de l'Électricité (MA2E)</p>" +
+    '</div>';
+
   const cfg = await resolveSmtp();
   if (!cfg) {
     console.log(`📧 [mailer désactivé] ${subject} → ${to} (rôle : ${roleLabel})`);
@@ -193,7 +230,7 @@ export async function sendStaffWelcome(to: string, name: string, roleLabel: stri
       secure: cfg.secure,
       auth: cfg.user ? { user: cfg.user, pass: cfg.pass } : undefined,
     });
-    await transporter.sendMail({ from: cfg.from, to, subject, text });
+    await transporter.sendMail({ from: withDisplayName(cfg.from), to, subject, text, html });
   } catch (err) {
     console.error('Échec envoi e-mail de bienvenue:', (err as Error).message);
   }
