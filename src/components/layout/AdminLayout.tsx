@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation, Outlet, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { 
-  LayoutDashboard, 
-  Newspaper, 
+  LayoutDashboard,
+  Newspaper,
   FileText,
+  Users,
   Settings,
-  LogOut, 
+  LogOut,
   Menu, 
   X, 
   Bell, 
@@ -92,6 +93,7 @@ export const AdminLayout = () => {
       { to: "/admin/partners", icon: Handshake, label: "Partenaires", perm: "partners:write" },
     ] },
     { title: "Administration", items: [
+      { to: "/admin/users", icon: Users, label: "Utilisateurs", perm: "users:manage" },
       { to: "/admin/audit", icon: History, label: "Journal d'activité", perm: "users:manage" },
     ] },
   ];
@@ -194,9 +196,14 @@ export const AdminLayout = () => {
                 <DropdownMenuItem onClick={() => setPwOpen(true)}>
                   <KeyRound className="mr-2 h-4 w-4" /> Changer le mot de passe
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setBackupOpen(true)}>
-                  <ShieldCheck className="mr-2 h-4 w-4" /> Codes de secours
-                </DropdownMenuItem>
+                {/* Codes de secours réservés à l'administrateur : les éditeurs n'en ont pas
+                    besoin (en cas de souci de code, l'admin réinitialise leur mot de passe
+                    ou corrige leur e-mail). */}
+                {user?.role?.toLowerCase() === "admin" && (
+                  <DropdownMenuItem onClick={() => setBackupOpen(true)}>
+                    <ShieldCheck className="mr-2 h-4 w-4" /> Codes de secours
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" /> Déconnexion
                 </DropdownMenuItem>

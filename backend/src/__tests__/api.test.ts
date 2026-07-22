@@ -260,3 +260,131 @@ describe('Validation des demandes', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("Rôle éditeur — 2FA, permissions et gestion par l'admin", () => {
+  const EDITOR_EMAIL = 'editeur-test@ma2e.local';
+  const EDITOR_EMAIL_2 = 'editeur-mute@ma2e.local';
+  const EDITOR_PASSWORD = 'editeur-mdp-initial';
+  const EDITOR_PASSWORD_2 = 'editeur-mdp-reinitialise';
+  let editorId = '';
+  const createdArticleIds: string[] = [];
+
+  afterAll(async () => {
+    for (const id of createdArticleIds) {
+      await prisma.article.delete({ where: { id } }).catch(() => null);
+    }
+    await prisma.user.deleteMany({ where: { email: { in: [EDITOR_EMAIL, EDITOR_EMAIL_2] } } });
+  });
+
+  // Jeton d'un éditeur : identique au flux réel (mot de passe puis code), avec un code
+  // connu réécrit dans le challenge (jamais exposé sur le réseau).
+  async function editorToken(email: string, password: string): Promise<string> {
+    const login = await startLogin(email, password);
+    if (login.status === 200 && login.body.token) return login.body.token;
+    await setChallengeCode(login.body.challengeId, '246810');
+    return (await submitCode(login.body.challengeId, '246810')).body.token;
+  }
+
+  it("l'admin crée un éditeur avec des permissions ciblées", async () => {
+    const token = await adminToken();
+    const res = await request(app)
+      .post('/api/users')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Forwarded-For', nextIp())
+      .send({ email: EDITOR_EMAIL, name: 'Éditeur Test', password: EDITOR_PASSWORD, role: 'EDITOR', permissions: ['news:write'] });
+    expect(res.status).toBe(201);
+    expect(res.body.role).toBe('EDITOR');
+    expect(res.body.permissions).toEqual(['news:write']);
+    editorId = res.body.id;
+  });
+
+  it("l'éditeur reçoit lui aussi un code à chaque connexion (202, aucun jeton)", async () => {
+    const res = await startLogin(EDITOR_EMAIL, EDITOR_PASSWORD);
+    expect(res.status).toBe(202);
+    expect(res.body.token).toBeUndefined();
+    expect(res.body.challengeId).toBeTruthy();
+    expect(res.body.maskedEmail).toBe('e***@ma2e.local');
+    // Aucun code de secours proposé à un éditeur.
+    expect(res.body.backupCodesLeft).toBe(0);
+  });
+
+  it("après le code, la session de l'éditeur a bien le rôle editor", async () => {
+    const token = await editorToken(EDITOR_EMAIL, EDITOR_PASSWORD);
+    const me = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`);
+    expect(me.status).toBe(200);
+    expect(me.body.user.role).toBe('editor');
+  });
+
+  it("l'éditeur peut écrire là où il a la permission (news:write) → 201", async () => {
+    const token = await editorToken(EDITOR_EMAIL, EDITOR_PASSWORD);
+    const res = await request(app)
+      .post('/api/articles')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: "Test éditeur 2FA", excerpt: 'Extrait de test', category: 'Actualité' });
+    expect(res.status).toBe(201);
+    createdArticleIds.push(res.body.id);
+  });
+
+  it("l'éditeur sans users:manage ne peut pas lister les comptes → 403", async () => {
+    const token = await editorToken(EDITOR_EMAIL, EDITOR_PASSWORD);
+    const res = await request(app).get('/api/users').set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(403);
+  });
+
+  it("l'éditeur ne peut pas créer d'utilisateur → 403", async () => {
+    const token = await editorToken(EDITOR_EMAIL, EDITOR_PASSWORD);
+    const res = await request(app)
+      .post('/api/users')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ email: 'usurpateur@ma2e.local', name: 'X', password: 'xxxxxx', role: 'EDITOR' });
+    expect(res.status).toBe(403);
+  });
+
+  it("l'admin réinitialise le mot de passe de l'éditeur", async () => {
+    const token = await adminToken();
+    const res = await request(app)
+      .put(`/api/users/${editorId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: EDITOR_PASSWORD_2 });
+    expect(res.status).toBe(200);
+    // L'ancien mot de passe ne fonctionne plus, le nouveau ouvre bien un challenge.
+    expect((await startLogin(EDITOR_EMAIL, EDITOR_PASSWORD)).status).toBe(401);
+    expect((await startLogin(EDITOR_EMAIL, EDITOR_PASSWORD_2)).status).toBe(202);
+  });
+
+  it("l'admin change l'e-mail de l'éditeur → le code part vers la nouvelle adresse", async () => {
+    const token = await adminToken();
+    const res = await request(app)
+      .put(`/api/users/${editorId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ email: EDITOR_EMAIL_2 });
+    expect(res.status).toBe(200);
+    expect(res.body.email).toBe(EDITOR_EMAIL_2);
+    // La connexion se fait désormais avec la nouvelle adresse…
+    const login = await startLogin(EDITOR_EMAIL_2, EDITOR_PASSWORD_2);
+    expect(login.status).toBe(202);
+    expect(login.body.maskedEmail).toBe('e***@ma2e.local');
+    // …et plus avec l'ancienne (elle n'est plus un identifiant valide).
+    expect((await startLogin(EDITOR_EMAIL, EDITOR_PASSWORD_2)).status).toBe(401);
+  });
+
+  it("changer l'e-mail vers une adresse déjà utilisée → 409", async () => {
+    const token = await adminToken();
+    const res = await request(app)
+      .put(`/api/users/${editorId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ email: ADMIN_EMAIL });
+    expect(res.status).toBe(409);
+  });
+
+  it('un administrateur ne peut pas modifier son propre rôle → 400', async () => {
+    const token = await adminToken();
+    const list = await request(app).get('/api/users').set('Authorization', `Bearer ${token}`);
+    const admin = list.body.find((u: { email: string; id: string }) => u.email === ADMIN_EMAIL);
+    const res = await request(app)
+      .put(`/api/users/${admin.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ role: 'EDITOR' });
+    expect(res.status).toBe(400);
+  });
+});

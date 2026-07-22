@@ -54,6 +54,7 @@ const NewsManager = lazyWithReload(() => import("./pages/admin/NewsManager.tsx")
 const ApplicationsManager = lazyWithReload(() => import("./pages/admin/ApplicationsManager.tsx").then(m => ({ default: m.ApplicationsManager })));
 const ProductsManager = lazyWithReload(() => import("./pages/admin/ProductsManager.tsx").then(m => ({ default: m.ProductsManager })));
 const MediaLibraryPage = lazyWithReload(() => import("./components/admin/MediaLibrary.tsx").then(m => ({ default: m.MediaLibrary })));
+const UsersManager = lazyWithReload(() => import("./pages/admin/UsersManager.tsx"));
 const FaqManager = lazyWithReload(() => import("./pages/admin/FaqManager.tsx"));
 const SettingsManager = lazyWithReload(() => import("./pages/admin/SettingsManager.tsx"));
 const PartnersManager = lazyWithReload(() => import("./pages/admin/PartnersManager.tsx"));
@@ -123,6 +124,7 @@ const App = () => (
                 <Route path="contact" element={<ContactManager />} />
                 <Route path="media" element={<MediaLibraryPage />} />
                 <Route path="partners" element={<PartnersManager />} />
+                <Route path="users" element={<UsersManager />} />
                 <Route path="audit" element={<AuditLog />} />
                 <Route path="settings" element={<SettingsManager />} />
               </Route>

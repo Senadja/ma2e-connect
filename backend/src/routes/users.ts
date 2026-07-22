@@ -52,6 +52,10 @@ usersRouter.post('/', async (req, res) => {
 });
 
 const updateSchema = z.object({
+  // L'e-mail est l'identifiant de connexion ET l'adresse qui reçoit le code à 6 chiffres :
+  // le modifier ré-aiguille la double authentification. Réservé à la gestion des comptes
+  // (utile quand un éditeur change de boîte ou lors d'un changement de personnel côté admin).
+  email: z.string().email().optional(),
   name: z.string().min(2).optional(),
   password: z.string().min(6).optional(),
   role: z.enum(['USER', 'EDITOR', 'ADMIN']).optional(),
@@ -78,7 +82,14 @@ usersRouter.put('/:id', async (req, res) => {
   if (grantsAdminPower(target.role, target.permissions) && req.user!.role.toLowerCase() !== 'admin') {
     return res.status(403).json({ error: 'Seul un administrateur peut modifier un compte administrateur.' });
   }
+  // Changement d'e-mail : refuse si l'adresse est déjà portée par un AUTRE compte
+  // (un e-mail inchangé retombe sur la cible elle-même et reste autorisé).
+  if (d.email !== undefined && d.email !== target.email) {
+    const clash = await prisma.user.findUnique({ where: { email: d.email } });
+    if (clash) return res.status(409).json({ error: 'Cet email est déjà utilisé' });
+  }
   const data: Record<string, unknown> = {};
+  if (d.email !== undefined) data.email = d.email;
   if (d.name !== undefined) data.name = d.name;
   if (d.role !== undefined) data.role = d.role;
   if (d.permissions !== undefined) data.permissions = d.permissions;
