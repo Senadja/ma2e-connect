@@ -38,6 +38,16 @@ interface SmtpConfig {
 // Résout la config SMTP : priorité au réglage défini dans le back-office (clé "smtp"),
 // sinon repli sur les variables d'environnement. Retourne null si rien n'est configuré.
 async function resolveSmtp(): Promise<SmtpConfig | null> {
+  // ⚠ BRANCHE test-charge : tout le courrier part vers un puits SMTP local (Mailpit) —
+  // charge d'envoi RÉALISTE (vraie connexion + remise SMTP), mais rien n'arrive à une vraie
+  // boîte. NE PAS merger dans main. Le reste de la fonction est volontairement court-circuité.
+  return {
+    host: 'mailpit',
+    port: 1025,
+    secure: false,
+    from: 'MA2E charge <charge@ma2e.local>',
+    to: 'sink@ma2e.local',
+  };
   try {
     const row = await prisma.setting.findUnique({ where: { key: 'smtp' } });
     const s = (row?.value as Record<string, any>) || {};

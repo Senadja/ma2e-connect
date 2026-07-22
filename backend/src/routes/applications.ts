@@ -8,8 +8,7 @@ import { prisma } from '../lib/prisma';
 import { requireAuth, requirePermission } from '../middleware/auth';
 import { publicWriteLimiter } from '../lib/rateLimit';
 import { signDoc, verifyDoc } from '../lib/docSign';
-// ⚠ BRANCHE test-charge : sendApplicationNotification retiré (spam pendant les tests de charge).
-import { sendApplicationDecision } from '../lib/mailer';
+import { sendApplicationNotification, sendApplicationDecision } from '../lib/mailer';
 
 export const applicationsRouter = Router();
 
@@ -122,9 +121,17 @@ applicationsRouter.post('/', publicWriteLimiter, async (req, res) => {
     },
   });
 
-  // ⚠ BRANCHE test-charge : notification e-mail d'adhésion DÉSACTIVÉE.
-  // Un test de charge génère des centaines de soumissions → autant d'e-mails au client.
-  // NE PAS merger dans main (main envoie bien la notification à chaque demande réelle).
+  // Notification e-mail (non bloquante).
+  void sendApplicationNotification({
+    appId,
+    category: d.category,
+    type: d.type,
+    name: d.name,
+    matricule: d.matricule,
+    email: d.email || '',
+    phone: d.phone,
+    data: d.data,
+  });
 
   res.status(201).json({ appId: application.appId, id: application.id });
 });

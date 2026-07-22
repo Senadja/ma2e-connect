@@ -29,6 +29,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      # ⚠ BRANCHE test-charge : puits SMTP (voir service mailpit ci-dessous).
+      mailpit:
+        condition: service_started
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://ma2e_admin:${DB_PASSWORD}@db:5432/ma2edb?schema=public
@@ -56,6 +59,14 @@ services:
       - ma2e_appdocs:/app/app-docs
     expose:
       - "3000"
+
+  # ⚠ BRANCHE test-charge UNIQUEMENT : puits SMTP. Capte tout le courrier généré pendant
+  # le test de charge (vraie remise SMTP → charge réaliste) mais ne livre RIEN à une vraie
+  # boîte. `resolveSmtp()` est court-circuité vers mailpit:1025 sur cette branche.
+  # NE PAS merger dans main.
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
 
   caddy:
     image: caddy:2-alpine
