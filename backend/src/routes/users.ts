@@ -4,10 +4,13 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { requireAuth, requirePermission } from '../middleware/auth';
 import { PERMISSIONS, PROFILES } from '../lib/permissions';
+import { sendStaffWelcome } from '../lib/mailer';
 
 export const usersRouter = Router();
 
 const SELECT = { id: true, email: true, name: true, role: true, permissions: true, createdAt: true };
+
+const ROLE_LABELS: Record<string, string> = { ADMIN: 'Administrateur', EDITOR: 'Éditeur', USER: 'Utilisateur' };
 
 usersRouter.use(requireAuth, requirePermission('users:manage'));
 
@@ -48,6 +51,9 @@ usersRouter.post('/', async (req, res) => {
     data: { email: d.email, name: d.name, password, role: d.role, permissions: d.permissions },
     select: SELECT,
   });
+  // Mail de bienvenue, non bloquant : un échec d'envoi ne doit pas annuler la création
+  // (la fonction avale ses propres erreurs, d'où le fire-and-forget).
+  void sendStaffWelcome(user.email, user.name, ROLE_LABELS[user.role] ?? user.role);
   res.status(201).json(user);
 });
 

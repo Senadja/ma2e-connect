@@ -96,6 +96,16 @@ export const UsersManager = () => {
     });
   };
 
+  const permsEqual = (a: string[], b: string[]) => a.length === b.length && a.every((p) => b.includes(p));
+
+  // Profil « actif » (vert persistant) = celui dont l'ensemble de droits correspond à la
+  // sélection courante ; le profil « admin » correspond au rôle Administrateur.
+  const isActiveProfile = (key: string, profile: { permissions: string[] }) => {
+    if (!editing) return false;
+    if (key === "admin") return editing.role === "ADMIN";
+    return editing.role !== "ADMIN" && permsEqual(editing.permissions, profile.permissions);
+  };
+
   const emailChanged = !!editing?.id && editing.email !== originalEmail;
 
   return (
@@ -187,7 +197,12 @@ export const UsersManager = () => {
                 <div className="flex flex-wrap gap-2">
                   {meta && Object.entries(meta.profiles).map(([key, p]) => (
                     <button key={key} type="button" onClick={() => applyProfile(key)}
-                      className="px-3 py-1.5 rounded-full text-xs font-bold bg-secondary/50 hover:bg-primary hover:text-white transition-colors">
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-xs font-bold transition-colors",
+                        isActiveProfile(key, p)
+                          ? "bg-primary text-white shadow-sm shadow-primary/20"
+                          : "bg-secondary/50 hover:bg-primary/90 hover:text-white"
+                      )}>
                       {p.label}
                     </button>
                   ))}
@@ -218,7 +233,9 @@ export const UsersManager = () => {
                   {(["EDITOR", "ADMIN"] as const).map((r) => (
                     <button key={r} type="button" onClick={() => setEditing({ ...editing, role: r })}
                       className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all",
-                        editing.role === r ? "bg-primary text-white" : "bg-secondary/40 text-muted-foreground")}>
+                        editing.role === r
+                          ? "bg-primary text-white shadow-md shadow-primary/20"
+                          : "bg-secondary/40 text-muted-foreground hover:bg-secondary")}>
                       {r === "ADMIN" ? "Administrateur" : "Éditeur"}
                     </button>
                   ))}

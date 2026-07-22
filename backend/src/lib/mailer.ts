@@ -155,6 +155,50 @@ export async function sendLoginCode(to: string, name: string, code: string): Pro
   });
 }
 
+// Bienvenue d'un membre du personnel créé par un administrateur.
+// Comme les notifications de demandes, les erreurs sont AVALÉES : un e-mail de bienvenue
+// perdu ne doit jamais faire échouer la création du compte (contrairement au code de
+// connexion, dont l'échec doit remonter). Le membre reçoit son rôle et le rappel que la
+// connexion enverra un code à 6 chiffres sur cette même adresse.
+export async function sendStaffWelcome(to: string, name: string, roleLabel: string): Promise<void> {
+  const loginUrl = `${env.publicUrl}/admin/login`;
+  const subject = 'Votre accès au back-office MA2E';
+  const text = [
+    `Bonjour ${name},`,
+    '',
+    `Vous avez été ajouté(e) en tant que personnel de la MA2E, avec le rôle « ${roleLabel} ».`,
+    '',
+    'Vous pouvez accéder au back-office à cette adresse :',
+    `    ${loginUrl}`,
+    '',
+    `Votre identifiant de connexion est votre adresse e-mail : ${to}`,
+    'Votre mot de passe vous est communiqué directement par votre administrateur.',
+    '',
+    'À chaque connexion, un code à 6 chiffres vous sera envoyé sur cette adresse e-mail :',
+    'il complète votre mot de passe et empêche que quiconque se connecte à votre place.',
+    '',
+    "La Mutuelle des Agents de l'Eau et de l'Électricité (MA2E)",
+  ].join('\n');
+
+  const cfg = await resolveSmtp();
+  if (!cfg) {
+    console.log(`📧 [mailer désactivé] ${subject} → ${to} (rôle : ${roleLabel})`);
+    return;
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: cfg.host,
+      port: cfg.port,
+      secure: cfg.secure,
+      auth: cfg.user ? { user: cfg.user, pass: cfg.pass } : undefined,
+    });
+    await transporter.sendMail({ from: cfg.from, to, subject, text });
+  } catch (err) {
+    console.error('Échec envoi e-mail de bienvenue:', (err as Error).message);
+  }
+}
+
 interface DecisionMail {
   appId: string;
   category: string;
