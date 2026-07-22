@@ -18,9 +18,12 @@ const RESEND_COOLDOWN_MS = 60 * 1000; // délai minimal entre deux envois
 const BACKUP_CODE_COUNT = 8;
 
 // Limite les tentatives de connexion (anti brute-force).
+// ⚠ BRANCHE test-charge : `skip` neutralise le limiteur pour les tests de charge.
+// NE PAS merger dans main (main garde le rate limiting pour l'audit de sécurité).
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
+  skip: () => true,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Trop de tentatives. Réessayez dans quelques minutes.' },
@@ -28,9 +31,11 @@ const loginLimiter = rateLimit({
 
 // Étape 2 : plafond par IP, en complément du compteur de tentatives porté par le challenge
 // lui-même. Plus permissif que le login car une saisie de code se rate facilement.
+// ⚠ BRANCHE test-charge : `skip` neutralise le limiteur (voir ci-dessus).
 const verifyLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
+  skip: () => true,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Trop de tentatives. Réessayez dans quelques minutes.' },
