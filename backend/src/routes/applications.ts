@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import multer from 'multer';
 import path from 'path';
@@ -37,8 +37,21 @@ const docUpload = multer({
   fileFilter: (_req, file, cb) => cb(null, ALLOWED_EXT.has(path.extname(file.originalname).toLowerCase())),
 });
 
+// Enrobe multer pour transformer ses erreurs en réponse JSON exploitable au lieu d'un 500 HTML
+// opaque : fichier trop volumineux (413), ou écriture impossible / multipart invalide (500 + log
+// de la cause réelle, ex. « ENOSPC: no space left » quand le volume des pièces est saturé).
+const receiveDoc = (req: Request, res: Response, next: NextFunction) =>
+  docUpload.single('file')(req, res, (err: unknown) => {
+    if (!err) return next();
+    if ((err as { code?: string }).code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'Fichier trop volumineux (8 Mo max).' });
+    }
+    console.error('Échec réception pièce justificative:', (err as Error).message);
+    return res.status(500).json({ error: "Le fichier n'a pas pu être enregistré. Réessayez." });
+  });
+
 // Public (rate-limité) : reçoit une pièce et renvoie une référence d'API (non résolvable sans signature).
-applicationsRouter.post('/documents', publicWriteLimiter, docUpload.single('file'), (req, res) => {
+applicationsRouter.post('/documents', publicWriteLimiter, receiveDoc, (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Fichier requis (PDF, image ou Word, 8 Mo max).' });
   res.status(201).json({ path: `/api/applications/documents/${req.file.filename}`, name: req.file.originalname });
 });
