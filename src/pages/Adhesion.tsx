@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { FileText, UserPlus, CheckCircle2, Upload, Briefcase, User, X, Users } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { compressImage } from "@/lib/imageCompress";
 import { useSettings, DEFAULT_SOCIETES } from "@/lib/content";
 import { useTranslation } from "react-i18next";
 
@@ -108,8 +109,9 @@ const Adhesion = () => {
   const uploadSlot = async (slot: Slot, file: File) => {
     setUploading(slot);
     try {
+      const compressed = await compressImage(file);
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", compressed);
       const res = await api<{ path: string; name: string }>("/applications/documents", { method: "POST", isForm: true, body: fd });
       setDocs((d) => ({ ...d, [slot]: { name: res.name, path: res.path } }));
       toast.success("Document ajouté.");

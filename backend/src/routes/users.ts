@@ -37,6 +37,12 @@ function grantsAdminPower(role?: string, permissions?: string[]): boolean {
   return role === 'ADMIN' || !!permissions?.includes('users:manage');
 }
 
+// Deux jeux de permissions équivalents (ordre ignoré). Sert à distinguer un champ
+// réellement modifié d'un champ simplement renvoyé tel quel par le formulaire.
+function samePerms(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((p) => b.includes(p));
+}
+
 usersRouter.post('/', async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
@@ -72,33 +78,48 @@ usersRouter.put('/:id', async (req, res) => {
   const parsed = updateSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
   const d = parsed.data;
-  // Anti-escalade : seul un ADMIN peut octroyer le rôle ADMIN / la permission users:manage.
-  if (grantsAdminPower(d.role, d.permissions) && req.user!.role.toLowerCase() !== 'admin') {
-    return res.status(403).json({ error: 'Seul un administrateur peut accorder le rôle ADMIN ou la permission users:manage.' });
-  }
-  // Anti auto-promotion : on ne modifie pas son propre rôle ni ses propres permissions.
-  if (req.params.id === req.user!.id && (d.role !== undefined || d.permissions !== undefined)) {
-    return res.status(400).json({ error: 'Vous ne pouvez pas modifier votre propre rôle ou vos permissions.' });
-  }
-  // Un compte détenant des pouvoirs admin (rôle ADMIN ou users:manage) ne peut être modifié
-  // — y compris son mot de passe — que par un ADMIN (sinon un non-admin users:manage réinitialiserait
-  // le mot de passe d'un admin puis se connecterait à sa place).
+
   const target = await prisma.user.findUnique({ where: { id: req.params.id } });
   if (!target) return res.status(404).json({ error: 'Utilisateur introuvable' });
-  if (grantsAdminPower(target.role, target.permissions) && req.user!.role.toLowerCase() !== 'admin') {
-    return res.status(403).json({ error: 'Seul un administrateur peut modifier un compte administrateur.' });
+
+  // Le formulaire de gestion des comptes renvoie TOUJOURS rôle + permissions, même inchangés.
+  // On ne considère donc ces champs sensibles comme « modifiés » que si leur valeur DIFFÈRE
+  // réellement de l'existant. Sans cela, changer uniquement le mot de passe (ou le nom) de son
+  // propre compte déclenchait à tort le garde-fou anti auto-promotion (400).
+  const roleChanged = d.role !== undefined && d.role !== target.role;
+  const permsChanged = d.permissions !== undefined && !samePerms(d.permissions, target.permissions);
+  const emailChanged = d.email !== undefined && d.email !== target.email;
+  const actorIsAdmin = req.user!.role.toLowerCase() === 'admin';
+
+  // Un compte à pouvoirs admin (rôle ADMIN ou permission users:manage) ne peut être géré que par
+  // un ADMIN — que la cible les détienne DÉJÀ (sinon un non-admin réinitialiserait le mot de passe
+  // d'un admin puis se connecterait à sa place) ou qu'on cherche à les lui ACCORDER (anti-escalade).
+  const nextRole = roleChanged ? d.role! : target.role;
+  const nextPerms = permsChanged ? d.permissions! : target.permissions;
+  if (
+    !actorIsAdmin &&
+    (grantsAdminPower(target.role, target.permissions) || grantsAdminPower(nextRole, nextPerms))
+  ) {
+    return res.status(403).json({ error: 'Seul un administrateur peut gérer un compte à pouvoirs administrateur.' });
   }
-  // Changement d'e-mail : refuse si l'adresse est déjà portée par un AUTRE compte
-  // (un e-mail inchangé retombe sur la cible elle-même et reste autorisé).
-  if (d.email !== undefined && d.email !== target.email) {
-    const clash = await prisma.user.findUnique({ where: { email: d.email } });
+
+  // Anti auto-promotion : on ne modifie pas son propre rôle ni ses propres permissions
+  // (le changement de son propre mot de passe / nom / e-mail reste autorisé).
+  if (req.params.id === req.user!.id && (roleChanged || permsChanged)) {
+    return res.status(400).json({ error: 'Vous ne pouvez pas modifier votre propre rôle ou vos permissions.' });
+  }
+
+  // Changement d'e-mail : refuse si l'adresse est déjà portée par un AUTRE compte.
+  if (emailChanged) {
+    const clash = await prisma.user.findUnique({ where: { email: d.email! } });
     if (clash) return res.status(409).json({ error: 'Cet email est déjà utilisé' });
   }
+
   const data: Record<string, unknown> = {};
-  if (d.email !== undefined) data.email = d.email;
+  if (emailChanged) data.email = d.email;
   if (d.name !== undefined) data.name = d.name;
-  if (d.role !== undefined) data.role = d.role;
-  if (d.permissions !== undefined) data.permissions = d.permissions;
+  if (roleChanged) data.role = d.role;
+  if (permsChanged) data.permissions = d.permissions;
   if (d.password) data.password = await bcrypt.hash(d.password, 10);
   const user = await prisma.user
     .update({ where: { id: req.params.id }, data, select: SELECT })

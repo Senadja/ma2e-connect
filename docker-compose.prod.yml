@@ -31,7 +31,9 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://ma2e_admin:${DB_PASSWORD}@db:5432/ma2edb?schema=public
+      # connection_limit explicite : pool prévisible sous charge (par défaut Prisma = cpus*2+1,
+      # soit très peu dans un conteneur bridé). 15 reste largement sous le max_connections Postgres.
+      DATABASE_URL: postgresql://ma2e_admin:${DB_PASSWORD}@db:5432/ma2edb?schema=public&connection_limit=15
       PORT: "3000"
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis — chaîne aléatoire >= 32 caractères (openssl rand -hex 32)}
       JWT_EXPIRES_IN: "8h"

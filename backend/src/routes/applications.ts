@@ -8,6 +8,7 @@ import { prisma } from '../lib/prisma';
 import { requireAuth, requirePermission } from '../middleware/auth';
 import { publicWriteLimiter } from '../lib/rateLimit';
 import { signDoc, verifyDoc } from '../lib/docSign';
+import { nextAppNumber } from '../lib/appRef';
 import { sendApplicationNotification, sendApplicationDecision } from '../lib/mailer';
 
 export const applicationsRouter = Router();
@@ -92,11 +93,31 @@ const createSchema = z.object({
   data: z.record(z.string(), z.any()).default({}),
 });
 
-// Génère une référence lisible : MA2E-2026-0001
-async function nextAppId(): Promise<string> {
+// Crée la demande avec une référence atomique (voir lib/appRef : séquence Postgres `nextval`).
+// Le retry sur collision (Prisma P2002) reste en filet de sécurité — il ne se déclenche plus avec
+// la séquence, mais couvre un éventuel doublon résiduel dans des données héritées.
+async function createApplication(d: z.infer<typeof createSchema>) {
   const year = new Date().getFullYear();
-  const count = await prisma.application.count();
-  return `MA2E-${year}-${String(count + 1).padStart(4, '0')}`;
+  for (let attempt = 0; ; attempt++) {
+    const appId = `MA2E-${year}-${String(await nextAppNumber()).padStart(4, '0')}`;
+    try {
+      return await prisma.application.create({
+        data: {
+          appId,
+          category: d.category,
+          type: d.type,
+          name: d.name,
+          matricule: d.matricule,
+          email: d.email || '',
+          phone: d.phone,
+          data: d.data,
+        },
+      });
+    } catch (err) {
+      if ((err as { code?: string }).code === 'P2002' && attempt < 5) continue;
+      throw err;
+    }
+  }
 }
 
 // POST public (rate-limité) — réception d'une demande depuis le site.
@@ -106,24 +127,11 @@ applicationsRouter.post('/', publicWriteLimiter, async (req, res) => {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
   const d = parsed.data;
-  const appId = await nextAppId();
-
-  const application = await prisma.application.create({
-    data: {
-      appId,
-      category: d.category,
-      type: d.type,
-      name: d.name,
-      matricule: d.matricule,
-      email: d.email || '',
-      phone: d.phone,
-      data: d.data,
-    },
-  });
+  const application = await createApplication(d);
 
   // Notification e-mail (non bloquante).
   void sendApplicationNotification({
-    appId,
+    appId: application.appId,
     category: d.category,
     type: d.type,
     name: d.name,

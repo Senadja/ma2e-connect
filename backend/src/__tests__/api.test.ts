@@ -3,6 +3,7 @@ import request from 'supertest';
 import bcrypt from 'bcrypt';
 import { app } from '../app';
 import { prisma } from '../lib/prisma';
+import { ensureAppRefSequence } from '../lib/appRef';
 
 // Tests d'intégration de l'API (non destructifs).
 // Pré-requis : PostgreSQL démarré + seed exécuté (admin@ma2e.ci / admin123).
@@ -53,6 +54,12 @@ async function adminToken(): Promise<string> {
   cachedToken = verified.body.token;
   return cachedToken;
 }
+
+// La séquence des références de demandes est normalement créée au démarrage du serveur
+// (index.ts) ; les tests importent l'app sans passer par ce bootstrap, on l'initialise donc ici.
+beforeAll(async () => {
+  await ensureAppRefSequence();
+});
 
 describe('Santé & Auth', () => {
   it('GET /api/health → 200 ok', async () => {
@@ -259,6 +266,28 @@ describe('Validation des demandes', () => {
     const res = await request(app).post('/api/applications').send({ category: 'crédit' });
     expect(res.status).toBe(400);
   });
+
+  // Non-régression : la génération d'appId était une course (count()+1 → même référence pour
+  // deux soumissions simultanées → violation @unique → HTTP 500). Le test de charge Gatling
+  // relevait 3–5,5 % de KO ici. On tire une rafale concurrente : chaque demande doit aboutir
+  // (201) avec une référence UNIQUE, jamais de 500.
+  it('POST /api/applications en rafale → références uniques, aucun 500', async () => {
+    const N = 20;
+    const payload = { category: 'crédit', type: 'test-concurrence', name: 'Test Concurrence', phone: '0102030405' };
+    const results = await Promise.all(
+      Array.from({ length: N }, () =>
+        request(app).post('/api/applications').set('X-Forwarded-For', nextIp()).send(payload)
+      )
+    );
+    const ids = results.map((r) => r.body?.id).filter(Boolean);
+    try {
+      for (const r of results) expect(r.status).toBe(201);
+      const appIds = results.map((r) => r.body.appId);
+      expect(new Set(appIds).size).toBe(N);
+    } finally {
+      await prisma.application.deleteMany({ where: { id: { in: ids } } });
+    }
+  });
 });
 
 describe("Rôle éditeur — 2FA, permissions et gestion par l'admin", () => {
@@ -266,6 +295,10 @@ describe("Rôle éditeur — 2FA, permissions et gestion par l'admin", () => {
   const EDITOR_EMAIL_2 = 'editeur-mute@ma2e.local';
   const EDITOR_PASSWORD = 'editeur-mdp-initial';
   const EDITOR_PASSWORD_2 = 'editeur-mdp-reinitialise';
+  // Compte admin jetable pour tester l'édition de SON PROPRE compte sans muter l'admin réel.
+  const SELF_EMAIL = 'admin-self-test@ma2e.local';
+  const SELF_PASSWORD = 'self-mdp-initial';
+  const SELF_PASSWORD_2 = 'self-mdp-change';
   let editorId = '';
   const createdArticleIds: string[] = [];
 
@@ -273,7 +306,7 @@ describe("Rôle éditeur — 2FA, permissions et gestion par l'admin", () => {
     for (const id of createdArticleIds) {
       await prisma.article.delete({ where: { id } }).catch(() => null);
     }
-    await prisma.user.deleteMany({ where: { email: { in: [EDITOR_EMAIL, EDITOR_EMAIL_2] } } });
+    await prisma.user.deleteMany({ where: { email: { in: [EDITOR_EMAIL, EDITOR_EMAIL_2, SELF_EMAIL] } } });
   });
 
   // Jeton d'un éditeur : identique au flux réel (mot de passe puis code), avec un code
@@ -386,5 +419,33 @@ describe("Rôle éditeur — 2FA, permissions et gestion par l'admin", () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ role: 'EDITOR' });
     expect(res.status).toBe(400);
+  });
+
+  // Non-régression : le formulaire de gestion des comptes renvoie TOUJOURS rôle + permissions.
+  // Quand l'admin éditait SON propre compte pour changer juste son mot de passe, le back-office
+  // renvoyait 400 (« vous ne pouvez pas modifier votre propre rôle ») alors que rien de sensible
+  // ne changeait. On rejoue exactement ce payload : rôle/permissions inchangés + nouveau mot de passe.
+  it("un administrateur change SON propre mot de passe (rôle inchangé) → 200", async () => {
+    const adminTok = await adminToken();
+    // Admin jetable, connecté sous sa propre identité pour l'édition de soi.
+    const created = await request(app)
+      .post('/api/users')
+      .set('Authorization', `Bearer ${adminTok}`)
+      .set('X-Forwarded-For', nextIp())
+      .send({ email: SELF_EMAIL, name: 'Admin Self', password: SELF_PASSWORD, role: 'ADMIN', permissions: [] });
+    expect(created.status).toBe(201);
+    const selfId = created.body.id;
+
+    const selfTok = await editorToken(SELF_EMAIL, SELF_PASSWORD);
+    const res = await request(app)
+      .put(`/api/users/${selfId}`)
+      .set('Authorization', `Bearer ${selfTok}`)
+      // Payload identique à celui du front : rôle + permissions renvoyés inchangés.
+      .send({ name: 'Admin Self', role: 'ADMIN', permissions: [], password: SELF_PASSWORD_2 });
+    expect(res.status).toBe(200);
+
+    // Le mot de passe a bien changé : l'ancien est refusé, le nouveau ouvre un challenge.
+    expect((await startLogin(SELF_EMAIL, SELF_PASSWORD)).status).toBe(401);
+    expect((await startLogin(SELF_EMAIL, SELF_PASSWORD_2)).status).toBe(202);
   });
 });

@@ -26,7 +26,21 @@ export const app = express();
 // Nombre exact de proxys, PAS `true` (sinon X-Forwarded-For serait usurpable).
 app.set('trust proxy', 1);
 
-app.use(helmet());
+// API JSON : jamais rendue ni intégrée dans une frame. On verrouille explicitement les
+// directives CSP qui n'héritent pas de default-src (frame-ancestors / form-action / base-uri) —
+// signalées par l'audit ZAP comme « directive sans fallback » sur /api.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        'frame-ancestors': ["'none'"],
+        'form-action': ["'self'"],
+        'base-uri': ["'self'"],
+      },
+    },
+  })
+);
 app.use(
   cors({
     origin: (origin, cb) => {
