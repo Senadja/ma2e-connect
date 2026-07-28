@@ -2,6 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "headers": [
     {
+      "source": "/((?!api/|documents/uploads/).*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "https://ma2e-connect.vercel.app" }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
         { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
