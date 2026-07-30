@@ -39,6 +39,10 @@ services:
       JWT_EXPIRES_IN: "8h"
       # Coupe-circuit de la double authentification (voir .env.prod.example).
       MFA_ENABLED: ${MFA_ENABLED:-true}
+      # Coupe-circuits TEMPORAIRES de test (défaut false = protection normale ; voir .env.prod.example).
+      # À REMETTRE à false après la campagne de re-test cyber.
+      RATE_LIMIT_DISABLED: ${RATE_LIMIT_DISABLED:-false}
+      APPLICATION_NOTIFY_DISABLED: ${APPLICATION_NOTIFY_DISABLED:-false}
       # Origines autorisées (front Vercel). Les rewrites Vercel passent par le serveur,
       # mais on autorise quand même l'origine pour tout appel direct.
       CORS_ORIGIN: ${CORS_ORIGIN}

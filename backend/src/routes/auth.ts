@@ -18,9 +18,11 @@ const RESEND_COOLDOWN_MS = 60 * 1000; // délai minimal entre deux envois
 const BACKUP_CODE_COUNT = 8;
 
 // Limite les tentatives de connexion (anti brute-force).
+// `skip` le coupe via RATE_LIMIT_DISABLED, le temps d'une campagne de test (voir lib/env).
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
+  skip: () => env.rateLimitDisabled,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Trop de tentatives. Réessayez dans quelques minutes.' },
@@ -31,6 +33,7 @@ const loginLimiter = rateLimit({
 const verifyLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
+  skip: () => env.rateLimitDisabled,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Trop de tentatives. Réessayez dans quelques minutes.' },

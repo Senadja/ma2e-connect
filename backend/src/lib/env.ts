@@ -37,6 +37,16 @@ export const env = {
   // tombe en panne ET que les codes de secours sont perdus. Il exige un accès au serveur
   // (SSH + redémarrage), donc il reste hors de portée d'un attaquant venant d'Internet.
   mfaEnabled: (process.env.MFA_ENABLED ?? 'true').toLowerCase() !== 'false',
+  // Coupe-circuits TEMPORAIRES pour les campagnes de test (audit de charge / re-test cyber).
+  // Défaut = false → comportement normal de production. À REMETTRE à false après les tests.
+  //  - RATE_LIMIT_DISABLED=true coupe TOUS les limiteurs (login, 2FA, formulaires publics) :
+  //    sinon une seule IP de test atteint le plafond en quelques secondes. ⚠ Une prod sans
+  //    limite = brute-force ouvert sur le login → ne l'activer QUE le temps du test.
+  //  - APPLICATION_NOTIFY_DISABLED=true coupe l'e-mail envoyé à chaque nouvelle demande
+  //    (évite de noyer la boîte quand un scan soumet des centaines de demandes).
+  // Tout changement exige un redémarrage du backend.
+  rateLimitDisabled: (process.env.RATE_LIMIT_DISABLED ?? 'false').toLowerCase() === 'true',
+  applicationNotifyDisabled: (process.env.APPLICATION_NOTIFY_DISABLED ?? 'false').toLowerCase() === 'true',
   corsOrigins: (process.env.CORS_ORIGIN ?? 'http://localhost:8080,http://localhost:5173')
     .split(',')
     .map((s) => s.trim())

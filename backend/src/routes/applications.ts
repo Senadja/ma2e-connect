@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
+import { env } from '../lib/env';
 import { requireAuth, requirePermission } from '../middleware/auth';
 import { publicWriteLimiter } from '../lib/rateLimit';
 import { signDoc, verifyDoc } from '../lib/docSign';
@@ -142,17 +143,20 @@ applicationsRouter.post('/', publicWriteLimiter, async (req, res) => {
   const d = parsed.data;
   const application = await createApplication(d);
 
-  // Notification e-mail (non bloquante).
-  void sendApplicationNotification({
-    appId: application.appId,
-    category: d.category,
-    type: d.type,
-    name: d.name,
-    matricule: d.matricule,
-    email: d.email || '',
-    phone: d.phone,
-    data: d.data,
-  });
+  // Notification e-mail (non bloquante). Désactivable via APPLICATION_NOTIFY_DISABLED
+  // le temps d'une campagne de test (évite de noyer la boîte pendant un scan). Voir lib/env.
+  if (!env.applicationNotifyDisabled) {
+    void sendApplicationNotification({
+      appId: application.appId,
+      category: d.category,
+      type: d.type,
+      name: d.name,
+      matricule: d.matricule,
+      email: d.email || '',
+      phone: d.phone,
+      data: d.data,
+    });
+  }
 
   res.status(201).json({ appId: application.appId, id: application.id });
 });
