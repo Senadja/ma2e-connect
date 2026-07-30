@@ -51,6 +51,33 @@ app.use(
     credentials: true,
   })
 );
+
+// Défense en profondeur — rejet immédiat de la signature d'injection Shellshock
+// (« () { » : définition de fonction Bash, CVE-2014-6271/6278) dans l'URL ou les en-têtes.
+// Le backend n'invoque aucun shell (conteneur Alpine sans bash) : il n'y a pas de surface
+// Shellshock réelle. Ce rejet rapide (400) neutralise surtout le FAUX POSITIF « temporel »
+// de ZAP (il mesurait la latence du tunnel, pas une exécution de code) et coupe le motif
+// d'attaque au plus tôt, sans rien changer pour le trafic légitime.
+const SHELLSHOCK_SIGNATURE = /\(\s*\)\s*\{/;
+app.use((req, res, next) => {
+  const safeDecode = (s: string) => {
+    try {
+      return decodeURIComponent(s);
+    } catch {
+      return s;
+    }
+  };
+  const suspects = [
+    safeDecode(req.originalUrl),
+    String(req.headers['user-agent'] ?? ''),
+    String(req.headers['referer'] ?? ''),
+    String(req.headers['cookie'] ?? ''),
+  ];
+  if (suspects.some((v) => SHELLSHOCK_SIGNATURE.test(v))) {
+    return res.status(400).json({ error: 'Requête invalide.' });
+  }
+  next();
+});
 app.use(express.json({ limit: '2mb' }));
 app.use(auditMiddleware);
 
