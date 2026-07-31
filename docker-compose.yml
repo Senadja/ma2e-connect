@@ -8,7 +8,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ma2e_admin
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-ma2e_password}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD requis — définissez-le dans .env (jamais de mot de passe en dur)}
       POSTGRES_DB: ma2edb
     volumes:
       - ma2e_pgdata:/var/lib/postgresql/data
@@ -26,7 +26,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://ma2e_admin:${DB_PASSWORD:-ma2e_password}@db:5432/ma2edb?schema=public
+      DATABASE_URL: postgresql://ma2e_admin:${DB_PASSWORD:?DB_PASSWORD requis — définissez-le dans .env (jamais de mot de passe en dur)}@db:5432/ma2edb?schema=public
       PORT: "3000"
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis — générez une chaîne aléatoire >= 32 caractères (ex. openssl rand -hex 32) et mettez-la dans .env}
       JWT_EXPIRES_IN: "8h"
