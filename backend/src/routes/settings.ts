@@ -29,40 +29,39 @@ settingsRouter.get('/:key', async (req, res) => {
 settingsRouter.use(requireAuth, requirePermission('settings:write'));
 
 // Lecture admin d'une clé sensible (ex. smtp). /secure/:key = 2 segments, ne heurte pas /:key public.
+// Sécurité (audit GS2E #2) : les secrets ne sont JAMAIS renvoyés en clair. Le mot de passe SMTP
+// est en écriture seule — on n'expose que sa présence via `hasPass`.
 settingsRouter.get('/secure/:key', async (req, res) => {
-  const row = await prisma.setting.findUnique({ where: { key: String(req.params.key) } });
-  res.json(row?.value ?? null);
+  const key = String(req.params.key);
+  const row = await prisma.setting.findUnique({ where: { key } });
+  const value = row?.value ?? null;
+  if (key === 'smtp' && value && typeof value === 'object') {
+    const { pass, ...safe } = value as Record<string, unknown>;
+    return res.json({ ...safe, hasPass: !!pass });
+  }
+  res.json(value);
 });
 
 // Envoi d'un e-mail de test pour valider la configuration SMTP.
-// Utilise les valeurs envoyées (formulaire en cours, sans obligation d'enregistrer),
-// avec repli sur le réglage déjà sauvegardé puis sur l'environnement.
-const smtpTestSchema = z.object({
-  to: z.string().email('Adresse de réception invalide'),
-  host: z.string().optional(),
-  port: z.coerce.number().int().positive().optional(),
-  user: z.string().optional(),
-  pass: z.string().optional(),
-  secure: z.boolean().optional(),
-  from: z.string().optional(),
-});
-
+// Sécurité (audit GS2E #1 — SSRF/usurpation/relais) : aucune donnée de la requête n'est utilisée.
+// La connexion provient UNIQUEMENT de la config enregistrée côté serveur (clé « smtp », repli sur
+// l'environnement), et le destinataire est FORCÉ à l'adresse du compte connecté (req.user.email) —
+// impossible d'envoyer un test à une adresse arbitraire. Cela supprime le SSRF, l'usurpation
+// d'expéditeur et le relais de courrier. Conséquence UX : enregistrer la configuration avant de la tester.
 settingsRouter.post('/smtp/test', async (req, res) => {
-  const parsed = smtpTestSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Paramètres invalides' });
-  }
-  const b = parsed.data;
+  const to = req.user?.email;
+  if (!to) return res.status(400).json({ error: 'Aucune adresse e-mail associée à votre compte.' });
+
   const saved = ((await prisma.setting.findUnique({ where: { key: 'smtp' } }))?.value as Record<string, any>) || {};
 
-  const host = b.host || saved.host;
-  const port = b.port || Number(saved.port) || 587;
-  const user = b.user || saved.user || undefined;
-  const pass = b.pass || saved.pass || undefined;
-  const secure = b.secure ?? saved.secure ?? port === 465;
-  const from = b.from || saved.from || env.smtp.from;
+  const host = saved.host || env.smtp.host;
+  const port = Number(saved.port) || env.smtp.port || 587;
+  const user = saved.user || env.smtp.user || undefined;
+  const pass = saved.pass || env.smtp.pass || undefined;
+  const secure = saved.secure ?? port === 465;
+  const from = saved.from || env.smtp.from;
 
-  if (!host) return res.status(400).json({ error: 'Renseignez au moins le serveur (host) avant de tester.' });
+  if (!host) return res.status(400).json({ error: 'Enregistrez la configuration SMTP (serveur/host) avant de la tester.' });
 
   try {
     const transporter = nodemailer.createTransport({
@@ -76,17 +75,14 @@ settingsRouter.post('/smtp/test', async (req, res) => {
     });
     await transporter.sendMail({
       from,
-      to: b.to,
+      to,
       subject: 'Test de configuration SMTP — site MA2E',
+      // Message minimal : ne divulgue aucun détail technique (serveur, port, expéditeur…).
       text:
-        `Cet e-mail confirme que la configuration SMTP du site MA2E fonctionne.\n\n` +
-        `Serveur : ${host}:${port}\n` +
-        `Sécurisé : ${secure ? 'oui (SSL/TLS)' : 'non (STARTTLS si disponible)'}\n` +
-        `Authentifié : ${user ? 'oui' : 'non'}\n` +
-        `Expéditeur : ${from}\n\n` +
-        `Vous pouvez activer les notifications par e-mail en toute confiance.`,
+        'Cet e-mail confirme que la configuration SMTP du site MA2E fonctionne.\n\n' +
+        'Vous pouvez activer les notifications par e-mail en toute confiance.',
     });
-    return res.json({ ok: true });
+    return res.json({ ok: true, to });
   } catch (err) {
     return res.status(502).json({ error: `Envoi impossible : ${(err as Error).message}` });
   }
@@ -94,15 +90,38 @@ settingsRouter.post('/smtp/test', async (req, res) => {
 
 const schema = z.object({ value: z.any() });
 
+// Retire le mot de passe d'une valeur SMTP et le remplace par un indicateur de présence.
+function stripSmtpSecret(value: unknown): unknown {
+  if (!value || typeof value !== 'object') return value;
+  const { pass, ...safe } = value as Record<string, unknown>;
+  return { ...safe, hasPass: !!pass };
+}
+
 // Met à jour (ou crée) un réglage par clé.
 settingsRouter.put('/:key', async (req, res) => {
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Valeur invalide' });
   const key = String(req.params.key);
+  let value = parsed.data.value;
+
+  // Sécurité (audit GS2E #2) : le mot de passe SMTP est en écriture seule côté client. Le
+  // formulaire ne le renvoie pas (champ vide) — on conserve alors celui déjà enregistré au lieu
+  // de l'effacer, et on retire l'indicateur d'affichage `hasPass` avant de persister.
+  if (key === 'smtp' && value && typeof value === 'object') {
+    const incoming = { ...(value as Record<string, unknown>) };
+    delete incoming.hasPass;
+    if (!incoming.pass) {
+      const existing = (await prisma.setting.findUnique({ where: { key } }))?.value as Record<string, unknown> | undefined;
+      if (existing?.pass) incoming.pass = existing.pass;
+      else delete incoming.pass;
+    }
+    value = incoming;
+  }
+
   const row = await prisma.setting.upsert({
     where: { key },
-    update: { value: parsed.data.value },
-    create: { key, value: parsed.data.value },
+    update: { value },
+    create: { key, value },
   });
-  res.json({ key: row.key, value: row.value });
+  res.json({ key: row.key, value: key === 'smtp' ? stripSmtpSecret(row.value) : row.value });
 });

@@ -449,3 +449,49 @@ describe("Rôle éditeur — 2FA, permissions et gestion par l'admin", () => {
     expect((await startLogin(SELF_EMAIL, SELF_PASSWORD_2)).status).toBe(202);
   });
 });
+
+// Non-régression du pentest GS2E (rapport 08/2026). Chaque test rejoue un finding corrigé.
+describe('Remédiation audit GS2E', () => {
+  it('#3 un brouillon ne fuit pas par son slug (404 anonyme, 200 admin)', async () => {
+    const token = await adminToken();
+    const created = await request(app)
+      .post('/api/articles')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Brouillon confidentiel audit GS2E', excerpt: 'à ne pas divulguer', category: 'Actualité', status: 'draft' });
+    expect(created.status).toBe(201);
+    const slug = created.body.slug;
+    try {
+      // Anonyme : le brouillon n'existe pas (404, pas 403 — on ne confirme rien).
+      expect((await request(app).get(`/api/articles/${slug}`)).status).toBe(404);
+      // Admin authentifié : il peut le relire.
+      const asAdmin = await request(app).get(`/api/articles/${slug}`).set('Authorization', `Bearer ${token}`);
+      expect(asAdmin.status).toBe(200);
+      expect(asAdmin.body.status).toBe('draft');
+    } finally {
+      await prisma.article.delete({ where: { id: created.body.id } }).catch(() => null);
+    }
+  });
+
+  it('#4 une pièce dont le contenu ne correspond pas à son extension est rejetée → 400', async () => {
+    const res = await request(app)
+      .post('/api/applications/documents')
+      .set('X-Forwarded-For', nextIp())
+      .attach('file', Buffer.from("ceci n'est pas un vrai PDF"), 'faux.pdf');
+    expect(res.status).toBe(400);
+  });
+
+  it('#5 un corps JSON malformé renvoie 400 (et non plus 500)', async () => {
+    const res = await request(app)
+      .post('/api/applications')
+      .set('X-Forwarded-For', nextIp())
+      .set('Content-Type', 'application/json')
+      .send('{"category": "crédit"'); // accolade non fermée
+    expect(res.status).toBe(400);
+  });
+
+  it('#6 les lectures publiques exposent désormais un en-tête de limite de débit', async () => {
+    const res = await request(app).get('/api/articles').set('X-Forwarded-For', nextIp());
+    expect(res.status).toBe(200);
+    expect(res.headers['ratelimit-limit']).toBeDefined();
+  });
+});

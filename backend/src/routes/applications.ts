@@ -38,6 +38,30 @@ const docUpload = multer({
   fileFilter: (_req, file, cb) => cb(null, ALLOWED_EXT.has(path.extname(file.originalname).toLowerCase())),
 });
 
+// Sécurité (audit GS2E #4) : valide le CONTENU réel du fichier (magic bytes), pas seulement son
+// extension. Un exécutable renommé « .pdf » ne présente pas la signature attendue → rejeté.
+const MAGIC: Record<string, (b: Buffer) => boolean> = {
+  '.pdf': (b) => b.slice(0, 5).toString('latin1') === '%PDF-',
+  '.png': (b) => b.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+  '.jpg': (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+  '.jpeg': (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+  '.docx': (b) => b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04, // conteneur ZIP
+  '.doc': (b) => b.slice(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])), // OLE
+};
+
+function contentMatchesExt(filePath: string, ext: string): boolean {
+  const check = MAGIC[ext];
+  if (!check) return false;
+  const fd = fs.openSync(filePath, 'r');
+  try {
+    const buf = Buffer.alloc(8);
+    fs.readSync(fd, buf, 0, 8, 0);
+    return check(buf);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
 // Enrobe multer pour transformer ses erreurs en réponse JSON exploitable au lieu d'un 500 HTML
 // opaque : fichier trop volumineux (413), ou écriture impossible / multipart invalide (500 + log
 // de la cause réelle, ex. « ENOSPC: no space left » quand le volume des pièces est saturé).
@@ -54,6 +78,11 @@ const receiveDoc = (req: Request, res: Response, next: NextFunction) =>
 // Public (rate-limité) : reçoit une pièce et renvoie une référence d'API (non résolvable sans signature).
 applicationsRouter.post('/documents', publicWriteLimiter, receiveDoc, (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Fichier requis (PDF, image ou Word, 8 Mo max).' });
+  const ext = path.extname(req.file.filename).toLowerCase();
+  if (!contentMatchesExt(req.file.path, ext)) {
+    fs.unlink(req.file.path, () => {}); // signature non conforme → on ne conserve pas le fichier
+    return res.status(400).json({ error: 'Le contenu du fichier ne correspond pas à son type (PDF, image ou Word attendu).' });
+  }
   res.status(201).json({ path: `/api/applications/documents/${req.file.filename}`, name: req.file.originalname });
 });
 

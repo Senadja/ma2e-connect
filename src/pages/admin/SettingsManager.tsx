@@ -322,16 +322,14 @@ export const SettingsManager = () => {
     save.mutate({ key: "savingsDetails", value: cleaned }, { onSuccess: refreshPublic });
   };
 
-  const [smtp, setSmtp] = useState({ enabled: false, host: "", port: 587, user: "", pass: "", secure: false, from: "", to: "" });
-  const [testTo, setTestTo] = useState("");
+  const [smtp, setSmtp] = useState({ enabled: false, host: "", port: 587, user: "", pass: "", secure: false, from: "", to: "", hasPass: false });
   const [testing, setTesting] = useState(false);
   const sendSmtpTest = async () => {
-    const to = testTo.trim();
-    if (!to) { toast.error("Renseignez l'adresse de réception du test."); return; }
     setTesting(true);
     try {
-      await api("/settings/smtp/test", { method: "POST", auth: true, body: { ...smtp, to } });
-      toast.success(`E-mail de test envoyé à ${to}. Vérifiez la boîte (pensez aux indésirables).`);
+      // Le destinataire est imposé côté serveur : l'adresse du compte connecté.
+      const res = await api<{ ok: boolean; to: string }>("/settings/smtp/test", { method: "POST", auth: true });
+      toast.success(`E-mail de test envoyé à ${res.to}. Vérifiez la boîte (pensez aux indésirables).`);
     } catch (e: any) {
       toast.error(e?.message || "Envoi du test impossible.", { duration: 9000 });
     } finally {
@@ -1279,7 +1277,7 @@ export const SettingsManager = () => {
                 <div className="grid gap-2"><label className={label}>Utilisateur</label>
                   <Input value={smtp.user} onChange={(e) => setSmtp({ ...smtp, user: e.target.value })} placeholder="user@exemple.com" /></div>
                 <div className="grid gap-2"><label className={label}>Mot de passe</label>
-                  <Input type="password" value={smtp.pass} onChange={(e) => setSmtp({ ...smtp, pass: e.target.value })} placeholder="••••••••" /></div>
+                  <Input type="password" value={smtp.pass} onChange={(e) => setSmtp({ ...smtp, pass: e.target.value })} placeholder={smtp.hasPass ? "•••••••• (enregistré — laisser vide pour ne pas changer)" : "••••••••"} /></div>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="grid gap-2"><label className={label}>Expéditeur (From)</label>
@@ -1295,11 +1293,8 @@ export const SettingsManager = () => {
 
               <div className="rounded-xl border border-dashed border-primary/30 p-4 space-y-3">
                 <p className="text-sm font-semibold flex items-center gap-2"><Send className="h-4 w-4 text-primary" /> Tester l'envoi</p>
-                <p className="text-[11px] text-muted-foreground">Envoie un e-mail de test avec les valeurs ci-dessus (pas besoin d'enregistrer d'abord). En cas d'échec, le message d'erreur indique la cause : <em>timeout</em> = port bloqué côté serveur, <em>authentification refusée</em> = identifiant/mot de passe, etc.</p>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Input type="email" value={testTo} onChange={(e) => setTestTo(e.target.value)} placeholder="adresse-de-reception@exemple.com" />
-                  <Button type="button" variant="outline" disabled={testing} onClick={sendSmtpTest} className="rounded-full gap-2 shrink-0"><Send className="h-4 w-4" /> {testing ? "Envoi…" : "Envoyer un test"}</Button>
-                </div>
+                <p className="text-[11px] text-muted-foreground">Envoie un e-mail de test avec la configuration <strong>enregistrée</strong> (cliquez d'abord sur « Enregistrer le SMTP »). Le test part <strong>vers l'adresse de votre compte</strong>. En cas d'échec, le message d'erreur indique la cause : <em>timeout</em> = port bloqué côté serveur, <em>authentification refusée</em> = identifiant/mot de passe, etc.</p>
+                <Button type="button" variant="outline" disabled={testing} onClick={sendSmtpTest} className="rounded-full gap-2"><Send className="h-4 w-4" /> {testing ? "Envoi…" : "M'envoyer un test"}</Button>
               </div>
             </CardContent>
           </Card>

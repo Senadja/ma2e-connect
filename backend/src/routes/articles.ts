@@ -50,9 +50,16 @@ articlesRouter.get('/', optionalAuth, async (req, res) => {
   res.json(articles);
 });
 
-articlesRouter.get('/:slug', async (req, res) => {
-  const article = await prisma.article.findUnique({ where: { slug: req.params.slug } });
+// Sécurité (audit GS2E #3) : un brouillon ne doit pas fuiter par son slug (dérivé du titre,
+// donc devinable). Seul un admin ou un rédacteur authentifié peut le consulter ; sinon 404
+// (pas 403, pour ne pas confirmer son existence).
+articlesRouter.get('/:slug', optionalAuth, async (req, res) => {
+  const article = await prisma.article.findUnique({ where: { slug: String(req.params.slug) } });
   if (!article) return res.status(404).json({ error: 'Article introuvable' });
+  const canSeeAll = !!req.user && (req.user.role.toLowerCase() === 'admin' || (req.user.permissions || []).includes('news:write'));
+  if (article.status !== 'published' && !canSeeAll) {
+    return res.status(404).json({ error: 'Article introuvable' });
+  }
   res.json(article);
 });
 

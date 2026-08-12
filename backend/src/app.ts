@@ -18,6 +18,7 @@ import { teamRouter } from './routes/team';
 import { contactRouter } from './routes/contact';
 import { auditRouter } from './routes/audit';
 import { auditMiddleware } from './lib/audit';
+import { apiLimiter } from './lib/rateLimit';
 
 export const app = express();
 
@@ -104,6 +105,9 @@ app.use(
   })
 );
 
+// Limiteur global souple sur toute l'API (lectures comprises) — audit GS2E #6.
+app.use('/api', apiLimiter);
+
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', message: 'MA2E Connect Backend API is running' });
 });
@@ -125,6 +129,15 @@ app.use('/api/audit', auditRouter);
 
 // Gestion centralisée des erreurs.
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  // Erreurs du parseur de corps (body-parser) : renvoyer le bon code 4xx plutôt qu'un 500 opaque
+  // (audit GS2E #5 : un JSON malformé renvoyait 500 au lieu de 400).
+  const type = (err as { type?: string }).type;
+  if (type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'Corps de requête JSON invalide.' });
+  }
+  if (type === 'entity.too.large') {
+    return res.status(413).json({ error: 'Charge utile trop volumineuse.' });
+  }
   console.error(err);
   res.status(500).json({ error: 'Erreur serveur interne' });
 });

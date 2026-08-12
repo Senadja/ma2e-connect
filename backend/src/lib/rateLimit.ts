@@ -13,3 +13,16 @@ export const publicWriteLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Trop de requêtes depuis cette adresse. Réessayez dans quelques minutes.' },
 });
+
+// Limiteur GLOBAL et souple pour toute l'API, y compris les LECTURES (audit GS2E #6).
+// Objectif : freiner le scraping massif / le déni de service par un client non authentifié,
+// sans gêner un usage normal (une page du site déclenche plusieurs requêtes). Seuil large ;
+// coupable via RATE_LIMIT_DISABLED le temps d'une campagne de test.
+export const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 min
+  max: 300,
+  skip: () => env.rateLimitDisabled,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de requêtes. Réessayez dans une minute.' },
+});
