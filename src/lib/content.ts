@@ -64,7 +64,10 @@ export function useArticle(slug?: string) {
     enabled: !!slug,
     queryFn: async () => {
       try {
-        return await api<PublicArticle>(`/articles/${slug}`);
+        // auth: true → si un éditeur est connecté (token présent), le backend renvoie aussi les
+        // brouillons (prévisualisation avant publication). Un visiteur anonyme n'a pas de token
+        // → 404 sur un article non publié : le brouillon reste privé. Voir backend articles.ts.
+        return await api<PublicArticle>(`/articles/${slug}`, { auth: true });
       } catch {
         return fallbackArticles.find((a) => a.slug === slug) ?? null;
       }

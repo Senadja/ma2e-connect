@@ -177,12 +177,12 @@ const News = () => {
             <article className="grid lg:grid-cols-2 gap-0 rounded-3xl overflow-hidden bg-card border border-border shadow-soft hover:shadow-elegant transition-smooth">
               <Link
                 to={`/actualites/${featured.slug}`}
-                className="aspect-[16/10] lg:aspect-auto relative overflow-hidden bg-gradient-primary group"
+                className="aspect-[16/10] lg:aspect-[4/3] relative overflow-hidden bg-gradient-primary group"
               >
                 <img
                   src={featured.image || "https://placehold.co/1200x800/1A6147/F5A623?text=MA2E&font=playfair"}
                   alt=""
-                  className="w-full h-full object-cover group-hover:scale-105 transition-smooth"
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-smooth"
                 />
               </Link>
               <div className="p-8 md:p-12 flex flex-col justify-center">
