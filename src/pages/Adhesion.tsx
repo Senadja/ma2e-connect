@@ -97,6 +97,34 @@ const formSchema = z.object({
 
 type Slot = (typeof DOC_SLOTS)[number]["key"];
 
+// Contrôles côté client (UX + 1re barrière) sur la pièce téléversée : extension, signature
+// binaire (magic bytes) et taille. La validation FAISANT AUTORITÉ reste côté serveur
+// (backend/src/routes/applications.ts) — ceci donne un retour immédiat et évite un envoi inutile.
+const FRONT_ALLOWED_EXT = ["pdf", "jpg", "jpeg", "png"] as const;
+const FRONT_MAX_BYTES = 8 * 1024 * 1024; // 8 Mo
+const FRONT_MAGIC: Record<string, (b: Uint8Array) => boolean> = {
+  pdf: (b) => b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46 && b[4] === 0x2d, // %PDF-
+  png: (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47,
+  jpg: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+  jpeg: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+};
+
+// Retourne un message d'erreur si la pièce est invalide, sinon null.
+async function validateUploadFile(file: File): Promise<string | null> {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (!(FRONT_ALLOWED_EXT as readonly string[]).includes(ext)) {
+    return "Format non autorisé : PDF, JPG ou PNG uniquement.";
+  }
+  if (file.size > FRONT_MAX_BYTES) {
+    return "Fichier trop volumineux (8 Mo max).";
+  }
+  const header = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+  if (!FRONT_MAGIC[ext]?.(header)) {
+    return "Le contenu du fichier ne correspond pas à son extension.";
+  }
+  return null;
+}
+
 const Adhesion = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -110,6 +138,8 @@ const Adhesion = () => {
     setUploading(slot);
     try {
       const compressed = await compressImage(file);
+      const err = await validateUploadFile(compressed);
+      if (err) { toast.error(err); return; }
       const fd = new FormData();
       fd.append("file", compressed);
       const res = await api<{ path: string; name: string }>("/applications/documents", { method: "POST", isForm: true, body: fd });
