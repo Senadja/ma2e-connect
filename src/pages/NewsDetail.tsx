@@ -41,6 +41,28 @@ const Gallery = ({ images }: { images: string[] }) => {
   );
 };
 
+// Rend cliquables les URLs (http/https) et adresses e-mail présentes dans un texte.
+const linkify = (text: string) =>
+  text.split(/(https?:\/\/[^\s]+|[\w.+-]+@[\w-]+\.[\w.-]+)/g).map((part, i) => {
+    if (i % 2 === 0) return part; // segments hors-lien
+    const trail = part.match(/[.,;:!?)]+$/)?.[0] ?? ""; // ne pas happer la ponctuation finale
+    const value = trail ? part.slice(0, -trail.length) : part;
+    const isEmail = value.includes("@") && !/^https?:/i.test(value);
+    return (
+      <span key={i}>
+        <a
+          href={isEmail ? `mailto:${value}` : value}
+          target={isEmail ? undefined : "_blank"}
+          rel={isEmail ? undefined : "noopener noreferrer"}
+          className="text-primary underline underline-offset-2 hover:text-primary/80 break-words"
+        >
+          {value}
+        </a>
+        {trail}
+      </span>
+    );
+  });
+
 const ContentBlock = ({ block }: { block: NewsArticle["content"][number] }) => {
   switch (block.type) {
     case "gallery":
@@ -59,13 +81,13 @@ const ContentBlock = ({ block }: { block: NewsArticle["content"][number] }) => {
           {block.items?.map((item, i) => (
             <li key={i} className="flex items-start gap-3 text-foreground/90">
               <span className="mt-2 h-1.5 w-1.5 rounded-full bg-accent shrink-0" />
-              <span>{item}</span>
+              <span>{linkify(item)}</span>
             </li>
           ))}
         </ul>
       );
     default:
-      return <p className="my-4 text-foreground/85 leading-relaxed text-lg">{block.text}</p>;
+      return <p className="my-4 text-foreground/85 leading-relaxed text-lg">{linkify(block.text || "")}</p>;
   }
 };
 
