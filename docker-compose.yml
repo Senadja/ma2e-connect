@@ -33,6 +33,10 @@ services:
       # Coupe-circuit de la double authentification (voir .env.prod.example).
       MFA_ENABLED: ${MFA_ENABLED:-true}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      # Coupe TOUS les limiteurs de débit (login, 2FA, formulaires publics, lectures) le temps
+      # d'une campagne de scan (ZAP/Gatling). Défaut false = limiteurs actifs. À remettre à false
+      # après les tests de la cyber.
+      RATE_LIMIT_DISABLED: ${RATE_LIMIT_DISABLED:-false}
       UPLOAD_DIR: /app/uploads
       SEED_ON_START: ${SEED_ON_START:-true}
       SMTP_HOST: ${SMTP_HOST:-}

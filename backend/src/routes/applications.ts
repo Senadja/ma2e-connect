@@ -27,14 +27,11 @@ fs.mkdirSync(APP_DOCS_DIR, { recursive: true });
 
 const ALLOWED_EXT = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx']);
 const DOC_FILE_RE = /^[A-Za-z0-9._-]+$/;
-const docStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, APP_DOCS_DIR),
-  // Nom NON devinable (pas d'énumération de masse) : UUID + extension d'origine validée.
-  filename: (_req, file, cb) => cb(null, `${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase()}`),
-});
+// Durcissement (zéro-écriture) : le fichier reste EN MÉMOIRE le temps de valider sa signature.
+// Rien n'est écrit sur le disque tant que le contenu n'est pas confirmé conforme (voir handler).
 const docUpload = multer({
-  storage: docStorage,
-  limits: { fileSize: 8 * 1024 * 1024 }, // 8 Mo max par pièce
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 }, // 8 Mo max par pièce (borne aussi la RAM par requête)
   fileFilter: (_req, file, cb) => cb(null, ALLOWED_EXT.has(path.extname(file.originalname).toLowerCase())),
 });
 
@@ -49,22 +46,14 @@ const MAGIC: Record<string, (b: Buffer) => boolean> = {
   '.doc': (b) => b.slice(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])), // OLE
 };
 
-function contentMatchesExt(filePath: string, ext: string): boolean {
+function contentMatchesExt(buf: Buffer, ext: string): boolean {
   const check = MAGIC[ext];
   if (!check) return false;
-  const fd = fs.openSync(filePath, 'r');
-  try {
-    const buf = Buffer.alloc(8);
-    fs.readSync(fd, buf, 0, 8, 0);
-    return check(buf);
-  } finally {
-    fs.closeSync(fd);
-  }
+  return check(buf.subarray(0, 8));
 }
 
 // Enrobe multer pour transformer ses erreurs en réponse JSON exploitable au lieu d'un 500 HTML
-// opaque : fichier trop volumineux (413), ou écriture impossible / multipart invalide (500 + log
-// de la cause réelle, ex. « ENOSPC: no space left » quand le volume des pièces est saturé).
+// opaque : fichier trop volumineux (413) ou multipart invalide (500 + log de la cause réelle).
 const receiveDoc = (req: Request, res: Response, next: NextFunction) =>
   docUpload.single('file')(req, res, (err: unknown) => {
     if (!err) return next();
@@ -78,12 +67,20 @@ const receiveDoc = (req: Request, res: Response, next: NextFunction) =>
 // Public (rate-limité) : reçoit une pièce et renvoie une référence d'API (non résolvable sans signature).
 applicationsRouter.post('/documents', publicWriteLimiter, receiveDoc, (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Fichier requis (PDF, image ou Word, 8 Mo max).' });
-  const ext = path.extname(req.file.filename).toLowerCase();
-  if (!contentMatchesExt(req.file.path, ext)) {
-    fs.unlink(req.file.path, () => {}); // signature non conforme → on ne conserve pas le fichier
+  const ext = path.extname(req.file.originalname).toLowerCase();
+  // Validation AVANT toute écriture : un contenu non conforme n'atteint jamais le disque.
+  if (!contentMatchesExt(req.file.buffer, ext)) {
     return res.status(400).json({ error: 'Le contenu du fichier ne correspond pas à son type (PDF, image ou Word attendu).' });
   }
-  res.status(201).json({ path: `/api/applications/documents/${req.file.filename}`, name: req.file.originalname });
+  // Contenu confirmé → écriture sous un nom NON devinable (UUID + extension validée).
+  const filename = `${crypto.randomUUID()}${ext}`;
+  try {
+    fs.writeFileSync(path.join(APP_DOCS_DIR, filename), req.file.buffer);
+  } catch (e) {
+    console.error('Échec écriture pièce justificative:', (e as Error).message);
+    return res.status(500).json({ error: "Le fichier n'a pas pu être enregistré. Réessayez." });
+  }
+  res.status(201).json({ path: `/api/applications/documents/${filename}`, name: req.file.originalname });
 });
 
 // Sert une pièce justificative UNIQUEMENT avec une signature valide et non expirée

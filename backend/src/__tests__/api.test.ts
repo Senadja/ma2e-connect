@@ -480,6 +480,15 @@ describe('Remédiation audit GS2E', () => {
     expect(res.status).toBe(400);
   });
 
+  it('#4 (durcissement) un vrai PDF est accepté et stocké sous un nom UUID → 201', async () => {
+    const res = await request(app)
+      .post('/api/applications/documents')
+      .set('X-Forwarded-For', nextIp())
+      .attach('file', Buffer.from('%PDF-1.4 contenu minimal'), 'vrai.pdf');
+    expect(res.status).toBe(201);
+    expect(res.body.path).toMatch(/\/api\/applications\/documents\/[a-f0-9-]+\.pdf$/);
+  });
+
   it('#5 un corps JSON malformé renvoie 400 (et non plus 500)', async () => {
     const res = await request(app)
       .post('/api/applications')
