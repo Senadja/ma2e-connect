@@ -37,7 +37,13 @@ services:
       # d'une campagne de scan (ZAP/Gatling). Défaut false = limiteurs actifs. À remettre à false
       # après les tests de la cyber.
       RATE_LIMIT_DISABLED: ${RATE_LIMIT_DISABLED:-false}
+      # Coupe l'e-mail de notification à chaque nouvelle demande d'adhésion (le mail du
+      # formulaire de contact n'est PAS concerné). Défaut false = notifications actives.
+      APPLICATION_NOTIFY_DISABLED: ${APPLICATION_NOTIFY_DISABLED:-false}
       UPLOAD_DIR: /app/uploads
+      # Pièces justificatives (CNI/passeport) : dossier PRIVÉ persistant (volume ma2e_appdocs).
+      # Sans volume dédié, ce dossier serait éphémère → pièces perdues à chaque rebuild backend.
+      APP_DOCS_DIR: /app/app-docs
       SEED_ON_START: ${SEED_ON_START:-true}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
@@ -47,6 +53,7 @@ services:
       MAIL_TO_APPLICATIONS: ${MAIL_TO_APPLICATIONS:-contact@ma2e.ci}
     volumes:
       - ma2e_uploads:/app/uploads
+      - ma2e_appdocs:/app/app-docs
     ports:
       - "3000:3000" # exposé pour le débogage (le front passe par nginx)
 
@@ -68,3 +75,4 @@ services:
 volumes:
   ma2e_pgdata:
   ma2e_uploads:
+  ma2e_appdocs:
