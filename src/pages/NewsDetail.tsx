@@ -67,6 +67,13 @@ const ContentBlock = ({ block }: { block: NewsArticle["content"][number] }) => {
   switch (block.type) {
     case "gallery":
       return <Gallery images={block.items || []} />;
+    case "image":
+      if (!block.text) return null;
+      return (
+        <figure className="my-8">
+          <img src={block.text} alt="" loading="lazy" className="w-full rounded-2xl border border-border object-cover" />
+        </figure>
+      );
     case "h2":
       return <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground mt-10 mb-4">{block.text}</h2>;
     case "quote":

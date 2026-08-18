@@ -7,8 +7,8 @@ import { slugify } from '../lib/slug';
 export const articlesRouter = Router();
 
 const blockSchema = z.object({
-  type: z.enum(['p', 'h2', 'quote', 'list', 'gallery']),
-  text: z.string().optional(),
+  type: z.enum(['p', 'h2', 'quote', 'list', 'gallery', 'image']),
+  text: z.string().optional(), // 'image' = chemin de l'image téléversée dans `text`
   items: z.array(z.string()).optional(), // 'list' = puces texte ; 'gallery' = chemins d'images
 });
 

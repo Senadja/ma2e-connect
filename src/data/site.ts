@@ -72,7 +72,7 @@ export type NewsArticle = {
   author?: string;
   readTime?: string;
   tags?: string[];
-  content: { type: "p" | "h2" | "quote" | "list" | "gallery"; text?: string; items?: string[] }[];
+  content: { type: "p" | "h2" | "quote" | "list" | "gallery" | "image"; text?: string; items?: string[] }[];
 };
 
 export const NEWS: NewsArticle[] = [

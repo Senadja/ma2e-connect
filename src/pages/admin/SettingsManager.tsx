@@ -1137,7 +1137,7 @@ export const SettingsManager = () => {
                 <Input value={social.linkedin} onChange={(e) => setSocial({ ...social, linkedin: e.target.value })} placeholder="https://linkedin.com/…" /></div>
               <div className="grid gap-2"><label className={label}>X (Twitter)</label>
                 <Input value={social.twitter} onChange={(e) => setSocial({ ...social, twitter: e.target.value })} placeholder="https://x.com/…" /></div>
-              <Button onClick={() => save.mutate({ key: "social", value: social })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les réseaux</Button>
+              <Button onClick={() => save.mutate({ key: "social", value: social }, { onSuccess: refreshPublic })} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les réseaux</Button>
             </CardContent>
           </Card>
 

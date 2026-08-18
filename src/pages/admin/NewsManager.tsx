@@ -50,7 +50,7 @@ const frToISO = (label: string) => {
   return `${m[3]}-${String(mo + 1).padStart(2, "0")}-${m[1].padStart(2, "0")}`;
 };
 
-interface Block { type: "p" | "h2" | "quote" | "list" | "gallery"; text?: string; items?: string[] }
+interface Block { type: "p" | "h2" | "quote" | "list" | "gallery" | "image"; text?: string; items?: string[] }
 interface ApiArticle {
   id: string;
   slug: string;
@@ -64,17 +64,70 @@ interface ApiArticle {
   createdAt: string;
 }
 
-// Conversion naïve éditeur <-> blocs (l'éditeur de blocs riche viendra en 2e passe).
-// Les blocs « gallery » sont gérés à part (section Galerie), pas dans l'éditeur texte.
-const blocksToText = (blocks: Block[] = []) =>
-  blocks.filter((b) => b.type !== "gallery").map((b) => (b.type === "list" ? (b.items || []).join("\n") : b.text || "")).join("\n\n");
+// Conversion éditeur (HTML tiptap) <-> blocs de contenu. Préserve titres, listes,
+// citations ET images téléversées (bloc « image »). Les blocs « gallery » sont gérés
+// à part (section Galerie), hors de l'éditeur de texte.
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+const blocksToHtml = (blocks: Block[] = []) =>
+  blocks
+    .filter((b) => b.type !== "gallery")
+    .map((b) => {
+      switch (b.type) {
+        case "h2": return `<h2>${esc(b.text || "")}</h2>`;
+        case "quote": return `<blockquote><p>${esc(b.text || "")}</p></blockquote>`;
+        case "list": return `<ul>${(b.items || []).map((i) => `<li>${esc(i)}</li>`).join("")}</ul>`;
+        case "image": return b.text ? `<img src="${esc(b.text).replace(/"/g, "&quot;")}">` : "";
+        default: return `<p>${esc(b.text || "")}</p>`;
+      }
+    })
+    .join("");
+
 const extractGallery = (blocks: Block[] = []) => blocks.find((b) => b.type === "gallery")?.items || [];
-const textToBlocks = (text: string): Block[] =>
-  text
-    .split(/\n{2,}|<br\s*\/?>(?:\s*<br\s*\/?>)*/i)
-    .map((s) => s.replace(/<[^>]+>/g, "").trim())
-    .filter(Boolean)
-    .map((t) => ({ type: "p", text: t }));
+
+// Parse le HTML produit par l'éditeur en blocs ordonnés (p / h2 / list / quote / image).
+const htmlToBlocks = (html: string): Block[] => {
+  const doc = new DOMParser().parseFromString(html || "", "text/html");
+  const blocks: Block[] = [];
+  doc.body.childNodes.forEach((node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const t = (node.textContent || "").trim();
+      if (t) blocks.push({ type: "p", text: t });
+      return;
+    }
+    if (!(node instanceof HTMLElement)) return;
+    const el = node;
+    const tag = el.tagName.toLowerCase();
+    const text = (el.textContent || "").trim();
+    if (tag === "img") {
+      const src = el.getAttribute("src");
+      if (src) blocks.push({ type: "image", text: src });
+      return;
+    }
+    if (tag === "h1" || tag === "h2" || tag === "h3" || tag === "h4") {
+      if (text) blocks.push({ type: "h2", text });
+      return;
+    }
+    if (tag === "ul" || tag === "ol") {
+      const items = Array.from(el.querySelectorAll("li")).map((li) => (li.textContent || "").trim()).filter(Boolean);
+      if (items.length) blocks.push({ type: "list", items });
+      return;
+    }
+    if (tag === "blockquote") {
+      if (text) blocks.push({ type: "quote", text });
+      return;
+    }
+    // Image insérée à l'intérieur d'un paragraphe : on l'extrait comme bloc image.
+    const innerImg = el.querySelector("img");
+    if (innerImg?.getAttribute("src")) {
+      if (text) blocks.push({ type: "p", text });
+      blocks.push({ type: "image", text: innerImg.getAttribute("src") as string });
+      return;
+    }
+    if (text) blocks.push({ type: "p", text });
+  });
+  return blocks;
+};
 
 export const NewsManager = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -108,6 +161,20 @@ export const NewsManager = () => {
       toast.error(e?.message || "Échec du téléversement.");
     } finally {
       setImgUploading(false);
+    }
+  };
+
+  // Téléversement d'une image insérée dans le corps de l'article (via l'éditeur).
+  const uploadInline = async (file: File): Promise<string> => {
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { path } = await api<{ path: string }>("/uploads", { method: "POST", auth: true, isForm: true, body: fd });
+      toast.success("Image insérée dans l'article.");
+      return path;
+    } catch (e: any) {
+      toast.error(e?.message || "Échec du téléversement.");
+      throw e;
     }
   };
 
@@ -160,7 +227,7 @@ export const NewsManager = () => {
     setCurrentArticle(article);
     setTitle(article.title);
     setExcerpt(article.excerpt || "");
-    setContent(blocksToText(article.content));
+    setContent(blocksToHtml(article.content));
     setCategory(article.category);
     setDate(frToISO(article.date || "") || (article.createdAt ? article.createdAt.slice(0, 10) : ""));
     setStatus(article.status || "draft");
@@ -186,7 +253,7 @@ export const NewsManager = () => {
     if (!title.trim()) { toast.error("Le titre est requis."); return; }
     const finalStatus = publish ? "published" : "draft";
     setStatus(finalStatus);
-    const blocks = textToBlocks(content);
+    const blocks = htmlToBlocks(content);
     const finalContent: Block[] = gallery.length ? [...blocks, { type: "gallery", items: gallery }] : blocks;
     saveMutation.mutate({
       title,
@@ -244,7 +311,7 @@ export const NewsManager = () => {
 
                 <div className="space-y-3">
                   <label className="text-sm font-bold text-primary tracking-wide uppercase">Corps de l'article</label>
-                  <Editor content={content} onChange={setContent} />
+                  <Editor content={content} onChange={setContent} onUpload={uploadInline} />
                 </div>
               </CardContent>
             </Card>

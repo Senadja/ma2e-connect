@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -25,6 +26,9 @@ interface EditorProps {
   content: string;
   onChange: (content: string) => void;
   placeholder?: string;
+  // Téléverse un fichier et renvoie son chemin. Fourni par le parent (ex. NewsManager).
+  // Impose que les images du corps soient importées par téléversement, jamais par URL.
+  onUpload?: (file: File) => Promise<string>;
 }
 
 const MenuButton = ({ onClick, active, children, title }: any) => (
@@ -42,7 +46,9 @@ const MenuButton = ({ onClick, active, children, title }: any) => (
   </Button>
 );
 
-export const Editor = ({ content, onChange, placeholder }: EditorProps) => {
+export const Editor = ({ content, onChange, placeholder, onUpload }: EditorProps) => {
+  const imgInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -53,12 +59,32 @@ export const Editor = ({ content, onChange, placeholder }: EditorProps) => {
       Image,
     ],
     content,
+    // La zone éditable (ProseMirror) porte elle-même la hauteur minimale et le padding :
+    // ainsi tout le cadre est cliquable pour saisir, pas seulement la 1re ligne.
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm max-w-none focus:outline-none min-h-[300px] p-4',
+      },
+    },
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
   });
 
   if (!editor) return null;
+
+  const insertImage = async (file: File) => {
+    if (!onUpload) return;
+    setUploading(true);
+    try {
+      const src = await onUpload(file);
+      if (src) editor.chain().focus().setImage({ src }).run();
+    } catch {
+      // Le parent (onUpload) affiche déjà le message d'erreur.
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden focus-within:ring-2 focus-within:ring-primary/20 transition-all">
@@ -139,15 +165,19 @@ export const Editor = ({ content, onChange, placeholder }: EditorProps) => {
           <LinkIcon className="h-4 w-4" />
         </MenuButton>
         
-        <MenuButton 
-          onClick={() => {
-            const url = window.prompt('URL de l\'image :');
-            if (url) editor.chain().focus().setImage({ src: url }).run();
-          }}
-          title="Image"
+        <MenuButton
+          onClick={() => imgInputRef.current?.click()}
+          title={uploading ? "Téléversement en cours…" : "Image (téléversement)"}
         >
           <ImageIcon className="h-4 w-4" />
         </MenuButton>
+        <input
+          ref={imgInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) insertImage(f); e.target.value = ""; }}
+        />
 
         <div className="ml-auto flex items-center gap-1">
           <MenuButton onClick={() => editor.chain().focus().undo().run()} title="Annuler">
@@ -159,9 +189,7 @@ export const Editor = ({ content, onChange, placeholder }: EditorProps) => {
         </div>
       </div>
       
-      <div className="p-4 min-h-[300px] prose prose-sm max-w-none focus:outline-none">
-        <EditorContent editor={editor} />
-      </div>
+      <EditorContent editor={editor} />
     </div>
   );
 };
