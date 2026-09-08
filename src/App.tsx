@@ -49,6 +49,7 @@ const NotFound = lazyWithReload(() => import("./pages/NotFound.tsx"));
 
 // Admin Pages
 const AdminLogin = lazyWithReload(() => import("./pages/admin/Login.tsx"));
+const AdminActivation = lazyWithReload(() => import("./pages/admin/Activation.tsx"));
 const AdminDashboard = lazyWithReload(() => import("./pages/admin/Dashboard.tsx"));
 const NewsManager = lazyWithReload(() => import("./pages/admin/NewsManager.tsx").then(m => ({ default: m.NewsManager })));
 const ApplicationsManager = lazyWithReload(() => import("./pages/admin/ApplicationsManager.tsx").then(m => ({ default: m.ApplicationsManager })));
@@ -114,6 +115,7 @@ const App = () => (
 
               {/* Admin Routes */}
               <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin/activation" element={<AdminActivation />} />
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Navigate to="/admin/dashboard" replace />} />
                 <Route path="dashboard" element={<AdminDashboard />} />

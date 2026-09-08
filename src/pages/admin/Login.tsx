@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth, type LoginChallenge } from "@/hooks/useAuth";
+import { useAuth, type LoginChallenge, type MustChangePassword } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
-import { ShieldAlert, Loader2, MailCheck, ArrowLeft, KeyRound } from "lucide-react";
+import { ShieldAlert, ShieldCheck, Loader2, MailCheck, ArrowLeft, KeyRound } from "lucide-react";
+import { PASSWORD_RULE_TEXT, validatePasswordClient } from "@/lib/passwordPolicy";
 
 const RESEND_COOLDOWN = 60;
 
@@ -31,7 +32,12 @@ const Login = () => {
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [resendIn, setResendIn] = useState(0);
 
-  const { login, verifyCode, resendCode } = useAuth();
+  // Étape « mot de passe expiré » : changement forcé avant l'ouverture de session.
+  const [forceChange, setForceChange] = useState<MustChangePassword | null>(null);
+  const [newPass, setNewPass] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+
+  const { login, verifyCode, resendCode, setPassword: setUserPassword } = useAuth();
   const navigate = useNavigate();
 
   // Un seul intervalle pour les deux comptes à rebours : validité du code et
@@ -56,6 +62,11 @@ const Login = () => {
         navigate("/admin/dashboard");
         return;
       }
+      // Mot de passe expiré (MFA désactivée) : bascule vers le changement forcé.
+      if ("mustChangePassword" in next) {
+        setForceChange(next);
+        return;
+      }
       setChallenge(next);
       setSecondsLeft(next.expiresIn);
       setResendIn(RESEND_COOLDOWN);
@@ -74,12 +85,37 @@ const Login = () => {
     if (!challenge || loading) return;
     setLoading(true);
     try {
-      await verifyCode(challenge.challengeId, value);
+      const res = await verifyCode(challenge.challengeId, value);
+      // Mot de passe expiré : le 2FA a réussi mais on force d'abord un nouveau mot de passe.
+      if (res && "mustChangePassword" in res) {
+        setChallenge(null);
+        setForceChange(res);
+        toast.info("Votre mot de passe a expiré. Définissez-en un nouveau.");
+        return;
+      }
       toast.success("Bienvenue sur le back-office MA2E");
       navigate("/admin/dashboard");
     } catch (error: any) {
       toast.error(error.message || "Code incorrect");
       setCode("");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitNewPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forceChange) return;
+    const complexityError = validatePasswordClient(newPass);
+    if (complexityError) return toast.error(complexityError);
+    if (newPass !== confirmPass) return toast.error("La confirmation ne correspond pas au mot de passe.");
+    setLoading(true);
+    try {
+      await setUserPassword(forceChange.uid, forceChange.resetToken, newPass);
+      toast.success("Mot de passe mis à jour. Bienvenue sur le back-office MA2E.");
+      navigate("/admin/dashboard");
+    } catch (error: any) {
+      toast.error(error.message || "Impossible de définir le mot de passe.");
     } finally {
       setLoading(false);
     }
@@ -117,7 +153,64 @@ const Login = () => {
         <Logo />
       </div>
       <Card className="w-full max-w-md shadow-elegant border-border/40">
-        {!challenge ? (
+        {forceChange ? (
+          <>
+            <CardHeader className="space-y-1 text-center">
+              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <KeyRound className="h-6 w-6 text-primary" />
+              </div>
+              <CardTitle className="text-2xl font-display font-bold">Mot de passe expiré</CardTitle>
+              <CardDescription>
+                Pour votre sécurité, définissez un nouveau mot de passe avant d'accéder au back-office.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <form onSubmit={submitNewPassword} className="space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="new-pass">Nouveau mot de passe</Label>
+                  <Input
+                    id="new-pass"
+                    type="password"
+                    value={newPass}
+                    onChange={(e) => setNewPass(e.target.value)}
+                    autoComplete="new-password"
+                    autoFocus
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="confirm-pass">Confirmer le mot de passe</Label>
+                  <Input
+                    id="confirm-pass"
+                    type="password"
+                    value={confirmPass}
+                    onChange={(e) => setConfirmPass(e.target.value)}
+                    autoComplete="new-password"
+                    required
+                  />
+                </div>
+                <div className="flex gap-2 rounded-lg bg-secondary/40 p-3 text-xs text-muted-foreground">
+                  <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
+                  <span>{PASSWORD_RULE_TEXT}</span>
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full rounded-full font-bold bg-primary text-white hover:bg-primary/90"
+                  disabled={loading || !newPass || !confirmPass}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enregistrement...
+                    </>
+                  ) : (
+                    "Définir le nouveau mot de passe"
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </>
+        ) : !challenge ? (
           <>
             <CardHeader className="space-y-1 text-center">
               <CardTitle className="text-2xl font-display font-bold">Connexion Back-office</CardTitle>

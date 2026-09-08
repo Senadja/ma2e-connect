@@ -12,7 +12,9 @@ datasource db {
 model User {
   id                   String    @id @default(uuid())
   email                String    @unique
-  password             String
+  // Nullable : un compte créé par invitation n'a pas encore de mot de passe tant que
+  // l'utilisateur n'a pas suivi le lien pour le définir lui-même.
+  password             String?
   name                 String
   role                 Role      @default(USER)
   // Permissions fines (ex. "news:write", "products:write"). ADMIN = toutes implicitement.
@@ -21,6 +23,19 @@ model User {
   // Un code consommé est retiré du tableau ; la longueur = nombre de codes restants.
   backupCodes          String[]  @default([])
   backupCodesCreatedAt DateTime?
+  // --- Politique de mot de passe locale (équivalent d'une GPO Active Directory) ---
+  // Date du dernier changement, pour l'expiration (null = compte hérité, non expiré).
+  passwordChangedAt    DateTime?
+  // Empreintes bcrypt des N derniers mots de passe, pour interdire la réutilisation.
+  passwordHistory      String[]  @default([])
+  // Verrouillage anti brute-force : compteur d'échecs et date de verrouillage
+  // (non nulle = compte verrouillé, déblocable UNIQUEMENT par un administrateur).
+  failedLoginAttempts  Int       @default(0)
+  lockedAt             DateTime?
+  // Invitation / réinitialisation : empreinte bcrypt d'un jeton à usage unique envoyé
+  // par e-mail, et sa date d'expiration. Sert à la première activation ET au reset.
+  inviteTokenHash      String?
+  inviteExpiresAt      DateTime?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 

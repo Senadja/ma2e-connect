@@ -39,6 +39,21 @@ async function setChallengeCode(challengeId: string, code: string) {
   });
 }
 
+// Simule le clic sur le lien d'invitation reçu par e-mail : on écrit une empreinte de jeton
+// connue en base, puis on appelle réellement /auth/set-password avec le jeton brut.
+// Renvoie la réponse (jeton de session inclus en cas de succès).
+async function activateViaInvite(uid: string, password: string) {
+  const raw = `test-invite-${uid}-${Date.now()}`;
+  await prisma.user.update({
+    where: { id: uid },
+    data: { inviteTokenHash: await bcrypt.hash(raw, 10), inviteExpiresAt: new Date(Date.now() + 3600_000) },
+  });
+  return request(app)
+    .post('/api/auth/set-password')
+    .set('X-Forwarded-For', nextIp())
+    .send({ uid, token: raw, password });
+}
+
 let cachedToken: string | null = null;
 
 async function adminToken(): Promise<string> {
@@ -293,12 +308,12 @@ describe('Validation des demandes', () => {
 describe("Rôle éditeur — 2FA, permissions et gestion par l'admin", () => {
   const EDITOR_EMAIL = 'editeur-test@ma2e.local';
   const EDITOR_EMAIL_2 = 'editeur-mute@ma2e.local';
-  const EDITOR_PASSWORD = 'editeur-mdp-initial';
-  const EDITOR_PASSWORD_2 = 'editeur-mdp-reinitialise';
+  const EDITOR_PASSWORD = 'Editeur-MdP-Initial9!';
+  const EDITOR_PASSWORD_2 = 'Editeur-MdP-Reinit2026#';
   // Compte admin jetable pour tester l'édition de SON PROPRE compte sans muter l'admin réel.
   const SELF_EMAIL = 'admin-self-test@ma2e.local';
-  const SELF_PASSWORD = 'self-mdp-initial';
-  const SELF_PASSWORD_2 = 'self-mdp-change';
+  const SELF_PASSWORD = 'Self-MdP-Initial9!';
+  const SELF_PASSWORD_2 = 'Self-MdP-Change2026#';
   let editorId = '';
   const createdArticleIds: string[] = [];
 
@@ -318,17 +333,30 @@ describe("Rôle éditeur — 2FA, permissions et gestion par l'admin", () => {
     return (await submitCode(login.body.challengeId, '246810')).body.token;
   }
 
-  it("l'admin crée un éditeur avec des permissions ciblées", async () => {
+  it("l'admin crée un éditeur par invitation (sans mot de passe)", async () => {
     const token = await adminToken();
     const res = await request(app)
       .post('/api/users')
       .set('Authorization', `Bearer ${token}`)
       .set('X-Forwarded-For', nextIp())
-      .send({ email: EDITOR_EMAIL, name: 'Éditeur Test', password: EDITOR_PASSWORD, role: 'EDITOR', permissions: ['news:write'] });
+      .send({ email: EDITOR_EMAIL, name: 'Éditeur Test', role: 'EDITOR', permissions: ['news:write'] });
     expect(res.status).toBe(201);
     expect(res.body.role).toBe('EDITOR');
     expect(res.body.permissions).toEqual(['news:write']);
+    // Compte non encore activé : aucun mot de passe, l'empreinte n'est jamais renvoyée.
+    expect(res.body.activated).toBe(false);
+    expect(res.body.password).toBeUndefined();
     editorId = res.body.id;
+  });
+
+  it("l'éditeur active son compte via le lien d'invitation puis peut se connecter", async () => {
+    // Avant activation, le mot de passe cible n'ouvre aucune session.
+    expect((await startLogin(EDITOR_EMAIL, EDITOR_PASSWORD)).status).toBe(401);
+    const res = await activateViaInvite(editorId, EDITOR_PASSWORD);
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeTruthy();
+    // Désormais activé : la connexion ouvre bien un challenge 2FA.
+    expect((await startLogin(EDITOR_EMAIL, EDITOR_PASSWORD)).status).toBe(202);
   });
 
   it("l'éditeur reçoit lui aussi un code à chaque connexion (202, aucun jeton)", async () => {
@@ -373,13 +401,16 @@ describe("Rôle éditeur — 2FA, permissions et gestion par l'admin", () => {
     expect(res.status).toBe(403);
   });
 
-  it("l'admin réinitialise le mot de passe de l'éditeur", async () => {
+  it("l'admin réinitialise le mot de passe de l'éditeur (renvoi d'une invitation)", async () => {
     const token = await adminToken();
     const res = await request(app)
-      .put(`/api/users/${editorId}`)
+      .post(`/api/users/${editorId}/invite`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ password: EDITOR_PASSWORD_2 });
+      .set('X-Forwarded-For', nextIp());
     expect(res.status).toBe(200);
+    // L'éditeur suit le lien reçu et choisit un nouveau mot de passe.
+    const activate = await activateViaInvite(editorId, EDITOR_PASSWORD_2);
+    expect(activate.status).toBe(200);
     // L'ancien mot de passe ne fonctionne plus, le nouveau ouvre bien un challenge.
     expect((await startLogin(EDITOR_EMAIL, EDITOR_PASSWORD)).status).toBe(401);
     expect((await startLogin(EDITOR_EMAIL, EDITOR_PASSWORD_2)).status).toBe(202);
@@ -425,26 +456,34 @@ describe("Rôle éditeur — 2FA, permissions et gestion par l'admin", () => {
   // Quand l'admin éditait SON propre compte pour changer juste son mot de passe, le back-office
   // renvoyait 400 (« vous ne pouvez pas modifier votre propre rôle ») alors que rien de sensible
   // ne changeait. On rejoue exactement ce payload : rôle/permissions inchangés + nouveau mot de passe.
-  it("un administrateur change SON propre mot de passe (rôle inchangé) → 200", async () => {
+  it("un administrateur édite SON propre compte (rôle inchangé) puis change son mot de passe", async () => {
     const adminTok = await adminToken();
-    // Admin jetable, connecté sous sa propre identité pour l'édition de soi.
+    // Admin jetable, créé par invitation puis activé sous sa propre identité.
     const created = await request(app)
       .post('/api/users')
       .set('Authorization', `Bearer ${adminTok}`)
       .set('X-Forwarded-For', nextIp())
-      .send({ email: SELF_EMAIL, name: 'Admin Self', password: SELF_PASSWORD, role: 'ADMIN', permissions: [] });
+      .send({ email: SELF_EMAIL, name: 'Admin Self', role: 'ADMIN', permissions: [] });
     expect(created.status).toBe(201);
     const selfId = created.body.id;
+    expect((await activateViaInvite(selfId, SELF_PASSWORD)).status).toBe(200);
 
     const selfTok = await editorToken(SELF_EMAIL, SELF_PASSWORD);
+    // Non-régression : éditer son propre compte avec rôle + permissions renvoyés inchangés
+    // (payload identique à celui du front) ne doit pas déclencher le garde anti auto-promotion.
     const res = await request(app)
       .put(`/api/users/${selfId}`)
       .set('Authorization', `Bearer ${selfTok}`)
-      // Payload identique à celui du front : rôle + permissions renvoyés inchangés.
-      .send({ name: 'Admin Self', role: 'ADMIN', permissions: [], password: SELF_PASSWORD_2 });
+      .send({ name: 'Admin Self', role: 'ADMIN', permissions: [] });
     expect(res.status).toBe(200);
 
-    // Le mot de passe a bien changé : l'ancien est refusé, le nouveau ouvre un challenge.
+    // Changement self-service du mot de passe (exige le mot de passe actuel).
+    const chg = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${selfTok}`)
+      .send({ currentPassword: SELF_PASSWORD, newPassword: SELF_PASSWORD_2 });
+    expect(chg.status).toBe(200);
+    // L'ancien est refusé, le nouveau ouvre un challenge.
     expect((await startLogin(SELF_EMAIL, SELF_PASSWORD)).status).toBe(401);
     expect((await startLogin(SELF_EMAIL, SELF_PASSWORD_2)).status).toBe(202);
   });
@@ -502,5 +541,160 @@ describe('Remédiation audit GS2E', () => {
     const res = await request(app).get('/api/articles').set('X-Forwarded-For', nextIp());
     expect(res.status).toBe(200);
     expect(res.headers['ratelimit-limit']).toBeDefined();
+  });
+});
+
+// Politique de mot de passe locale (équivalent d'une GPO Active Directory) :
+// invitation, complexité, historique anti-réutilisation, verrouillage + déverrouillage admin,
+// et expiration forçant le changement.
+describe('Politique de mot de passe locale', () => {
+  const EMAIL = 'policy-test@ma2e.local';
+  const GOOD = 'Ma2e-Policy-2026!';
+  const GOOD2 = 'Ma2e-Policy-2027#';
+  const GOOD3 = 'Ma2e-Policy-2028$';
+  let uid = '';
+
+  beforeAll(async () => {
+    await prisma.user.deleteMany({ where: { email: EMAIL } });
+    const token = await adminToken();
+    const res = await request(app)
+      .post('/api/users')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Forwarded-For', nextIp())
+      .send({ email: EMAIL, name: 'Policy Test', role: 'EDITOR', permissions: [] });
+    uid = res.body.id;
+  });
+
+  afterAll(async () => {
+    await prisma.user.deleteMany({ where: { email: EMAIL } });
+  });
+
+  it('un compte créé par invitation ne peut pas se connecter tant qu\'il n\'est pas activé', async () => {
+    expect((await startLogin(EMAIL, GOOD)).status).toBe(401);
+  });
+
+  it('refuse un mot de passe trop faible à l\'activation → 400', async () => {
+    const res = await activateViaInvite(uid, 'faible');
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/12 caractères/);
+  });
+
+  it('active le compte avec un mot de passe conforme → 200 + session', async () => {
+    const res = await activateViaInvite(uid, GOOD);
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeTruthy();
+    expect((await startLogin(EMAIL, GOOD)).status).toBe(202);
+  });
+
+  it('interdit de réutiliser le mot de passe courant (change-password) → 400', async () => {
+    const login = await startLogin(EMAIL, GOOD);
+    await setChallengeCode(login.body.challengeId, '112233');
+    const token = (await submitCode(login.body.challengeId, '112233')).body.token;
+    const res = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ currentPassword: GOOD, newPassword: GOOD });
+    expect(res.status).toBe(400);
+  });
+
+  it('accepte un nouveau mot de passe conforme (change-password) → 200', async () => {
+    const login = await startLogin(EMAIL, GOOD);
+    await setChallengeCode(login.body.challengeId, '223344');
+    const token = (await submitCode(login.body.challengeId, '223344')).body.token;
+    const res = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ currentPassword: GOOD, newPassword: GOOD2 });
+    expect(res.status).toBe(200);
+    expect((await startLogin(EMAIL, GOOD)).status).toBe(401);
+    expect((await startLogin(EMAIL, GOOD2)).status).toBe(202);
+  });
+
+  it('interdit de revenir à un ancien mot de passe (historique) → 400', async () => {
+    const login = await startLogin(EMAIL, GOOD2);
+    await setChallengeCode(login.body.challengeId, '334455');
+    const token = (await submitCode(login.body.challengeId, '334455')).body.token;
+    const res = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ currentPassword: GOOD2, newPassword: GOOD });
+    expect(res.status).toBe(400);
+  });
+
+  it('verrouille le compte après 5 échecs, puis l\'admin le déverrouille', async () => {
+    // 4 premiers échecs → 401, le 5e verrouille → 423.
+    for (let i = 0; i < 4; i++) {
+      expect((await startLogin(EMAIL, `Faux-MdP-${i}!Zz`)).status).toBe(401);
+    }
+    expect((await startLogin(EMAIL, 'Faux-MdP-5!Zz')).status).toBe(423);
+    // Verrouillé : même le bon mot de passe est refusé (423), depuis n'importe quelle IP.
+    expect((await startLogin(EMAIL, GOOD2)).status).toBe(423);
+    // Déverrouillage par un administrateur.
+    const token = await adminToken();
+    const unlock = await request(app)
+      .post(`/api/users/${uid}/unlock`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Forwarded-For', nextIp());
+    expect(unlock.status).toBe(200);
+    expect((await startLogin(EMAIL, GOOD2)).status).toBe(202);
+  });
+
+  it('un mot de passe expiré force son changement à la connexion', async () => {
+    // On antidate le dernier changement au-delà des 42 jours de la politique.
+    await prisma.user.update({
+      where: { id: uid },
+      data: { passwordChangedAt: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000) },
+    });
+    const login = await startLogin(EMAIL, GOOD2);
+    expect(login.status).toBe(202);
+    await setChallengeCode(login.body.challengeId, '445566');
+    const verify = await submitCode(login.body.challengeId, '445566');
+    // Le 2FA réussit mais AUCUNE session n'est ouverte : changement forcé.
+    expect(verify.status).toBe(200);
+    expect(verify.body.token).toBeUndefined();
+    expect(verify.body.mustChangePassword).toBe(true);
+    expect(verify.body.resetToken).toBeTruthy();
+    expect(verify.body.uid).toBe(uid);
+    // Définition d'un nouveau mot de passe avec le jeton de changement → session ouverte.
+    const setRes = await request(app)
+      .post('/api/auth/set-password')
+      .set('X-Forwarded-For', nextIp())
+      .send({ uid, token: verify.body.resetToken, password: GOOD3 });
+    expect(setRes.status).toBe(200);
+    expect(setRes.body.token).toBeTruthy();
+    // Le nouveau mot de passe (non expiré) ouvre une connexion normale.
+    expect((await startLogin(EMAIL, GOOD3)).status).toBe(202);
+  });
+
+  it("l'admin fixe directement le mot de passe (style Odoo) : faible refusé, conforme accepté", async () => {
+    const token = await adminToken();
+    const weak = await request(app)
+      .put(`/api/users/${uid}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: 'faible' });
+    expect(weak.status).toBe(400);
+    const strong = await request(app)
+      .put(`/api/users/${uid}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: 'Admin-Reset-2099!' });
+    expect(strong.status).toBe(200);
+    // L'ancien ne fonctionne plus, le mot de passe fixé par l'admin ouvre un challenge.
+    expect((await startLogin(EMAIL, GOOD3)).status).toBe(401);
+    expect((await startLogin(EMAIL, 'Admin-Reset-2099!')).status).toBe(202);
+  });
+
+  it("l'admin peut créer un compte déjà activé en fixant le mot de passe", async () => {
+    const token = await adminToken();
+    const email2 = 'policy-direct@ma2e.local';
+    await prisma.user.deleteMany({ where: { email: email2 } });
+    const res = await request(app)
+      .post('/api/users')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Forwarded-For', nextIp())
+      .send({ email: email2, name: 'Direct', role: 'EDITOR', permissions: [], password: 'Direct-Create-2099!' });
+    expect(res.status).toBe(201);
+    expect(res.body.activated).toBe(true);
+    expect((await startLogin(email2, 'Direct-Create-2099!')).status).toBe(202);
+    await prisma.user.deleteMany({ where: { email: email2 } });
   });
 });

@@ -7,6 +7,15 @@ import { prisma } from '../lib/prisma';
 import { env } from '../lib/env';
 import { sendLoginCode } from '../lib/mailer';
 import { signToken, requireAuth, AuthUser } from '../middleware/auth';
+import {
+  PASSWORD_POLICY,
+  validatePasswordComplexity,
+  isPasswordExpired,
+  isPasswordReused,
+  pushHistory,
+  hashPassword,
+  createOneTimeToken,
+} from '../lib/passwordPolicy';
 
 export const authRouter = Router();
 
@@ -94,11 +103,31 @@ function normalizeBackupCode(input: string): string {
   return raw.length === 8 ? `${raw.slice(0, 4)}-${raw.slice(4)}` : raw;
 }
 
-function issueToken(
+async function issueToken(
   res: Response,
-  user: { id: string; email: string; name: string; role: string; permissions: string[] },
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    permissions: string[];
+    passwordChangedAt?: Date | null;
+  },
   backupCodesLeft: number
 ) {
+  // Mot de passe expiré (politique 42 j) : on N'OUVRE PAS de session. On délivre un jeton de
+  // changement à usage unique (au navigateur, l'identité vient d'être prouvée par mot de passe
+  // + 2FA) et le front force la définition d'un nouveau mot de passe avant tout accès.
+  if (isPasswordExpired(user.passwordChangedAt)) {
+    const { raw, hash, expiresAt } = await createOneTimeToken(
+      PASSWORD_POLICY.resetTtlMinutes * 60 * 1000
+    );
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { inviteTokenHash: hash, inviteExpiresAt: expiresAt },
+    });
+    return res.json({ mustChangePassword: true, resetToken: raw, uid: user.id, name: user.name });
+  }
   const authUser = toAuthUser(user);
   return res.json({ token: signToken(authUser), user: authUser, backupCodesLeft });
 }
@@ -114,10 +143,39 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
   const { email, password } = parsed.data;
 
   const user = await prisma.user.findUnique({ where: { email } });
+
+  // Compte verrouillé après trop d'échecs : refus explicite. Le déblocage est réservé à un
+  // administrateur (pas d'auto-déverrouillage temporisé).
+  if (user?.lockedAt) {
+    return res.status(423).json({
+      error: 'Compte verrouillé après plusieurs tentatives. Contactez un administrateur.',
+    });
+  }
+
   // Comparaison bcrypt systématique (hash factice si l'utilisateur n'existe pas) → temps constant.
   const ok = await bcrypt.compare(password, user?.password ?? DUMMY_HASH);
   if (!user || !ok) {
+    // Verrouillage anti brute-force : on ne compte les échecs que pour un compte réel ET activé
+    // (un compte en attente d'invitation n'a pas encore de mot de passe).
+    if (user && user.password && !ok) {
+      const attempts = user.failedLoginAttempts + 1;
+      const locked = attempts >= PASSWORD_POLICY.lockThreshold;
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: attempts, lockedAt: locked ? new Date() : null },
+      });
+      if (locked) {
+        return res.status(423).json({
+          error: 'Compte verrouillé après plusieurs tentatives. Contactez un administrateur.',
+        });
+      }
+    }
     return res.status(401).json({ error: 'Identifiants invalides' });
+  }
+
+  // Succès de l'étape mot de passe : on remet le compteur d'échecs à zéro s'il était entamé.
+  if (user.failedLoginAttempts > 0) {
+    await prisma.user.update({ where: { id: user.id }, data: { failedLoginAttempts: 0 } });
   }
 
   // Coupe-circuit d'urgence (MFA_ENABLED=false) : retour au comportement d'origine.
@@ -308,7 +366,7 @@ authRouter.post('/backup-codes', requireAuth, async (req, res) => {
 
   const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
-  if (!(await bcrypt.compare(parsed.data.password, user.password))) {
+  if (!(await bcrypt.compare(parsed.data.password, user.password ?? DUMMY_HASH))) {
     return res.status(401).json({ error: 'Mot de passe incorrect' });
   }
 
@@ -325,7 +383,7 @@ authRouter.post('/backup-codes', requireAuth, async (req, res) => {
 // Changement de son propre mot de passe (self-service). Exige le mot de passe actuel.
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Mot de passe actuel requis'),
-  newPassword: z.string().min(6, 'Nouveau mot de passe : 6 caractères minimum'),
+  newPassword: z.string().min(1, 'Nouveau mot de passe requis'),
 });
 
 authRouter.post('/change-password', requireAuth, async (req, res) => {
@@ -336,10 +394,82 @@ authRouter.post('/change-password', requireAuth, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
 
-  const ok = await bcrypt.compare(currentPassword, user.password);
+  const ok = await bcrypt.compare(currentPassword, user.password ?? DUMMY_HASH);
   if (!ok) return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
 
-  const password = await bcrypt.hash(newPassword, 10);
-  await prisma.user.update({ where: { id: user.id }, data: { password } });
+  const complexityError = validatePasswordComplexity(newPassword);
+  if (complexityError) return res.status(400).json({ error: complexityError });
+
+  // Interdiction de réutiliser le mot de passe actuel ou l'un des précédents.
+  if (await isPasswordReused(newPassword, user.password, user.passwordHistory)) {
+    return res
+      .status(400)
+      .json({ error: 'Ce mot de passe a déjà été utilisé récemment. Choisissez-en un autre.' });
+  }
+
+  const password = await hashPassword(newPassword);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      password,
+      passwordHistory: { set: pushHistory(user.password, user.passwordHistory) },
+      passwordChangedAt: new Date(),
+    },
+  });
   res.json({ ok: true });
+});
+
+// Définition du mot de passe via un lien à usage unique : première activation (invitation
+// envoyée par l'administrateur) OU changement forcé (mot de passe expiré). Aucune session
+// n'est requise — c'est la possession du jeton qui fait foi. Ouvre la session au succès.
+const setPasswordSchema = z.object({
+  uid: z.string().uuid('Lien invalide'),
+  token: z.string().min(1, 'Lien invalide'),
+  password: z.string().min(1, 'Mot de passe requis'),
+});
+
+authRouter.post('/set-password', verifyLimiter, async (req, res) => {
+  const parsed = setPasswordSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+  const { uid, token, password } = parsed.data;
+
+  const user = await prisma.user.findUnique({ where: { id: uid } });
+  const now = new Date();
+  const tokenValid =
+    !!user &&
+    !!user.inviteTokenHash &&
+    !!user.inviteExpiresAt &&
+    user.inviteExpiresAt > now &&
+    (await bcrypt.compare(token, user.inviteTokenHash));
+  if (!user || !tokenValid) {
+    return res
+      .status(400)
+      .json({ error: 'Lien invalide ou expiré. Demandez une nouvelle invitation.' });
+  }
+
+  const complexityError = validatePasswordComplexity(password);
+  if (complexityError) return res.status(400).json({ error: complexityError });
+
+  if (await isPasswordReused(password, user.password, user.passwordHistory)) {
+    return res
+      .status(400)
+      .json({ error: 'Ce mot de passe a déjà été utilisé récemment. Choisissez-en un autre.' });
+  }
+
+  const newHash = await hashPassword(password);
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      password: newHash,
+      passwordHistory: { set: pushHistory(user.password, user.passwordHistory) },
+      passwordChangedAt: now,
+      // Le jeton est consommé et le compte déverrouillé / le compteur d'échecs remis à zéro.
+      inviteTokenHash: null,
+      inviteExpiresAt: null,
+      failedLoginAttempts: 0,
+      lockedAt: null,
+    },
+  });
+
+  return issueToken(res, updated, updated.backupCodes.length);
 });

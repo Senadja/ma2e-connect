@@ -21,14 +21,32 @@ export interface LoginChallenge {
   backupCodesLeft: number;
 }
 
+// Réponse « mot de passe expiré » : l'identité est prouvée mais aucune session n'est ouverte.
+// Le front doit forcer la définition d'un nouveau mot de passe avec ce jeton.
+export interface MustChangePassword {
+  mustChangePassword: true;
+  resetToken: string;
+  uid: string;
+  name: string;
+}
+
+function isMustChange(x: unknown): x is MustChangePassword {
+  return !!x && (x as MustChangePassword).mustChangePassword === true;
+}
+
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  // Renvoie le challenge à confirmer, ou null si la session a été ouverte directement
-  // (coupe-circuit MFA_ENABLED=false côté serveur).
-  login: (email: string, password: string) => Promise<LoginChallenge | null>;
-  verifyCode: (challengeId: string, code: string) => Promise<void>;
+  // Renvoie le challenge à confirmer, null si la session a été ouverte directement
+  // (coupe-circuit MFA_ENABLED=false côté serveur), ou une demande de changement forcé
+  // si le mot de passe est expiré (cas MFA désactivée).
+  login: (email: string, password: string) => Promise<LoginChallenge | MustChangePassword | null>;
+  // Renvoie une demande de changement forcé si le mot de passe est expiré, sinon void
+  // (session ouverte).
+  verifyCode: (challengeId: string, code: string) => Promise<MustChangePassword | void>;
   resendCode: (challengeId: string) => Promise<void>;
+  // Définit le mot de passe via un jeton (invitation ou changement forcé) et ouvre la session.
+  setPassword: (uid: string, token: string, password: string) => Promise<void>;
   logout: () => void;
   can: (permission: string) => boolean;
 }
@@ -39,10 +57,11 @@ export const useAuth = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       login: async (email, password) => {
-        const res = await api<Partial<LoginChallenge> & { token?: string; user?: User }>(
-          '/auth/login',
-          { method: 'POST', body: { email, password } }
-        );
+        const res = await api<
+          Partial<LoginChallenge> & Partial<MustChangePassword> & { token?: string; user?: User }
+        >('/auth/login', { method: 'POST', body: { email, password } });
+        // Mot de passe expiré (cas MFA désactivée) : changement forcé avant toute session.
+        if (isMustChange(res)) return res;
         // Le serveur a rendu un jeton directement : la double authentification est
         // désactivée côté serveur, on ouvre la session comme avant.
         if (res.token && res.user) {
@@ -53,15 +72,26 @@ export const useAuth = create<AuthState>()(
         return res as LoginChallenge;
       },
       verifyCode: async (challengeId, code) => {
-        const { token, user } = await api<{ token: string; user: User }>('/auth/verify', {
-          method: 'POST',
-          body: { challengeId, code },
-        });
-        setToken(token);
-        set({ user, isAuthenticated: true });
+        const res = await api<Partial<MustChangePassword> & { token?: string; user?: User }>(
+          '/auth/verify',
+          { method: 'POST', body: { challengeId, code } }
+        );
+        // Mot de passe expiré : le 2FA a réussi mais la session reste fermée tant que
+        // l'utilisateur n'a pas défini un nouveau mot de passe.
+        if (isMustChange(res)) return res;
+        setToken(res.token!);
+        set({ user: res.user!, isAuthenticated: true });
       },
       resendCode: async (challengeId) => {
         await api('/auth/resend', { method: 'POST', body: { challengeId } });
+      },
+      setPassword: async (uid, token, password) => {
+        const { token: jwt, user } = await api<{ token: string; user: User }>('/auth/set-password', {
+          method: 'POST',
+          body: { uid, token, password },
+        });
+        setToken(jwt);
+        set({ user, isAuthenticated: true });
       },
       logout: () => {
         setToken(null);

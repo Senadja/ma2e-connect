@@ -180,27 +180,39 @@ export async function sendLoginCode(to: string, name: string, code: string): Pro
   });
 }
 
-// Bienvenue d'un membre du personnel créé par un administrateur.
-// Comme les notifications de demandes, les erreurs sont AVALÉES : un e-mail de bienvenue
-// perdu ne doit jamais faire échouer la création du compte (contrairement au code de
-// connexion, dont l'échec doit remonter). Le membre reçoit son rôle et le rappel que la
-// connexion enverra un code à 6 chiffres sur cette même adresse.
-export async function sendStaffWelcome(to: string, name: string, roleLabel: string): Promise<void> {
-  const loginUrl = `${env.publicUrl}/admin/login`;
-  const subject = 'Votre accès au back-office MA2E';
+// Invitation d'un membre du personnel : au lieu de recevoir un mot de passe défini par
+// l'administrateur, il reçoit un lien à usage unique pour définir lui-même son mot de passe.
+// Sert AUSSI à la réinitialisation (« mot de passe oublié » déclenché par un administrateur).
+// Erreurs AVALÉES comme les autres mails non critiques : en cas d'échec, l'administrateur
+// peut relancer l'invitation depuis la gestion des comptes.
+export async function sendStaffInvitation(
+  to: string,
+  name: string,
+  link: string,
+  roleLabel: string,
+  isReset: boolean
+): Promise<void> {
+  const subject = isReset
+    ? 'Réinitialisation de votre mot de passe — back-office MA2E'
+    : 'Votre invitation au back-office MA2E';
+  const intro = isReset
+    ? 'Une réinitialisation de votre mot de passe du back-office MA2E a été demandée.'
+    : `Vous avez été ajouté(e) en tant que personnel de la MA2E, avec le rôle « ${roleLabel} ».`;
+
   const text = [
     `Bonjour ${name},`,
     '',
-    `Vous avez été ajouté(e) en tant que personnel de la MA2E, avec le rôle « ${roleLabel} ».`,
+    intro,
     '',
-    'Vous pouvez accéder au back-office à cette adresse :',
-    `    ${loginUrl}`,
+    isReset
+      ? 'Pour définir un nouveau mot de passe, suivez ce lien :'
+      : 'Pour activer votre accès, définissez votre mot de passe en suivant ce lien :',
+    `    ${link}`,
     '',
-    `Votre identifiant de connexion est votre adresse e-mail : ${to}`,
-    'Votre mot de passe vous est communiqué directement par votre administrateur.',
+    `Ce lien est valable 48 heures et ne peut servir qu'une seule fois.`,
+    'Votre identifiant de connexion sera votre adresse e-mail : ' + to,
     '',
-    'À chaque connexion, un code à 6 chiffres vous sera envoyé sur cette adresse e-mail :',
-    'il complète votre mot de passe et empêche que quiconque se connecte à votre place.',
+    "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.",
     '',
     "La Mutuelle des Agents de l'Eau et de l'Électricité (MA2E)",
   ].join('\n');
@@ -208,18 +220,16 @@ export async function sendStaffWelcome(to: string, name: string, roleLabel: stri
   const html =
     '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#222">' +
     `<p>Bonjour ${escapeHtml(name)},</p>` +
-    `<p>Vous avez été ajouté(e) en tant que personnel de la MA2E, avec le rôle « <b>${escapeHtml(roleLabel)}</b> ».</p>` +
-    `<p>Vous pouvez accéder au back-office ici :<br><a href="${loginUrl}">${loginUrl}</a></p>` +
-    `<p>Votre identifiant de connexion est votre adresse e-mail : <b>${escapeHtml(to)}</b>.<br>` +
-    'Votre mot de passe vous est communiqué directement par votre administrateur.</p>' +
-    '<p>À chaque connexion, un code à 6 chiffres vous sera envoyé sur cette adresse e-mail : ' +
-    'il complète votre mot de passe et empêche que quiconque se connecte à votre place.</p>' +
+    `<p>${escapeHtml(intro)}</p>` +
+    `<p><a href="${link}" style="display:inline-block;background:#0a7d3c;color:#fff;padding:12px 22px;border-radius:24px;text-decoration:none;font-weight:bold">${isReset ? 'Définir un nouveau mot de passe' : 'Activer mon accès'}</a></p>` +
+    `<p style="color:#777;font-size:13px">Ce lien est valable 48 heures et ne peut servir qu'une seule fois.<br>Votre identifiant de connexion sera votre adresse e-mail : <b>${escapeHtml(to)}</b>.</p>` +
+    `<p style="color:#777;font-size:13px">Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>` +
     "<p>La Mutuelle des Agents de l'Eau et de l'Électricité (MA2E)</p>" +
     '</div>';
 
   const cfg = await resolveSmtp();
   if (!cfg) {
-    console.log(`📧 [mailer désactivé] ${subject} → ${to} (rôle : ${roleLabel})`);
+    console.log(`📧 [mailer désactivé] ${subject} → ${to}\n${link}\n`);
     return;
   }
 
@@ -232,7 +242,7 @@ export async function sendStaffWelcome(to: string, name: string, roleLabel: stri
     });
     await transporter.sendMail({ from: withDisplayName(cfg.from), to, subject, text, html });
   } catch (err) {
-    console.error('Échec envoi e-mail de bienvenue:', (err as Error).message);
+    console.error("Échec envoi e-mail d'invitation:", (err as Error).message);
   }
 }
 

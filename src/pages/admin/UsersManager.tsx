@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit2, Trash2, X, ShieldCheck, UserPlus, Mail, AlertTriangle } from "lucide-react";
+import { Plus, Edit2, Trash2, X, ShieldCheck, UserPlus, Mail, AlertTriangle, Send, Unlock, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { PASSWORD_RULE_TEXT, validatePasswordClient } from "@/lib/passwordPolicy";
 
 interface User {
   id: string;
@@ -16,6 +17,9 @@ interface User {
   role: "USER" | "EDITOR" | "ADMIN";
   permissions: string[];
   createdAt: string;
+  // Dérivés côté serveur : le compte a-t-il défini son mot de passe ? est-il verrouillé ?
+  activated: boolean;
+  locked: boolean;
 }
 interface Meta {
   permissions: string[];
@@ -57,16 +61,38 @@ export const UsersManager = () => {
   const saveMutation = useMutation({
     mutationFn: (f: typeof emptyForm) => {
       const body: Record<string, unknown> = { name: f.name, role: f.role, permissions: f.permissions };
+      // Mot de passe optionnel : renseigné = l'admin le fixe directement (style Odoo) ; vide =
+      // invitation par e-mail (création) ou aucun changement (édition).
       if (f.password) body.password = f.password;
       if (f.id) {
         // On n'envoie l'e-mail que s'il a réellement changé (évite un contrôle d'unicité inutile).
         if (f.email !== originalEmail) body.email = f.email;
         return api(`/users/${f.id}`, { method: "PUT", auth: true, body });
       }
-      return api("/users", { method: "POST", auth: true, body: { ...body, email: f.email, password: f.password } });
+      return api("/users", { method: "POST", auth: true, body: { ...body, email: f.email } });
     },
-    onSuccess: () => { invalidate(); setEditing(null); toast.success("Utilisateur enregistré."); },
+    onSuccess: (_data, f) => {
+      invalidate();
+      setEditing(null);
+      toast.success(
+        f.id ? "Utilisateur enregistré." : f.password ? "Utilisateur créé." : `Invitation envoyée à ${f.email}.`
+      );
+    },
     onError: (e: any) => toast.error(e?.message || "Enregistrement impossible."),
+  });
+
+  // Renvoi d'invitation (première activation restée sans suite OU réinitialisation d'un mot
+  // de passe oublié) et déverrouillage d'un compte bloqué après trop d'échecs.
+  const inviteMutation = useMutation({
+    mutationFn: (id: string) => api(`/users/${id}/invite`, { method: "POST", auth: true }),
+    onSuccess: () => { invalidate(); toast.success("Invitation envoyée."); },
+    onError: (e: any) => toast.error(e?.message || "Envoi impossible."),
+  });
+
+  const unlockMutation = useMutation({
+    mutationFn: (id: string) => api(`/users/${id}/unlock`, { method: "POST", auth: true }),
+    onSuccess: () => { invalidate(); toast.success("Compte déverrouillé."); },
+    onError: (e: any) => toast.error(e?.message || "Déverrouillage impossible."),
   });
 
   const deleteMutation = useMutation({
@@ -108,6 +134,16 @@ export const UsersManager = () => {
 
   const emailChanged = !!editing?.id && editing.email !== originalEmail;
 
+  // Validation côté client du mot de passe AVANT envoi (le backend revalide toujours).
+  const handleSave = () => {
+    if (!editing) return;
+    if (editing.password) {
+      const err = validatePasswordClient(editing.password);
+      if (err) return toast.error(err);
+    }
+    saveMutation.mutate(editing);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
@@ -134,7 +170,13 @@ export const UsersManager = () => {
                   <div className="text-xs text-muted-foreground flex items-center gap-1.5"><Mail className="h-3 w-3" /> {u.email}</div>
                 </div>
               </div>
-              <div className="hidden md:flex flex-wrap gap-1 justify-end max-w-sm">
+              <div className="hidden md:flex flex-wrap gap-1 justify-end max-w-sm items-center">
+                {u.locked && (
+                  <Badge className="bg-destructive text-white border-none gap-1"><Unlock className="h-3 w-3" /> Verrouillé</Badge>
+                )}
+                {!u.activated && (
+                  <Badge className="bg-amber-500 text-white border-none gap-1"><Clock className="h-3 w-3" /> Invitation en attente</Badge>
+                )}
                 {u.role === "ADMIN" ? (
                   <Badge className="bg-primary text-white border-none gap-1"><ShieldCheck className="h-3 w-3" /> Administrateur</Badge>
                 ) : (
@@ -147,10 +189,21 @@ export const UsersManager = () => {
                 )}
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => openEditor({ id: u.id, email: u.email, name: u.name, password: "", role: u.role, permissions: [...u.permissions] })}>
+                {u.locked && (
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-amber-600 hover:bg-amber-500/10" title="Déverrouiller le compte"
+                    disabled={unlockMutation.isPending} onClick={() => unlockMutation.mutate(u.id)}>
+                    <Unlock className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" className="h-9 w-9" title={u.activated ? "Réinitialiser le mot de passe (renvoyer une invitation)" : "Renvoyer l'invitation"}
+                  disabled={inviteMutation.isPending}
+                  onClick={() => { if (confirm(`${u.activated ? "Réinitialiser le mot de passe de" : "Renvoyer l'invitation à"} ${u.name} ?`)) inviteMutation.mutate(u.id); }}>
+                  <Send className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-9 w-9" title="Modifier" onClick={() => openEditor({ id: u.id, email: u.email, name: u.name, password: "", role: u.role, permissions: [...u.permissions] })}>
                   <Edit2 className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={() => { if (confirm(`Supprimer ${u.name} ?`)) deleteMutation.mutate(u.id); }}>
+                <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10" title="Supprimer" onClick={() => { if (confirm(`Supprimer ${u.name} ?`)) deleteMutation.mutate(u.id); }}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -188,8 +241,27 @@ export const UsersManager = () => {
                 )}
               </div>
               <div className="grid gap-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase">{editing.id ? "Nouveau mot de passe (optionnel)" : "Mot de passe"}</label>
-                <Input type="password" value={editing.password} onChange={(e) => setEditing({ ...editing, password: e.target.value })} placeholder="6 caractères minimum" />
+                <label className="text-xs font-bold text-muted-foreground uppercase">
+                  {editing.id ? "Nouveau mot de passe (optionnel)" : "Mot de passe (optionnel)"}
+                </label>
+                <Input
+                  type="password"
+                  value={editing.password}
+                  onChange={(e) => setEditing({ ...editing, password: e.target.value })}
+                  placeholder="Laisser vide…"
+                  autoComplete="new-password"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  {editing.id
+                    ? "Laissez vide pour ne rien changer. Renseignez-le pour définir directement un nouveau mot de passe (réinitialisation immédiate)."
+                    : "Laissez vide pour envoyer une invitation par e-mail (l'utilisateur choisit son mot de passe). Renseignez-le pour activer le compte immédiatement."}
+                </p>
+                {editing.password && (
+                  <div className="flex gap-2 rounded-lg bg-secondary/40 p-2.5 text-[11px] text-muted-foreground">
+                    <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
+                    <span>{PASSWORD_RULE_TEXT}</span>
+                  </div>
+                )}
               </div>
 
               <div className="grid gap-2">
@@ -244,7 +316,7 @@ export const UsersManager = () => {
             </CardContent>
             <div className="p-4 border-t bg-card shrink-0 flex justify-end gap-3">
               <Button variant="outline" onClick={() => setEditing(null)} className="rounded-full px-6">Annuler</Button>
-              <Button disabled={saveMutation.isPending} onClick={() => saveMutation.mutate(editing)} className="rounded-full px-8 bg-primary text-white">
+              <Button disabled={saveMutation.isPending} onClick={handleSave} className="rounded-full px-8 bg-primary text-white">
                 {saveMutation.isPending ? "Enregistrement…" : "Enregistrer"}
               </Button>
             </div>

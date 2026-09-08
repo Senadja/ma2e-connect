@@ -10,9 +10,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { KeyRound } from "lucide-react";
+import { KeyRound, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { PASSWORD_RULE_TEXT, validatePasswordClient } from "@/lib/passwordPolicy";
 
 // Changement de son propre mot de passe (self-service) depuis le back-office.
 export function ChangePasswordDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
@@ -24,7 +25,8 @@ export function ChangePasswordDialog({ open, onOpenChange }: { open: boolean; on
   const reset = () => { setCurrent(""); setNext(""); setConfirm(""); };
 
   const submit = async () => {
-    if (next.length < 6) { toast.error("Le nouveau mot de passe doit faire au moins 6 caractères."); return; }
+    const complexityError = validatePasswordClient(next);
+    if (complexityError) { toast.error(complexityError); return; }
     if (next !== confirm) { toast.error("La confirmation ne correspond pas au nouveau mot de passe."); return; }
     setLoading(true);
     try {
@@ -61,11 +63,15 @@ export function ChangePasswordDialog({ open, onOpenChange }: { open: boolean; on
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cp-new">Nouveau mot de passe</Label>
-            <Input id="cp-new" type="password" value={next} onChange={(e) => setNext(e.target.value)} placeholder="6 caractères minimum" autoComplete="new-password" />
+            <Input id="cp-new" type="password" value={next} onChange={(e) => setNext(e.target.value)} placeholder="12 caractères minimum" autoComplete="new-password" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cp-confirm">Confirmer le nouveau mot de passe</Label>
             <Input id="cp-confirm" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
+          </div>
+          <div className="flex gap-2 rounded-lg bg-secondary/40 p-2.5 text-xs text-muted-foreground">
+            <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
+            <span>{PASSWORD_RULE_TEXT}</span>
           </div>
         </div>
         <DialogFooter className="gap-2 sm:gap-0">

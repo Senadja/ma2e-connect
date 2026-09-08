@@ -1,16 +1,57 @@
 import { Router } from 'express';
-import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
+import { env } from '../lib/env';
 import { requireAuth, requirePermission } from '../middleware/auth';
 import { PERMISSIONS, PROFILES } from '../lib/permissions';
-import { sendStaffWelcome } from '../lib/mailer';
+import { sendStaffInvitation } from '../lib/mailer';
+import {
+  PASSWORD_POLICY,
+  createOneTimeToken,
+  validatePasswordComplexity,
+  hashPassword,
+  isPasswordReused,
+  pushHistory,
+} from '../lib/passwordPolicy';
 
 export const usersRouter = Router();
 
-const SELECT = { id: true, email: true, name: true, role: true, permissions: true, createdAt: true };
+// On sélectionne `password` et `lockedAt` pour EN DÉRIVER des booléens sûrs (compte activé ?
+// verrouillé ?), mais on ne renvoie JAMAIS l'empreinte au client : shape() les retire.
+const SELECT = {
+  id: true,
+  email: true,
+  name: true,
+  role: true,
+  permissions: true,
+  createdAt: true,
+  lockedAt: true,
+  password: true,
+};
+
+interface RawUser {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  permissions: string[];
+  createdAt: Date;
+  lockedAt: Date | null;
+  password: string | null;
+}
+
+// Expose au front des drapeaux plutôt que des secrets : `activated` (a défini son mot de passe)
+// et `locked` (compte verrouillé). L'empreinte du mot de passe ne sort jamais de l'API.
+function shape(u: RawUser) {
+  const { password, lockedAt, ...rest } = u;
+  return { ...rest, activated: !!password, locked: !!lockedAt };
+}
 
 const ROLE_LABELS: Record<string, string> = { ADMIN: 'Administrateur', EDITOR: 'Éditeur', USER: 'Utilisateur' };
+
+function inviteLink(uid: string, rawToken: string): string {
+  return `${env.publicUrl}/admin/activation?uid=${uid}&token=${rawToken}`;
+}
 
 usersRouter.use(requireAuth, requirePermission('users:manage'));
 
@@ -21,13 +62,16 @@ usersRouter.get('/meta', (_req, res) => {
 
 usersRouter.get('/', async (_req, res) => {
   const users = await prisma.user.findMany({ select: SELECT, orderBy: { createdAt: 'asc' } });
-  res.json(users);
+  res.json(users.map(shape));
 });
 
+// Création : par défaut par invitation (l'utilisateur définit lui-même son mot de passe via
+// le lien reçu). L'administrateur peut cependant fixer directement un mot de passe (style Odoo)
+// en renseignant `password` : le compte est alors activé immédiatement, sans e-mail.
 const createSchema = z.object({
   email: z.string().email(),
   name: z.string().min(2),
-  password: z.string().min(6, 'Mot de passe : 6 caractères minimum'),
+  password: z.string().optional(),
   role: z.enum(['USER', 'EDITOR', 'ADMIN']).default('EDITOR'),
   permissions: z.array(z.string()).default([]),
 });
@@ -52,15 +96,79 @@ usersRouter.post('/', async (req, res) => {
   }
   const exists = await prisma.user.findUnique({ where: { email: d.email } });
   if (exists) return res.status(409).json({ error: 'Cet email est déjà utilisé' });
-  const password = await bcrypt.hash(d.password, 10);
+
+  // Cas 1 — l'administrateur fixe directement le mot de passe : compte activé immédiatement.
+  if (d.password) {
+    const complexityError = validatePasswordComplexity(d.password);
+    if (complexityError) return res.status(400).json({ error: complexityError });
+    const user = await prisma.user.create({
+      data: {
+        email: d.email,
+        name: d.name,
+        role: d.role,
+        permissions: d.permissions,
+        password: await hashPassword(d.password),
+        passwordChangedAt: new Date(),
+      },
+      select: SELECT,
+    });
+    return res.status(201).json(shape(user));
+  }
+
+  // Cas 2 — invitation : compte créé SANS mot de passe + jeton à usage unique envoyé par e-mail.
+  const { raw, hash, expiresAt } = await createOneTimeToken(
+    PASSWORD_POLICY.inviteTtlHours * 60 * 60 * 1000
+  );
   const user = await prisma.user.create({
-    data: { email: d.email, name: d.name, password, role: d.role, permissions: d.permissions },
+    data: {
+      email: d.email,
+      name: d.name,
+      role: d.role,
+      permissions: d.permissions,
+      inviteTokenHash: hash,
+      inviteExpiresAt: expiresAt,
+    },
     select: SELECT,
   });
-  // Mail de bienvenue, non bloquant : un échec d'envoi ne doit pas annuler la création
-  // (la fonction avale ses propres erreurs, d'où le fire-and-forget).
-  void sendStaffWelcome(user.email, user.name, ROLE_LABELS[user.role] ?? user.role);
-  res.status(201).json(user);
+  // E-mail d'invitation non bloquant : un échec d'envoi n'annule pas la création
+  // (l'administrateur pourra relancer l'invitation). La fonction avale ses erreurs.
+  void sendStaffInvitation(user.email, user.name, inviteLink(user.id, raw), ROLE_LABELS[user.role] ?? user.role, false);
+  res.status(201).json(shape(user));
+});
+
+// (Re)envoi d'une invitation : première activation restée sans suite OU réinitialisation
+// d'un mot de passe oublié. Remplace la saisie manuelle d'un mot de passe par l'administrateur.
+usersRouter.post('/:id/invite', async (req, res) => {
+  const target = await prisma.user.findUnique({ where: { id: req.params.id } });
+  if (!target) return res.status(404).json({ error: 'Utilisateur introuvable' });
+  if (req.user!.role.toLowerCase() !== 'admin' && grantsAdminPower(target.role, target.permissions)) {
+    return res.status(403).json({ error: 'Seul un administrateur peut gérer un compte à pouvoirs administrateur.' });
+  }
+  const { raw, hash, expiresAt } = await createOneTimeToken(
+    PASSWORD_POLICY.inviteTtlHours * 60 * 60 * 1000
+  );
+  await prisma.user.update({
+    where: { id: target.id },
+    data: { inviteTokenHash: hash, inviteExpiresAt: expiresAt },
+  });
+  // Déjà activé (mot de passe défini) → c'est une réinitialisation ; sinon une première invitation.
+  const isReset = !!target.password;
+  void sendStaffInvitation(target.email, target.name, inviteLink(target.id, raw), ROLE_LABELS[target.role] ?? target.role, isReset);
+  res.json({ ok: true });
+});
+
+// Déverrouillage d'un compte bloqué après trop d'échecs (réservé, comme le reste, à users:manage).
+usersRouter.post('/:id/unlock', async (req, res) => {
+  const target = await prisma.user.findUnique({ where: { id: req.params.id } });
+  if (!target) return res.status(404).json({ error: 'Utilisateur introuvable' });
+  if (req.user!.role.toLowerCase() !== 'admin' && grantsAdminPower(target.role, target.permissions)) {
+    return res.status(403).json({ error: 'Seul un administrateur peut gérer un compte à pouvoirs administrateur.' });
+  }
+  await prisma.user.update({
+    where: { id: target.id },
+    data: { failedLoginAttempts: 0, lockedAt: null },
+  });
+  res.json({ ok: true });
 });
 
 const updateSchema = z.object({
@@ -69,7 +177,8 @@ const updateSchema = z.object({
   // (utile quand un éditeur change de boîte ou lors d'un changement de personnel côté admin).
   email: z.string().email().optional(),
   name: z.string().min(2).optional(),
-  password: z.string().min(6).optional(),
+  // Réinitialisation directe du mot de passe par l'administrateur (style Odoo), optionnelle.
+  password: z.string().optional(),
   role: z.enum(['USER', 'EDITOR', 'ADMIN']).optional(),
   permissions: z.array(z.string()).optional(),
 });
@@ -120,12 +229,31 @@ usersRouter.put('/:id', async (req, res) => {
   if (d.name !== undefined) data.name = d.name;
   if (roleChanged) data.role = d.role;
   if (permsChanged) data.permissions = d.permissions;
-  if (d.password) data.password = await bcrypt.hash(d.password, 10);
+
+  // Réinitialisation directe du mot de passe par l'administrateur : même politique que partout
+  // (complexité + non-réutilisation). Active le compte, purge le verrou et une invitation en cours.
+  if (d.password) {
+    const complexityError = validatePasswordComplexity(d.password);
+    if (complexityError) return res.status(400).json({ error: complexityError });
+    if (await isPasswordReused(d.password, target.password, target.passwordHistory)) {
+      return res
+        .status(400)
+        .json({ error: 'Ce mot de passe a déjà été utilisé récemment. Choisissez-en un autre.' });
+    }
+    data.password = await hashPassword(d.password);
+    data.passwordHistory = { set: pushHistory(target.password, target.passwordHistory) };
+    data.passwordChangedAt = new Date();
+    data.failedLoginAttempts = 0;
+    data.lockedAt = null;
+    data.inviteTokenHash = null;
+    data.inviteExpiresAt = null;
+  }
+
   const user = await prisma.user
     .update({ where: { id: req.params.id }, data, select: SELECT })
     .catch(() => null);
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
-  res.json(user);
+  res.json(shape(user));
 });
 
 usersRouter.delete('/:id', async (req, res) => {
