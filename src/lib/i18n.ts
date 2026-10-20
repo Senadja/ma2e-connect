@@ -62,7 +62,7 @@ export const resources = {
         rights: "Tous droits réservés.",
         legal: "Mentions légales",
         terms: "CGU",
-        dcp: "Politique DCP",
+        dcp: "Données Personnelles",
       },
       home: {
         heroBadge: "Microfinance mutualiste · 2006",
@@ -407,7 +407,7 @@ export const resources = {
         rights: "All rights reserved.",
         legal: "Legal notice",
         terms: "Terms of use",
-        dcp: "Privacy policy",
+        dcp: "Personal Data",
       },
       home: {
         heroBadge: "Mutual microfinance · 2006",

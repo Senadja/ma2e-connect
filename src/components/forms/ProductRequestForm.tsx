@@ -13,11 +13,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useTranslation } from "react-i18next";
+import { DcpNotice, FreeTextHint, useFormsDcp } from "@/components/forms/DcpNotice";
 
 const formSchema = z.object({
   fullName: z.string().min(3, "Nom complet requis"),
@@ -26,6 +28,7 @@ const formSchema = z.object({
   productType: z.string().min(1, "Sélectionnez un produit"),
   amount: z.string().optional(),
   message: z.string().optional(),
+  consent: z.boolean().refine((val) => val === true, "Vous devez accepter le traitement de vos données"),
 });
 
 interface ProductRequestFormProps {
@@ -35,6 +38,7 @@ interface ProductRequestFormProps {
 
 export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestFormProps) => {
   const { t } = useTranslation();
+  const { dcp, fill } = useFormsDcp();
   const [submitted, setSubmitted] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -46,6 +50,7 @@ export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestF
       productType: defaultProduct || "",
       amount: "",
       message: "",
+      consent: false,
     },
   });
 
@@ -63,6 +68,7 @@ export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestF
           matricule: values.matricule,
           phone: values.phone,
           data: { amount: values.amount || "", message: values.message || "" },
+          consent: true,
         },
       });
       setSubmitted(true);
@@ -98,7 +104,8 @@ export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestF
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-      <h3 className="font-display text-xl font-bold mb-6">{t("form.title")}</h3>
+      <h3 className="font-display text-xl font-bold mb-4">{t("form.title")}</h3>
+      <DcpNotice className="mb-6" />
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
@@ -204,10 +211,27 @@ export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestF
             render={({ field }) => (
               <FormItem>
                 <FormLabel>{t("form.message")}</FormLabel>
+                <FreeTextHint />
                 <FormControl>
                   <Textarea placeholder={t("form.messagePlaceholder")} className="resize-none" {...field} />
                 </FormControl>
                 <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="consent"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start gap-3 space-y-0 rounded-md border p-3">
+                <FormControl>
+                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel className="text-sm font-normal">{dcp.consentLabel} *</FormLabel>
+                  <p className="text-[11px] text-muted-foreground">{fill(dcp.withdrawNote)}</p>
+                  <FormMessage />
+                </div>
               </FormItem>
             )}
           />

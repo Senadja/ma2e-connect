@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { PageHero } from "@/components/PageHero";
-import { MapPin, Phone, Mail, Clock, Send, ChevronDown } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Send } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useSettings } from "@/lib/content";
+import { DcpNotice, FreeTextHint, useFormsDcp } from "@/components/forms/DcpNotice";
 
 const Contact = () => {
   const { t } = useTranslation();
   const { data: settings } = useSettings();
+  const { dcp, fill } = useFormsDcp();
   const c = settings?.contact;
   // Carte OpenStreetMap (gratuite, sans clé API) centrée sur la position éditable au CMS.
   const mapLat = parseFloat(String(c?.mapLat ?? "")) || 5.325;
@@ -18,7 +20,7 @@ const Contact = () => {
   const mapSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${(mapLng - dLng).toFixed(4)}%2C${(mapLat - dLat).toFixed(4)}%2C${(mapLng + dLng).toFixed(4)}%2C${(mapLat + dLat).toFixed(4)}&layer=mapnik&marker=${mapLat.toFixed(4)}%2C${mapLng.toFixed(4)}`;
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showDcp, setShowDcp] = useState(false);
+  const [consent, setConsent] = useState(false);
   const [subject, setSubject] = useState("Adhésion");
   const [otherSubject, setOtherSubject] = useState("");
 
@@ -37,6 +39,7 @@ const Contact = () => {
           phone: String(fd.get("phone") || ""),
           subject: finalSubject,
           message: String(fd.get("message") || ""),
+          consent: true,
         },
       });
       setSent(true);
@@ -120,6 +123,7 @@ const Contact = () => {
                 </div>
               ) : (
                 <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
+                  <DcpNotice />
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium mb-1.5" htmlFor="nom">{t("contact.fullName")} *</label>
@@ -162,24 +166,25 @@ const Contact = () => {
                   )}
                   <div>
                     <label className="block text-sm font-medium mb-1.5" htmlFor="msg">{t("contact.message")} *</label>
+                    <FreeTextHint className="mb-1.5" />
                     <textarea id="msg" name="message" rows={5} required className="w-full rounded-lg border border-input bg-background px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary" />
                   </div>
-                  <label className="flex gap-2 items-start text-sm text-muted-foreground">
-                    <input type="checkbox" required className="mt-1 accent-primary" />
-                    <span>{t("contact.accept")} *</span>
-                  </label>
+                  <div className="space-y-1">
+                    <label className="flex gap-2 items-start text-sm text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        required
+                        checked={consent}
+                        onChange={(e) => setConsent(e.target.checked)}
+                        className="mt-1 accent-primary"
+                      />
+                      <span>{dcp.consentLabel} *</span>
+                    </label>
+                    <p className="pl-6 text-[11px] text-muted-foreground">{fill(dcp.withdrawNote)}</p>
+                  </div>
                   <button type="submit" disabled={loading} className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-gradient-gold text-accent-foreground px-5 py-3.5 font-semibold shadow-gold hover:scale-[1.01] transition-bounce disabled:opacity-60">
                     <Send className="h-4 w-4" /> {loading ? t("contact.sending") : t("contact.send")}
                   </button>
-
-                  <button type="button" onClick={() => setShowDcp(!showDcp)} className="w-full text-xs text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1">
-                    Notice DCP <ChevronDown className={`h-3 w-3 transition-transform ${showDcp ? "rotate-180" : ""}`} />
-                  </button>
-                  {showDcp && (
-                    <p className="text-xs text-muted-foreground bg-secondary/40 rounded-lg p-3 leading-relaxed">
-                      Les données collectées via ce formulaire sont utilisées exclusivement pour répondre à votre demande. Conformément à la loi ivoirienne n° 2013-450, vous disposez d'un droit d'accès, de rectification et de suppression. Contact DCP : {c?.dcpEmail || "privacyMA2E@ma2e.ci"}
-                    </p>
-                  )}
                 </form>
               )}
             </div>

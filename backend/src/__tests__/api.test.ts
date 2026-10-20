@@ -288,7 +288,7 @@ describe('Validation des demandes', () => {
   // (201) avec une référence UNIQUE, jamais de 500.
   it('POST /api/applications en rafale → références uniques, aucun 500', async () => {
     const N = 20;
-    const payload = { category: 'crédit', type: 'test-concurrence', name: 'Test Concurrence', phone: '0102030405' };
+    const payload = { category: 'crédit', type: 'test-concurrence', name: 'Test Concurrence', phone: '0102030405', consent: true };
     const results = await Promise.all(
       Array.from({ length: N }, () =>
         request(app).post('/api/applications').set('X-Forwarded-For', nextIp()).send(payload)
@@ -541,6 +541,81 @@ describe('Remédiation audit GS2E', () => {
     const res = await request(app).get('/api/articles').set('X-Forwarded-For', nextIp());
     expect(res.status).toBe(200);
     expect(res.headers['ratelimit-limit']).toBeDefined();
+  });
+});
+
+// Consentement et preuve de lecture (check-list de recette DCP SD_PDCP) :
+// le consentement est exigé côté serveur, puis horodaté avec la version du texte affiché.
+describe('Consentement DCP des formulaires publics', () => {
+  it("POST /api/applications sans consentement → 400", async () => {
+    const res = await request(app)
+      .post('/api/applications')
+      .set('X-Forwarded-For', nextIp())
+      .send({ category: 'crédit', type: 'test-dcp', name: 'Sans Consentement', phone: '0102030405' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/consentement/i);
+  });
+
+  it("POST /api/applications (adhésion) → preuve de lecture des TCU horodatée", async () => {
+    const res = await request(app)
+      .post('/api/applications')
+      .set('X-Forwarded-For', nextIp())
+      .send({ category: 'adhésion', type: 'Adhésion (sociétaire)', name: 'Test Preuve TCU', phone: '0102030405', consent: true });
+    expect(res.status).toBe(201);
+    const row = await prisma.application.findUnique({ where: { id: res.body.id } });
+    expect(row?.consentAt).toBeInstanceOf(Date);
+    // Sur l'adhésion, la case vaut preuve de LECTURE DES TCU (pas un consentement distinct).
+    expect(row?.consentVersion).toMatch(/^TCU /);
+  });
+
+  it("POST /api/applications (autre demande) → consentement DCP horodaté", async () => {
+    const res = await request(app)
+      .post('/api/applications')
+      .set('X-Forwarded-For', nextIp())
+      .send({ category: 'épargne', type: 'expresse', name: 'Test Consentement DCP', phone: '0102030405', consent: true });
+    expect(res.status).toBe(201);
+    const row = await prisma.application.findUnique({ where: { id: res.body.id } });
+    expect(row?.consentAt).toBeInstanceOf(Date);
+    expect(row?.consentVersion).toMatch(/^DCP /);
+  });
+
+  it("la version enregistrée est celle servie par le serveur, pas celle envoyée par le client", async () => {
+    const res = await request(app)
+      .post('/api/applications')
+      .set('X-Forwarded-For', nextIp())
+      .send({
+        category: 'crédit',
+        type: 'test-version-forgee',
+        name: 'Test Version Forgee',
+        phone: '0102030405',
+        consent: true,
+        consentVersion: 'DCP version-forgee-par-le-client',
+      });
+    expect(res.status).toBe(201);
+    const row = await prisma.application.findUnique({ where: { id: res.body.id } });
+    expect(row?.consentVersion).not.toContain('forgee-par-le-client');
+  });
+
+  it("POST /api/contact sans consentement → 400", async () => {
+    const res = await request(app)
+      .post('/api/contact')
+      .set('X-Forwarded-For', nextIp())
+      .send({ name: 'Sans Consentement', email: 'sans-consentement@example.com', message: 'Message de test DCP.' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/consentement/i);
+  });
+
+  it("POST /api/contact avec consentement → message créé et trace enregistrée", async () => {
+    const email = `dcp-consent-${Date.now()}@example.com`;
+    const res = await request(app)
+      .post('/api/contact')
+      .set('X-Forwarded-For', nextIp())
+      .send({ name: 'Test Consentement', email, message: 'Message de test DCP.', consent: true });
+    expect(res.status).toBe(201);
+    const row = await prisma.contactMessage.findFirst({ where: { email }, orderBy: { createdAt: 'desc' } });
+    expect(row?.consentAt).toBeInstanceOf(Date);
+    expect(row?.consentVersion).toMatch(/^DCP /);
+    if (row) await prisma.contactMessage.delete({ where: { id: row.id } });
   });
 });
 

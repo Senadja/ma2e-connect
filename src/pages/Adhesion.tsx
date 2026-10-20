@@ -4,7 +4,7 @@ import * as z from "zod";
 import { Layout } from "@/components/layout/Layout";
 import { PageHero } from "@/components/PageHero";
 import { SEO } from "@/components/SEO";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DcpNotice, useFormsDcp } from "@/components/forms/DcpNotice";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SignaturePad } from "@/components/SignaturePad";
 import { toast } from "sonner";
@@ -127,6 +128,7 @@ async function validateUploadFile(file: File): Promise<string | null> {
 
 const Adhesion = () => {
   const { t } = useTranslation();
+  const { dcp } = useFormsDcp();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
@@ -232,6 +234,7 @@ const Adhesion = () => {
             documents: docs,
             signature,
           },
+          consent: true,
         },
       });
       toast.success(`Demande d'adhésion envoyée — référence ${appId} !`);
@@ -284,6 +287,7 @@ const Adhesion = () => {
 
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-8">
+                    <DcpNotice />
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                       <TabsList className="grid w-full grid-cols-4 mb-10">
                         <TabsTrigger value="personal" className="flex items-center gap-2"><User className="h-4 w-4" /><span className="hidden sm:inline">Personnel</span></TabsTrigger>
@@ -515,7 +519,15 @@ const Adhesion = () => {
                         <FormField control={form.control} name="acceptTerms" render={({ field }) => (
                           <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                             <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                            <div className="space-y-1 leading-none"><FormLabel className="text-sm">{t("adhesion.certify")}</FormLabel></div>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel className="text-sm">{t("adhesion.certify")}</FormLabel>
+                              <p className="text-[11px] text-muted-foreground">
+                                <Link to="/cgu" target="_blank" className="text-primary font-semibold hover:underline">
+                                  Lire les conditions (TCU)
+                                </Link>
+                                {" "}— version {dcp.tcuVersion}. Votre acceptation est horodatée et conservée avec votre dossier.
+                              </p>
+                            </div>
                           </FormItem>
                         )} />
 

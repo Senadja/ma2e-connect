@@ -14,6 +14,7 @@ import {
   MessageSquare,
   XCircle,
   CheckCircle2,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,10 @@ interface ApiApplication {
   status: "PENDING" | "REVIEWING" | "APPROVED" | "REJECTED";
   priority: "LOW" | "MEDIUM" | "HIGH";
   data: Record<string, unknown>;
+  // Preuve de consentement / de lecture des TCU (check-list DCP) — null sur les demandes
+  // reçues avant sa mise en place.
+  consentAt: string | null;
+  consentVersion: string | null;
   createdAt: string;
 }
 
@@ -102,6 +107,8 @@ function mapApp(a: ApiApplication) {
     phone: a.phone,
     priority: a.priority.toLowerCase(),
     data: a.data || {},
+    consentAt: a.consentAt ?? null,
+    consentVersion: a.consentVersion ?? null,
     createdAt: a.createdAt,
     date: fmtDate(a.createdAt),
   };
@@ -151,6 +158,7 @@ export const ApplicationsManager = () => {
     }
     const headers = [
       "Référence", "Catégorie", "Type", "Nom", "Matricule", "Email", "Téléphone", "Date réception",
+      "Consentement (version)", "Consentement (horodatage)",
     ];
     const esc = (v: unknown) => {
       const s = v == null ? "" : String(v);
@@ -158,6 +166,7 @@ export const ApplicationsManager = () => {
     };
     const rows = filteredApps.map((a) => [
       a.id, a.category, a.type, a.name, a.matricule, a.email, a.phone, fmtDateTime(a.createdAt),
+      a.consentVersion || "", a.consentAt ? fmtDateTime(a.consentAt) : "",
     ]);
     // Séparateur « ; » + BOM UTF-8 → Excel FR ouvre proprement les accents.
     const csv = "﻿" + [headers, ...rows].map((r) => r.map(esc).join(";")).join("\r\n");
@@ -411,6 +420,28 @@ export const ApplicationsManager = () => {
                         <MessageSquare className="h-4 w-4" /> Contacter le demandeur
                       </a>
                     </Button>
+                  </div>
+
+                  {/* Preuve de consentement / de lecture des TCU : version du texte accepté,
+                      horodatage et identifiant de la soumission (check-list de recette DCP). */}
+                  <div className="pt-6 border-t">
+                    <div className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest mb-3">
+                      {selectedApp.category === "Adhésion" ? "Preuve de lecture des TCU" : "Preuve de consentement"}
+                    </div>
+                    {selectedApp.consentAt ? (
+                      <div className="rounded-xl border border-border/50 bg-secondary/20 p-3 text-xs space-y-1">
+                        <div className="flex items-center gap-2 font-bold">
+                          <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Acceptation enregistrée
+                        </div>
+                        <p className="text-muted-foreground">Version acceptée : <span className="font-mono">{selectedApp.consentVersion || "—"}</span></p>
+                        <p className="text-muted-foreground">Horodatage : {fmtDateTime(selectedApp.consentAt)}</p>
+                        <p className="text-muted-foreground">Soumission : <span className="font-mono">{selectedApp.id}</span></p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Non enregistrée — demande reçue avant la mise en place de la preuve.
+                      </p>
+                    )}
                   </div>
 
                   {/* Historique réel */}

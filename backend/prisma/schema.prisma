@@ -77,6 +77,10 @@ model Application {
   status         AppStatus @default(PENDING)
   priority       Priority  @default(MEDIUM)
   data           Json
+  // Preuve de consentement : date d'acceptation et version du texte accepté
+  // (« TCU <version> » pour une adhésion, « DCP <version> » pour les autres demandes).
+  consentAt      DateTime?
+  consentVersion String?
   // Traçabilité de la décision (validation / refus motivé).
   decisionReason String? // motif du refus ou note de validation
   decidedAt      DateTime? // horodatage de la décision
@@ -174,14 +178,17 @@ model TeamMember {
 }
 
 model ContactMessage {
-  id        String   @id @default(uuid())
-  name      String
-  email     String
-  phone     String?
-  subject   String?
-  message   String
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id             String   @id @default(uuid())
+  name           String
+  email          String
+  phone          String?
+  subject        String?
+  message        String
+  read           Boolean  @default(false)
+  // Preuve du consentement recueilli sur le formulaire (date + version du texte affiché).
+  consentAt      DateTime?
+  consentVersion String?
+  createdAt      DateTime @default(now())
 }
 
 model AuditLog {

@@ -9,6 +9,7 @@ import { env } from '../lib/env';
 import { requireAuth, requirePermission } from '../middleware/auth';
 import { publicWriteLimiter } from '../lib/rateLimit';
 import { signDoc, verifyDoc } from '../lib/docSign';
+import { consentStamp } from '../lib/consent';
 import { nextAppNumber } from '../lib/appRef';
 import { sendApplicationNotification, sendApplicationDecision } from '../lib/mailer';
 
@@ -131,6 +132,12 @@ const createSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().min(6),
   data: z.record(z.string(), z.any()).default({}),
+  // Acceptation des TCU (adhésion) ou consentement au traitement (autres demandes).
+  // La date et la version du texte accepté sont déterminées par le serveur (lib/consent).
+  // z.literal(true) couvre d'un seul message les trois cas de refus : champ absent,
+  // case décochée, valeur non booléenne (un `.refine()` ne s'exécuterait pas si le
+  // champ est absent — le message de zod prendrait le dessus).
+  consent: z.literal(true, { error: 'Le consentement au traitement des données est requis' }),
 });
 
 // Crée la demande avec une référence atomique (voir lib/appRef : séquence Postgres `nextval`).
@@ -138,6 +145,9 @@ const createSchema = z.object({
 // la séquence, mais couvre un éventuel doublon résiduel dans des données héritées.
 async function createApplication(d: z.infer<typeof createSchema>) {
   const year = new Date().getFullYear();
+  // Sur le formulaire d'adhésion, la case cochée vaut preuve de LECTURE DES TCU
+  // (relation contractuelle) ; ailleurs, c'est un consentement au traitement des DCP.
+  const consent = await consentStamp(d.category.toLowerCase().startsWith('adh') ? 'tcu' : 'dcp');
   for (let attempt = 0; ; attempt++) {
     const appId = `MA2E-${year}-${String(await nextAppNumber()).padStart(4, '0')}`;
     try {
@@ -151,6 +161,8 @@ async function createApplication(d: z.infer<typeof createSchema>) {
           email: d.email || '',
           phone: d.phone,
           data: d.data,
+          consentAt: consent.consentAt,
+          consentVersion: consent.consentVersion,
         },
       });
     } catch (err) {

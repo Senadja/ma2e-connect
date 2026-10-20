@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { requireAuth, requirePermission } from '../middleware/auth';
 import { publicWriteLimiter } from '../lib/rateLimit';
 import { sendApplicationNotification } from '../lib/mailer';
+import { consentStamp } from '../lib/consent';
 
 export const contactRouter = Router();
 
@@ -13,6 +14,12 @@ const createSchema = z.object({
   phone: z.string().optional(),
   subject: z.string().optional(),
   message: z.string().min(5),
+  // Consentement explicite exigé par SD_PDCP sur ce formulaire ; sa date et la version
+  // du texte affiché sont déterminées par le serveur (lib/consent).
+  // z.literal(true) couvre d'un seul message les trois cas de refus : champ absent,
+  // case décochée, valeur non booléenne (un `.refine()` ne s'exécuterait pas si le
+  // champ est absent — le message de zod prendrait le dessus).
+  consent: z.literal(true, { error: 'Le consentement au traitement des données est requis' }),
 });
 
 // POST public (rate-limité) — message de contact depuis le site.
@@ -20,8 +27,17 @@ contactRouter.post('/', publicWriteLimiter, async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
   const d = parsed.data;
+  const consent = await consentStamp('dcp');
   const msg = await prisma.contactMessage.create({
-    data: { name: d.name, email: d.email, phone: d.phone, subject: d.subject, message: d.message },
+    data: {
+      name: d.name,
+      email: d.email,
+      phone: d.phone,
+      subject: d.subject,
+      message: d.message,
+      consentAt: consent.consentAt,
+      consentVersion: consent.consentVersion,
+    },
   });
   // Réutilise le mailer (notification au service MA2E).
   void sendApplicationNotification({

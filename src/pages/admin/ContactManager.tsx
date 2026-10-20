@@ -11,6 +11,9 @@ import { cn } from "@/lib/utils";
 interface Message {
   id: string; name: string; email: string; phone?: string; subject?: string;
   message: string; read: boolean; createdAt: string;
+  // Trace du consentement recueilli sur le formulaire (check-list DCP) — null sur les
+  // messages reçus avant sa mise en place.
+  consentAt?: string | null; consentVersion?: string | null;
 }
 
 export const ContactManager = () => {
@@ -82,6 +85,18 @@ export const ContactManager = () => {
                   {selected.phone && <a href={`tel:${selected.phone}`} className="inline-flex items-center gap-2 rounded-lg bg-secondary/40 px-3 py-2 hover:text-primary"><Phone className="h-4 w-4" /> {selected.phone}</a>}
                 </div>
                 <div className="rounded-xl bg-secondary/20 border border-border/50 p-4 text-sm leading-relaxed whitespace-pre-wrap">{selected.message}</div>
+                <div className="rounded-xl border border-border/50 bg-secondary/10 p-3 text-xs">
+                  <div className="font-bold uppercase tracking-widest text-[10px] text-muted-foreground mb-1.5">Consentement DCP</div>
+                  {selected.consentAt ? (
+                    <div className="space-y-0.5 text-muted-foreground">
+                      <p>Version acceptée : <span className="font-mono">{selected.consentVersion || "—"}</span></p>
+                      <p>Horodatage : {new Date(selected.consentAt).toLocaleString("fr-FR")}</p>
+                      <p>Soumission : <span className="font-mono">{selected.id}</span></p>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">Non enregistré — message reçu avant la mise en place de la trace.</p>
+                  )}
+                </div>
                 <div className="flex gap-3">
                   <Button asChild className="rounded-full gap-2"><a href={`mailto:${selected.email}?subject=Re: ${encodeURIComponent(selected.subject || "Votre message")}`}><Reply className="h-4 w-4" /> Répondre par e-mail</a></Button>
                   <Button variant="outline" className="rounded-full gap-2" onClick={() => markRead.mutate({ id: selected.id, read: !selected.read })}><Check className="h-4 w-4" /> Marquer {selected.read ? "non lu" : "lu"}</Button>
