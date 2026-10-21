@@ -92,7 +92,7 @@ d'autres clients**. Nous recommandons de retirer ce mapping en production, ou de
 `127.0.0.1`. Correctif non appliqué à ce stade : il touche la configuration de déploiement et doit
 être validé puis vérifié sur le serveur.
 
-### 3.2 R29 — Politique de journalisation (proposition de réponse : **OK**, durée à fixer)
+### 3.2 R29 — Politique de journalisation (proposition de réponse : **OK partiel**)
 
 Les deux lacunes techniques relevées lors de la première rédaction de cette note — absence de trace
 des échecs d'authentification, absence d'adresse IP — **ont été corrigées le 21/10/2026**. Ce qui
@@ -110,8 +110,16 @@ Cette section vaut politique de journalisation : elle précise *quoi*, *où*, *c
 | **Événements d'authentification** | Connexion réussie (en précisant la voie : code reçu par courriel, code de secours, lien à usage unique), mot de passe incorrect avec le rang de l'échec, identifiant inconnu, compte en attente d'activation, verrouillage du compte après 5 échecs, tentative sur un compte verrouillé, code de vérification incorrect, abandon après trop de codes erronés — chacun avec l'adresse électronique visée et l'**adresse IP** de l'appelant | idem | idem |
 | Journaux techniques des conteneurs | Démarrages, erreurs applicatives, accès au proxy | `docker logs` sur le serveur OVH | selon la rotation Docker par défaut |
 
-L'adresse IP enregistrée est celle du visiteur, et non celle du proxy : l'application ne fait
-confiance qu'à un seul intermédiaire déclaré, ce qui empêche un appelant de la falsifier.
+**Réserve sur l'adresse IP, relevée à la mise en production du 21/10/2026.** L'application ne fait
+confiance qu'à **un seul** intermédiaire déclaré — ce qui empêche un appelant de falsifier son
+adresse, mais la chaîne réelle en compte plusieurs (Vercel, puis le tunnel Tailscale, puis le proxy
+inverse). L'adresse enregistrée est donc aujourd'hui celle du **dernier relais interne**, et non
+celle du visiteur. Les événements eux-mêmes sont correctement journalisés ; seule la valeur de
+l'adresse reste à corriger. Deux voies : déclarer le nombre exact de relais après avoir **mesuré**
+la chaîne (une valeur trop élevée rendrait l'adresse falsifiable, donc le journal manipulable), ou
+exposer l'API sur un vrai domaine avec TLS et supprimer le tunnel — ce qui corrige aussi les
+coupures intermittentes constatées sur l'entrée publique. Correctif non appliqué à ce stade : il
+touche l'architecture d'exposition et doit être arbitré.
 
 **Qui analyse.** Le journal est lisible par les seuls comptes habilités à la gestion des
 utilisateurs, dans le back-office. Les échecs y portent leur code de retour (401, 423, 429) et leur
@@ -124,7 +132,8 @@ signature d'une attaque par force brute aboutie — se lit sans outil d'analyse.
    **inerte** : sans durée renseignée, aucune purge n'a lieu. Il s'activera à réception de la
    réponse R07. Tant que cette durée n'est pas fixée, la conservation du journal est de fait
    illimitée.
-2. **Pas d'externalisation.** Les journaux résident sur le serveur qu'ils tracent et pourraient donc
+2. **Valeur de l'adresse IP** — voir la réserve ci-dessus.
+3. **Pas d'externalisation.** Les journaux résident sur le serveur qu'ils tracent et pourraient donc
    être altérés par un attaquant ayant obtenu un accès — point explicitement soulevé par le guide
    ANSSI. Y remédier suppose un service de collecte distinct (serveur de journalisation ou service
    géré), à arbitrer avec MA2E : c'est un choix d'hébergement et de coût, pas un développement.
@@ -160,7 +169,7 @@ pentest applicatif GS2E d'août 2026 et la mise en conformité DCP des formulair
 | R16, R17, R21 | **NA** (3) | pas de redirection dynamique, pas d'inclusion de fichier par donnée externe, session par jeton et non par cookie |
 | **R5** | à décider | voir § 3.3 |
 | **R11** | **OK** proposé | matrice fournie au § 3.1 |
-| **R29** | **OK** proposé | voir § 3.2 ; échecs d'authentification et adresses IP journalisés, durée de conservation à fixer (R07) |
+| **R29** | **OK partiel** proposé | voir § 3.2 ; échecs d'authentification journalisés, durée de conservation à fixer (R07) et valeur de l'adresse IP à corriger |
 
 ## 5. Un guide ANSSI plus récent existe — proposition d'arbitrage
 

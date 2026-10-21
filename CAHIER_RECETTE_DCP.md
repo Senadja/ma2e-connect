@@ -176,19 +176,25 @@ déverrouillage).
 
 | ID | Objet | Mode opératoire | Résultat attendu | OK/KO |
 |---|---|---|---|---|
-| J-01 | Connexion réussie tracée | Se connecter normalement, puis ouvrir le journal | Une ligne **« connexion réussie (code reçu par e-mail) »** apparaît, avec l'adresse de courriel du compte, l'heure et l'**adresse IP** | |
-| J-02 | Mot de passe erroné tracé | Se déconnecter, tenter une connexion du compte de test avec un mauvais mot de passe, se reconnecter en administrateur, ouvrir le journal | Une ligne rouge **401** porte le libellé « mot de passe incorrect (1/5) » et l'adresse IP | |
-| J-03 | Identifiant inconnu tracé | Tenter une connexion avec une adresse qui n'existe pas | Une ligne rouge **401** porte le libellé **« identifiant inconnu »** et l'adresse tentée. *(C'est la trace d'une tentative d'énumération de comptes.)* | |
+| J-01 | Connexion réussie tracée | Se connecter normalement, puis ouvrir le journal | Une ligne **« connexion réussie (code reçu par e-mail) »** apparaît, avec l'adresse de courriel du compte et l'heure (voir la réserve ci-dessus sur l'adresse IP) | |
+| J-02 | Mot de passe erroné tracé | Se déconnecter, tenter une connexion du compte de test avec un mauvais mot de passe, se reconnecter en administrateur, ouvrir le journal | Une ligne rouge **401** porte le libellé « mot de passe incorrect (1/5) » | |
+| J-03 | Identifiant inconnu tracé | Tenter une connexion avec une adresse qui n'existe pas | Une ligne rouge **401** porte le libellé **« identifiant inconnu »** et l'adresse de courriel tentée. *(C'est la trace d'une tentative d'énumération de comptes.)* | |
 | J-04 ⚠️ | Verrouillage tracé | Enchaîner **5** mauvais mots de passe sur le compte de test | La 5ᵉ tentative est refusée avec un message de verrouillage, et le journal porte une ligne **423 « compte verrouillé après 5 échecs »**. **Déverrouiller ensuite le compte** depuis *Utilisateurs* | |
 | J-05 | Tentative sur compte verrouillé tracée | Avant de déverrouiller, retenter une connexion (même avec le **bon** mot de passe) | Une ligne **423 « tentative sur un compte verrouillé »** apparaît | |
 | J-06 | Code de vérification erroné tracé | Se connecter avec le bon mot de passe, puis saisir un code à 6 chiffres faux | Une ligne **401 « code de vérification incorrect (1/5) »** apparaît | |
-| J-07 | Écritures de gestion tracées avec l'IP | Faire une modification quelconque (par ex. enregistrer un réglage), puis ouvrir le journal | La ligne de l'action porte désormais l'**adresse IP** de son auteur | |
+| J-07 | Écritures de gestion tracées avec l'IP | Faire une modification quelconque (par ex. enregistrer un réglage), puis ouvrir le journal | La ligne de l'action porte une colonne d'adresse, renseignée (même réserve sur sa valeur) | |
 | J-08 | Lecture du journal restreinte | Se connecter avec le compte éditeur | Le menu **« Journal d'activité »** n'est pas proposé | |
 
-> **Ce que ces lignes permettent de détecter.** Une série d'échecs suivie d'une connexion réussie
-> **depuis la même adresse IP** est la signature d'une attaque par force brute aboutie. Avant cette
-> livraison, aucun échec n'était enregistré : seules les actions réussies et authentifiées
-> apparaissaient au journal.
+> **Ce que ces lignes permettent de détecter.** Avant cette livraison, aucun échec n'était
+> enregistré : seules les actions réussies et authentifiées apparaissaient au journal. Une série
+> d'échecs suivie d'une connexion réussie se lit désormais directement.
+>
+> ⚠️ **Réserve sur la colonne « adresse IP », relevée le 21/10/2026.** La chaîne d'exposition compte
+> plusieurs relais (Vercel, tunnel, proxy inverse) alors que l'application n'en déclare qu'un :
+> l'adresse affichée est donc celle du **dernier relais interne**, identique pour tous les visiteurs,
+> et non celle du visiteur. Les tests J-01 à J-07 doivent donc être évalués sur **la présence de
+> l'événement et de son libellé**, et la colonne d'adresse notée **KO** jusqu'au correctif. Les deux
+> voies de correction sont décrites dans `DCP_ANSSI.md` § 3.2.
 
 ---
 
