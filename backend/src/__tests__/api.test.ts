@@ -4,6 +4,9 @@ import bcrypt from 'bcrypt';
 import { app } from '../app';
 import { prisma } from '../lib/prisma';
 import { ensureAppRefSequence } from '../lib/appRef';
+import fs from 'fs';
+import path from 'path';
+import { APP_DOCS_DIR } from '../lib/appDocs';
 
 // Tests d'intégration de l'API (non destructifs).
 // Pré-requis : PostgreSQL démarré + seed exécuté (admin@ma2e.ci / admin123).
@@ -771,5 +774,242 @@ describe('Politique de mot de passe locale', () => {
     expect(res.body.activated).toBe(true);
     expect((await startLogin(email2, 'Direct-Create-2099!')).status).toBe(202);
     await prisma.user.deleteMany({ where: { email: email2 } });
+  });
+});
+
+// --- Droits des personnes et conservation (DEV-10 / DEV-09) --------------------------
+// Chaque mécanisme est exercé sur un dossier FICTIF créé puis nettoyé par le test.
+// La purge est testée avec une durée de 600 mois (50 ans) et des enregistrements antidatés
+// à 1950 : seuls les fixtures du test peuvent entrer dans la fenêtre de purge.
+describe('DCP — droits des personnes et purge', () => {
+  const SUBJECT = 'dcp-test@ma2e.local';
+  const APP_ID = 'MA2E-TEST-DCP-0001';
+  let appUuid = '';
+  let contactUuid = '';
+  let docFile = '';
+  let savedRetention: unknown = null;
+
+  beforeAll(async () => {
+    // Sauvegarde du réglage réel : le test le modifie, il doit être rendu intact.
+    const row = await prisma.setting.findUnique({ where: { key: 'dcpRetention' } });
+    savedRetention = row ? row.value : null;
+
+    await prisma.application.deleteMany({ where: { appId: { startsWith: APP_ID } } });
+    await prisma.contactMessage.deleteMany({ where: { email: SUBJECT } });
+
+    // Pièce justificative réelle sur le disque, pour vérifier qu'elle est bien effacée.
+    docFile = `test-dcp-${Date.now()}.pdf`;
+    fs.writeFileSync(path.join(APP_DOCS_DIR, docFile), '%PDF-1.4 fixture');
+
+    const created = await prisma.application.create({
+      data: {
+        appId: APP_ID,
+        category: 'adhesion',
+        type: 'Adhésion',
+        name: 'Testeur DCP',
+        matricule: 'TST-001',
+        email: SUBJECT,
+        phone: '+2250700000000',
+        data: { documents: { cni: { path: `/api/applications/documents/${docFile}`, name: 'cni.pdf' } } },
+      },
+    });
+    appUuid = created.id;
+
+    const msg = await prisma.contactMessage.create({
+      data: {
+        name: 'Testeur DCP',
+        email: SUBJECT,
+        phone: '+2250700000000',
+        subject: 'Essai',
+        message: 'Message de test',
+      },
+    });
+    contactUuid = msg.id;
+  });
+
+  afterAll(async () => {
+    await prisma.application.deleteMany({ where: { appId: { startsWith: APP_ID } } });
+    await prisma.contactMessage.deleteMany({ where: { email: SUBJECT } });
+    await prisma.dcpAction.deleteMany({ where: { actorEmail: ADMIN_EMAIL, subject: { in: [SUBJECT, '—'] } } });
+    try {
+      fs.unlinkSync(path.join(APP_DOCS_DIR, docFile));
+    } catch {
+      /* déjà effacé par le test d'effacement : c'est le résultat attendu */
+    }
+    // Restauration du réglage de conservation d'origine.
+    if (savedRetention === null) {
+      await prisma.setting.deleteMany({ where: { key: 'dcpRetention' } });
+    } else {
+      await prisma.setting.upsert({
+        where: { key: 'dcpRetention' },
+        create: { key: 'dcpRetention', value: savedRetention as object },
+        update: { value: savedRetention as object },
+      });
+    }
+  });
+
+  it('ces mécanismes sont inaccessibles sans authentification → 401', async () => {
+    const res = await request(app).get(`/api/dcp/subject?q=${SUBJECT}`).set('X-Forwarded-For', nextIp());
+    expect(res.status).toBe(401);
+  });
+
+  it("droit d'accès : le dossier regroupe les demandes et les messages de la personne", async () => {
+    const token = await adminToken();
+    const res = await request(app).get(`/api/dcp/subject?q=${SUBJECT}`).set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.applications.map((a: { appId: string }) => a.appId)).toContain(APP_ID);
+    expect(res.body.contactMessages.map((m: { id: string }) => m.id)).toContain(contactUuid);
+  });
+
+  it('droit à la portabilité : export CSV réutilisable', async () => {
+    const token = await adminToken();
+    const res = await request(app).get(`/api/dcp/subject.csv?q=${SUBJECT}`).set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('text/csv');
+    expect(res.text).toContain(APP_ID);
+    expect(res.text).toContain(SUBJECT);
+  });
+
+  it('droit de rectification : la correction est appliquée', async () => {
+    const token = await adminToken();
+    const res = await request(app)
+      .patch(`/api/dcp/application/${appUuid}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Testeur DCP Rectifié' });
+    expect(res.status).toBe(200);
+    const after = await prisma.application.findUnique({ where: { id: appUuid } });
+    expect(after?.name).toBe('Testeur DCP Rectifié');
+  });
+
+  it('rectification : une donnée invalide est refusée → 400', async () => {
+    const token = await adminToken();
+    const res = await request(app)
+      .patch(`/api/dcp/application/${appUuid}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ email: 'pas-un-email' });
+    expect(res.status).toBe(400);
+  });
+
+  it("l'effacement exige une sélection explicite → 400", async () => {
+    const token = await adminToken();
+    const res = await request(app)
+      .post('/api/dcp/erase')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ subject: SUBJECT });
+    expect(res.status).toBe(400);
+  });
+
+  it("droit à l'effacement : identité et pièce justificative effacées, message supprimé", async () => {
+    const token = await adminToken();
+    const res = await request(app)
+      .post('/api/dcp/erase')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        subject: SUBJECT,
+        applicationIds: [appUuid],
+        contactIds: [contactUuid],
+        mode: 'anonymize',
+        notify: false,
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.applications).toBe(1);
+    expect(res.body.contactMessages).toBe(1);
+    expect(res.body.documents).toBe(1);
+
+    const anon = await prisma.application.findUnique({ where: { id: appUuid } });
+    expect(anon?.anonymizedAt).toBeTruthy();
+    expect(anon?.email).toBe('');
+    expect(anon?.name).not.toContain('Testeur');
+    // La pièce d'identité n'est plus sur le disque.
+    expect(fs.existsSync(path.join(APP_DOCS_DIR, docFile))).toBe(false);
+    // Le message de contact a disparu.
+    expect(await prisma.contactMessage.findUnique({ where: { id: contactUuid } })).toBeNull();
+  });
+
+  it('chaque opération est consignée au registre DCP', async () => {
+    const token = await adminToken();
+    const res = await request(app).get('/api/dcp/actions').set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    const kinds = res.body
+      .filter((a: { subject: string }) => a.subject === SUBJECT)
+      .map((a: { kind: string }) => a.kind);
+    expect(kinds).toContain('access');
+    expect(kinds).toContain('portability');
+    expect(kinds).toContain('rectification');
+    expect(kinds).toContain('erasure');
+  });
+
+  it("purge : refusée tant qu'aucune durée de conservation n'est définie → 409", async () => {
+    const token = await adminToken();
+    await prisma.setting.deleteMany({ where: { key: 'dcpRetention' } });
+    const res = await request(app).post('/api/dcp/purge').set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(409);
+  });
+
+  it('purge : anonymise et supprime les enregistrements en fin de conservation', async () => {
+    const token = await adminToken();
+    // Dossier antidaté à 1950 + durée de 50 ans : hors de portée de toute donnée réelle.
+    const old = new Date('1950-01-01T00:00:00Z');
+    const oldApp = await prisma.application.create({
+      data: {
+        appId: `${APP_ID}-OLD`,
+        category: 'adhesion',
+        type: 'Adhésion',
+        name: 'Ancien dossier',
+        matricule: 'TST-OLD',
+        email: SUBJECT,
+        phone: '+2250700000001',
+        data: {},
+        createdAt: old,
+      },
+    });
+    const oldMsg = await prisma.contactMessage.create({
+      data: { name: 'Ancien', email: SUBJECT, message: 'Ancien message', createdAt: old },
+    });
+
+    const put = await request(app)
+      .put('/api/dcp/retention')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ applicationsMonths: 600, contactMonths: 600, auditMonths: null, autoPurge: false });
+    expect(put.status).toBe(200);
+    expect(put.body.configured).toBe(true);
+    expect(put.body.due.applications).toBeGreaterThanOrEqual(1);
+
+    const res = await request(app).post('/api/dcp/purge').set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.applications).toBeGreaterThanOrEqual(1);
+
+    const purged = await prisma.application.findUnique({ where: { id: oldApp.id } });
+    expect(purged?.anonymizedAt).toBeTruthy();
+    expect(purged?.email).toBe('');
+    expect(await prisma.contactMessage.findUnique({ where: { id: oldMsg.id } })).toBeNull();
+  });
+
+  it('un éditeur, même gestionnaire des demandes, ne peut pas accéder à ces mécanismes → 403', async () => {
+    const token = await adminToken();
+    const email = 'dcp-editor@ma2e.local';
+    const password = 'Dcp-Editor-2099!';
+    await prisma.user.deleteMany({ where: { email } });
+    const created = await request(app)
+      .post('/api/users')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Forwarded-For', nextIp())
+      .send({ email, name: 'Éditeur DCP', role: 'EDITOR', permissions: ['applications:manage'], password });
+    expect(created.status).toBe(201);
+
+    const login = await startLogin(email, password);
+    let editorToken = login.body.token;
+    if (!editorToken) {
+      await setChallengeCode(login.body.challengeId, '778899');
+      editorToken = (await submitCode(login.body.challengeId, '778899')).body.token;
+    }
+    expect(editorToken).toBeTruthy();
+
+    const res = await request(app)
+      .get(`/api/dcp/subject?q=${SUBJECT}`)
+      .set('Authorization', `Bearer ${editorToken}`);
+    expect(res.status).toBe(403);
+
+    await prisma.user.deleteMany({ where: { email } });
   });
 });

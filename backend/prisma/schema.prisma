@@ -85,6 +85,9 @@ model Application {
   decisionReason String? // motif du refus ou note de validation
   decidedAt      DateTime? // horodatage de la décision
   decidedBy      String? // e-mail de l'admin ayant statué
+  // Non nul = identité retirée (droit à l'effacement ou purge de fin de conservation).
+  // Le dossier reste pour les statistiques ; plus aucune donnée personnelle dedans.
+  anonymizedAt   DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }
@@ -189,6 +192,20 @@ model ContactMessage {
   consentAt      DateTime?
   consentVersion String?
   createdAt      DateTime @default(now())
+}
+
+// Registre des opérations DCP (droits des personnes et purges de fin de conservation).
+// Distinct de l'AuditLog, qui ne trace que la requête HTTP : ici on conserve CE QUI a été
+// fait — enregistrements touchés, mode, compteurs — pour pouvoir le justifier à SD_PDCP.
+model DcpAction {
+  id         String   @id @default(uuid())
+  kind       String // access | portability | rectification | erasure | purge
+  subject    String // personne concernée (e-mail ou nom) ; "—" pour une purge globale
+  actorEmail String // administrateur ayant exécuté l'opération
+  details    Json // détail de l'opération (identifiants, mode, compteurs)
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 model AuditLog {

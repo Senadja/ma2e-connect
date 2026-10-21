@@ -256,6 +256,59 @@ interface DecisionMail {
   reason?: string;
 }
 
+// Confirme à la personne concernée l'exécution de sa demande d'effacement (DEV-10 :
+// « un mécanisme de suppression, avec un retour à la personne concernée confirmant
+// l'exécution »). Les erreurs sont capturées : l'effacement, lui, est déjà fait.
+export async function sendErasureConfirmation(d: {
+  email: string;
+  name: string;
+  applications: number;
+  contactMessages: number;
+  mode: 'anonymize' | 'delete';
+}): Promise<void> {
+  const subject = 'Votre demande d\'effacement de données a été traitée — MA2E';
+  const details = [
+    d.applications > 0
+      ? `  - ${d.applications} demande(s) : ${
+          d.mode === 'delete'
+            ? 'dossier supprimé, pièces justificatives effacées'
+            : 'identité et pièces justificatives effacées'
+        }`
+      : '',
+    d.contactMessages > 0 ? `  - ${d.contactMessages} message(s) de contact : supprimé(s)` : '',
+  ].filter(Boolean);
+
+  const text = [
+    `Bonjour ${d.name},`,
+    '',
+    'Votre demande d\'effacement de vos données personnelles a été exécutée.',
+    '',
+    ...(details.length ? ['Opérations réalisées :', ...details, ''] : []),
+    'Si vous constatiez que des données vous concernant subsistent, répondez à ce message',
+    'ou écrivez à privacyma2e@ma2e.ci : nous régulariserons.',
+    '',
+    'La Mutuelle des Agents de l\'Eau et de l\'Électricité (MA2E)',
+  ].join('\n');
+
+  const cfg = await resolveSmtp();
+  if (!cfg) {
+    console.log(`📧 [mailer désactivé] ${subject}\n${text}\n`);
+    return;
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: cfg.host,
+      port: cfg.port,
+      secure: cfg.secure,
+      auth: cfg.user ? { user: cfg.user, pass: cfg.pass } : undefined,
+    });
+    await transporter.sendMail({ from: cfg.from, to: d.email, replyTo: cfg.to || undefined, subject, text });
+  } catch (err) {
+    console.error('Échec envoi e-mail confirmation d\'effacement:', (err as Error).message);
+  }
+}
+
 // Notifie le demandeur de la décision (validation ou refus motivé).
 // Envoyé à l'adresse e-mail du demandeur, pas à la boîte interne.
 export async function sendApplicationDecision(d: DecisionMail): Promise<void> {

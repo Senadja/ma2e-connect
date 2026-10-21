@@ -85,3 +85,28 @@ export async function api<T = unknown>(path: string, opts: Options = {}): Promis
   }
   return data as T;
 }
+
+// Télécharge une réponse non-JSON (export CSV) en conservant l'authentification : un
+// simple <a href> n'enverrait pas l'en-tête Authorization, et la route serait refusée.
+export async function apiDownload(path: string, filename: string): Promise<void> {
+  const token = getToken();
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    if (res.status === 401) handleUnauthorized();
+    let message = "Le téléchargement a échoué";
+    try {
+      message = ((await res.json()) as { error?: string }).error || message;
+    } catch {
+      /* réponse non-JSON : on garde le message générique */
+    }
+    throw new ApiError(message, res.status);
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}

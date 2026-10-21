@@ -17,6 +17,7 @@ import { partnersRouter } from './routes/partners';
 import { teamRouter } from './routes/team';
 import { contactRouter } from './routes/contact';
 import { auditRouter } from './routes/audit';
+import { dcpRouter } from './routes/dcp';
 import { auditMiddleware } from './lib/audit';
 import { apiLimiter } from './lib/rateLimit';
 
@@ -126,6 +127,7 @@ app.use('/api/partners', partnersRouter);
 app.use('/api/team', teamRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/audit', auditRouter);
+app.use('/api/dcp', dcpRouter);
 
 // Gestion centralisée des erreurs.
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

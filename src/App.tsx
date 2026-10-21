@@ -61,6 +61,7 @@ const SettingsManager = lazyWithReload(() => import("./pages/admin/SettingsManag
 const PartnersManager = lazyWithReload(() => import("./pages/admin/PartnersManager.tsx"));
 const ContactManager = lazyWithReload(() => import("./pages/admin/ContactManager.tsx"));
 const AuditLog = lazyWithReload(() => import("./pages/admin/AuditLog.tsx"));
+const DcpManager = lazyWithReload(() => import("./pages/admin/DcpManager.tsx"));
 
 const PageLoader = () => (
   <div className="h-screen w-full flex items-center justify-center bg-background">
@@ -128,6 +129,7 @@ const App = () => (
                 <Route path="partners" element={<PartnersManager />} />
                 <Route path="users" element={<UsersManager />} />
                 <Route path="audit" element={<AuditLog />} />
+                <Route path="dcp" element={<DcpManager />} />
                 <Route path="settings" element={<SettingsManager />} />
               </Route>
 

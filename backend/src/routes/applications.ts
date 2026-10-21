@@ -9,22 +9,14 @@ import { env } from '../lib/env';
 import { requireAuth, requirePermission } from '../middleware/auth';
 import { publicWriteLimiter } from '../lib/rateLimit';
 import { signDoc, verifyDoc } from '../lib/docSign';
+// Dossier privé des pièces justificatives : résolu dans lib/appDocs, partagé avec les
+// mécanismes d'effacement et de purge (lib/dcp).
+import { APP_DOCS_DIR } from '../lib/appDocs';
 import { consentStamp } from '../lib/consent';
 import { nextAppNumber } from '../lib/appRef';
 import { sendApplicationNotification, sendApplicationDecision } from '../lib/mailer';
 
 export const applicationsRouter = Router();
-
-// --- Pièces justificatives (CNI, passeport, photo) : données personnelles SENSIBLES ---
-// Stockées dans un dossier PRIVÉ (jamais servi par l'express.static public de app.ts) et
-// accessibles uniquement via une URL signée à durée limitée (voir GET /documents/:file).
-const PUBLIC_UPLOAD_DIR = process.env.UPLOAD_DIR
-  ? path.resolve(process.env.UPLOAD_DIR)
-  : path.resolve(__dirname, '../../../public/documents/uploads');
-const APP_DOCS_DIR = process.env.APP_DOCS_DIR
-  ? path.resolve(process.env.APP_DOCS_DIR)
-  : path.resolve(PUBLIC_UPLOAD_DIR, '..', 'app-docs');
-fs.mkdirSync(APP_DOCS_DIR, { recursive: true });
 
 const ALLOWED_EXT = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx']);
 const DOC_FILE_RE = /^[A-Za-z0-9._-]+$/;

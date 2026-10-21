@@ -20,7 +20,8 @@ import {
   Inbox,
   History,
   KeyRound,
-  ShieldCheck
+  ShieldCheck,
+  Scale
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
@@ -74,7 +75,7 @@ export const AdminLayout = () => {
   }
 
   // Menu regroupé par thème pour s'y retrouver plus vite.
-  const navGroups: { title: string | null; items: { to: string; icon: any; label: string; perm?: string }[] }[] = [
+  const navGroups: { title: string | null; items: { to: string; icon: any; label: string; perm?: string; adminOnly?: boolean }[] }[] = [
     { title: null, items: [
       { to: "/admin/dashboard", icon: LayoutDashboard, label: "Tableau de bord" },
     ] },
@@ -95,12 +96,18 @@ export const AdminLayout = () => {
     { title: "Administration", items: [
       { to: "/admin/users", icon: Users, label: "Utilisateurs", perm: "users:manage" },
       { to: "/admin/audit", icon: History, label: "Journal d'activité", perm: "users:manage" },
+      // Effacement de données personnelles : administrateurs seulement (l'API refuse les autres).
+      { to: "/admin/dcp", icon: Scale, label: "Droits des personnes", adminOnly: true },
     ] },
   ];
 
   // Menu adaptatif : on n'affiche que ce que l'utilisateur a le droit de gérer (et on masque les groupes vides).
+  const isAdmin = user?.role?.toLowerCase() === "admin";
   const visibleGroups = navGroups
-    .map((g) => ({ ...g, items: g.items.filter((item) => !item.perm || can(item.perm)) }))
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((item) => (!item.perm || can(item.perm)) && (!item.adminOnly || isAdmin)),
+    }))
     .filter((g) => g.items.length > 0);
 
   const renderGroups = (isCollapsed: boolean) =>
@@ -122,7 +129,12 @@ export const AdminLayout = () => {
     ));
 
   return (
-    <div className="min-h-screen bg-secondary/20 flex">
+    // `notranslate` : le widget Google Translate est chargé pour tout le site (index.html) et
+    // s'appliquerait aussi au back-office, ce qui enverrait les DCP affichées (noms, e-mails,
+    // demandes) à translate-pa.googleapis.com. La classe isole ce sous-arbre — vérifié : un
+    // sous-arbre .notranslate n'apparaît pas dans la charge envoyée à Google. Portée locale
+    // uniquement : ne pas transformer en balise/meta globale, cela désactiverait le multilingue.
+    <div className="min-h-screen bg-secondary/20 flex notranslate">
       {/* Sidebar Desktop */}
       <aside 
         className={cn(
