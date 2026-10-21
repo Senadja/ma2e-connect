@@ -7,6 +7,7 @@ import { ensureAppRefSequence } from '../lib/appRef';
 import fs from 'fs';
 import path from 'path';
 import { APP_DOCS_DIR } from '../lib/appDocs';
+import { PASSWORD_POLICY } from '../lib/passwordPolicy';
 
 // Tests d'intégration de l'API (non destructifs).
 // Pré-requis : PostgreSQL démarré + seed exécuté (admin@ma2e.ci / admin123).
@@ -1011,5 +1012,189 @@ describe('DCP — droits des personnes et purge', () => {
     expect(res.status).toBe(403);
 
     await prisma.user.deleteMany({ where: { email } });
+    // Sa connexion est désormais consignée au journal : on retire aussi cette trace.
+    await prisma.auditLog.deleteMany({ where: { userEmail: email } });
+  });
+});
+
+// --- Journalisation des événements d'authentification (ANSSI R29) --------------------
+// Le journal d'audit n'enregistrait que les écritures réussies d'un utilisateur déjà
+// authentifié : une tentative de connexion refusée ne laissait aucune trace. On vérifie
+// ici que les échecs, les verrouillages et les connexions réussies sont consignés, avec
+// l'adresse IP de l'appelant.
+describe("Journalisation des événements d'authentification (ANSSI R29)", () => {
+  const LOG_EMAIL = 'audit-r29@ma2e.local';
+  const LOG_PASSWORD = 'Audit-R29-2099!';
+  const UNKNOWN_EMAIL = 'inconnu-r29@ma2e.local';
+  const PROBE_IP = '203.0.113.7'; // plage de documentation RFC 5737 : jamais une vraie IP
+  const WRITE_IP = '203.0.113.8';
+  let userId = '';
+  let startedAt = new Date();
+
+  // L'écriture au journal part APRÈS la réponse HTTP (journalisation « au mieux », pour ne
+  // jamais faire échouer une authentification sur un incident de base). On attend donc
+  // l'apparition de la ligne au lieu de la supposer déjà écrite.
+  async function waitFor<T>(fn: () => Promise<T | null>, timeoutMs = 5000): Promise<T | null> {
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      const found = await fn();
+      if (found) return found;
+      if (Date.now() > deadline) return null;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+  }
+
+  const lastLog = (where: { userEmail: string; status?: number; detail?: { startsWith: string } }) =>
+    prisma.auditLog.findFirst({ where, orderBy: { createdAt: 'desc' } });
+
+  beforeAll(async () => {
+    await prisma.auditLog.deleteMany({ where: { userEmail: { in: [LOG_EMAIL, UNKNOWN_EMAIL] } } });
+    await prisma.user.deleteMany({ where: { email: LOG_EMAIL } });
+
+    const token = await adminToken();
+    startedAt = new Date();
+    const created = await request(app)
+      .post('/api/users')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Forwarded-For', WRITE_IP)
+      .send({
+        email: LOG_EMAIL,
+        name: 'Compte de test R29',
+        role: 'EDITOR',
+        permissions: [],
+        password: LOG_PASSWORD,
+      });
+    expect(created.status).toBe(201);
+    userId = created.body.id;
+  });
+
+  afterAll(async () => {
+    await prisma.user.deleteMany({ where: { email: LOG_EMAIL } });
+    await prisma.auditLog.deleteMany({ where: { userEmail: { in: [LOG_EMAIL, UNKNOWN_EMAIL] } } });
+  });
+
+  it("une écriture ordinaire enregistre désormais l'adresse IP de son auteur", async () => {
+    const row = await waitFor(() =>
+      prisma.auditLog.findFirst({
+        where: { userEmail: ADMIN_EMAIL, path: '/api/users', createdAt: { gte: startedAt } },
+        orderBy: { createdAt: 'desc' },
+      })
+    );
+    expect(row?.ip).toBe(WRITE_IP);
+    // Une écriture ordinaire n'a pas de libellé : la méthode et le chemin disent tout.
+    expect(row?.detail).toBeNull();
+  });
+
+  it('un mot de passe erroné est journalisé, avec son adresse IP', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .set('X-Forwarded-For', PROBE_IP)
+      .send({ email: LOG_EMAIL, password: 'ce-nest-pas-le-bon' });
+    expect(res.status).toBe(401);
+
+    const row = await waitFor(() => lastLog({ userEmail: LOG_EMAIL, status: 401 }));
+    expect(row?.detail).toContain('mot de passe incorrect');
+    expect(row?.ip).toBe(PROBE_IP);
+    expect(row?.path).toBe('/api/auth/login');
+  });
+
+  it('une tentative sur un identifiant inconnu est journalisée', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .set('X-Forwarded-For', nextIp())
+      .send({ email: UNKNOWN_EMAIL, password: 'peu-importe' });
+    expect(res.status).toBe(401);
+
+    const row = await waitFor(() => lastLog({ userEmail: UNKNOWN_EMAIL }));
+    expect(row?.detail).toBe('identifiant inconnu');
+  });
+
+  it('le verrouillage du compte et les tentatives suivantes sont journalisés', async () => {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { failedLoginAttempts: 0, lockedAt: null },
+    });
+
+    // Une IP différente par tentative : le verrouillage testé ici est celui du COMPTE,
+    // on ne veut pas buter d'abord sur la limitation de débit par adresse.
+    let last: { status: number } = { status: 0 };
+    for (let i = 0; i < PASSWORD_POLICY.lockThreshold; i++) {
+      last = await request(app)
+        .post('/api/auth/login')
+        .set('X-Forwarded-For', nextIp())
+        .send({ email: LOG_EMAIL, password: 'ce-nest-pas-le-bon' });
+    }
+    expect(last.status).toBe(423);
+
+    const locked = await waitFor(() => lastLog({ userEmail: LOG_EMAIL, status: 423 }));
+    expect(locked?.detail).toContain('compte verrouillé');
+
+    const again = await request(app)
+      .post('/api/auth/login')
+      .set('X-Forwarded-For', nextIp())
+      .send({ email: LOG_EMAIL, password: LOG_PASSWORD });
+    expect(again.status).toBe(423);
+    const retry = await waitFor(() =>
+      lastLog({ userEmail: LOG_EMAIL, detail: { startsWith: 'tentative sur un compte' } })
+    );
+    expect(retry).toBeTruthy();
+
+    // Déverrouillage : le compte sert encore aux tests suivants.
+    await prisma.user.update({
+      where: { id: userId },
+      data: { failedLoginAttempts: 0, lockedAt: null },
+    });
+  });
+
+  it('une connexion réussie est journalisée', async () => {
+    const login = await request(app)
+      .post('/api/auth/login')
+      .set('X-Forwarded-For', nextIp())
+      .send({ email: LOG_EMAIL, password: LOG_PASSWORD });
+
+    if (login.status === 202) {
+      await setChallengeCode(login.body.challengeId, '445566');
+      const verified = await submitCode(login.body.challengeId, '445566');
+      expect(verified.status).toBe(200);
+    } else {
+      expect(login.status).toBe(200); // coupe-circuit MFA_ENABLED=false
+    }
+
+    const row = await waitFor(() => lastLog({ userEmail: LOG_EMAIL, status: 200 }));
+    expect(row?.detail).toContain('connexion réussie');
+  });
+
+  it('un code de vérification erroné est journalisé', async () => {
+    const login = await request(app)
+      .post('/api/auth/login')
+      .set('X-Forwarded-For', nextIp())
+      .send({ email: LOG_EMAIL, password: LOG_PASSWORD });
+    if (login.status !== 202) return; // 2FA désactivée : aucune étape de code à exercer
+
+    const wrong = await submitCode(login.body.challengeId, '000000');
+    expect(wrong.status).toBe(401);
+
+    const row = await waitFor(() =>
+      lastLog({ userEmail: LOG_EMAIL, detail: { startsWith: 'code de vérification incorrect' } })
+    );
+    expect(row?.ip).toBeTruthy();
+  });
+
+  it("le journal restitué par l'API porte l'adresse IP et la nature de l'événement", async () => {
+    const token = await adminToken();
+    const res = await request(app)
+      .get('/api/audit?limit=500')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+
+    const entry = res.body.find((l: { userEmail: string }) => l.userEmail === LOG_EMAIL);
+    expect(entry).toBeTruthy();
+    expect(entry.ip).toBeTruthy();
+    expect(entry.detail).toBeTruthy();
+  });
+
+  it('le journal reste réservé aux comptes habilités → 401 sans jeton', async () => {
+    const res = await request(app).get('/api/audit').set('X-Forwarded-For', nextIp());
+    expect(res.status).toBe(401);
   });
 });

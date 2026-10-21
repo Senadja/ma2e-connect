@@ -7,6 +7,7 @@ import { prisma } from '../lib/prisma';
 import { env } from '../lib/env';
 import { sendLoginCode } from '../lib/mailer';
 import { signToken, requireAuth, AuthUser } from '../middleware/auth';
+import { logAuthEvent } from '../lib/audit';
 import {
   PASSWORD_POLICY,
   validatePasswordComplexity,
@@ -147,6 +148,12 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
   // Compte verrouillé après trop d'échecs : refus explicite. Le déblocage est réservé à un
   // administrateur (pas d'auto-déverrouillage temporisé).
   if (user?.lockedAt) {
+    logAuthEvent(req, {
+      email,
+      name: user.name,
+      status: 423,
+      detail: 'tentative sur un compte verrouillé',
+    });
     return res.status(423).json({
       error: 'Compte verrouillé après plusieurs tentatives. Contactez un administrateur.',
     });
@@ -164,11 +171,28 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
         where: { id: user.id },
         data: { failedLoginAttempts: attempts, lockedAt: locked ? new Date() : null },
       });
+      logAuthEvent(req, {
+        email,
+        name: user.name,
+        status: locked ? 423 : 401,
+        detail: locked
+          ? `compte verrouillé après ${attempts} échecs`
+          : `mot de passe incorrect (${attempts}/${PASSWORD_POLICY.lockThreshold})`,
+      });
       if (locked) {
         return res.status(423).json({
           error: 'Compte verrouillé après plusieurs tentatives. Contactez un administrateur.',
         });
       }
+    } else {
+      // Adresse inconnue, ou compte créé mais pas encore activé : les deux cas méritent une
+      // trace (tentative d'énumération de comptes) et aucun ne doit se lire dans la réponse.
+      logAuthEvent(req, {
+        email,
+        name: user?.name,
+        status: 401,
+        detail: user ? "compte en attente d'activation" : 'identifiant inconnu',
+      });
     }
     return res.status(401).json({ error: 'Identifiants invalides' });
   }
@@ -180,6 +204,12 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
 
   // Coupe-circuit d'urgence (MFA_ENABLED=false) : retour au comportement d'origine.
   if (!env.mfaEnabled) {
+    logAuthEvent(req, {
+      email,
+      name: user.name,
+      status: 200,
+      detail: 'connexion réussie (double authentification désactivée)',
+    });
     return issueToken(res, user, user.backupCodes.length);
   }
 
@@ -245,6 +275,12 @@ authRouter.post('/verify', verifyLimiter, async (req, res) => {
 
   if (challenge.attempts >= MAX_ATTEMPTS) {
     await prisma.loginChallenge.update({ where: { id: challenge.id }, data: { consumedAt: now } });
+    logAuthEvent(req, {
+      email: challenge.user.email,
+      name: challenge.user.name,
+      status: 429,
+      detail: 'trop de codes de vérification erronés — tentative annulée',
+    });
     return res.status(429).json({ error: 'Trop de codes erronés. Reprenez la connexion depuis le début.' });
   }
 
@@ -254,6 +290,12 @@ authRouter.post('/verify', verifyLimiter, async (req, res) => {
   // 1) Code reçu par e-mail.
   if (looksLikeEmailCode && (await bcrypt.compare(submitted, challenge.codeHash))) {
     await prisma.loginChallenge.update({ where: { id: challenge.id }, data: { consumedAt: now } });
+    logAuthEvent(req, {
+      email: challenge.user.email,
+      name: challenge.user.name,
+      status: 200,
+      detail: 'connexion réussie (code reçu par e-mail)',
+    });
     return issueToken(res, challenge.user, challenge.user.backupCodes.length);
   }
 
@@ -272,6 +314,12 @@ authRouter.post('/verify', verifyLimiter, async (req, res) => {
           }),
           prisma.loginChallenge.update({ where: { id: challenge.id }, data: { consumedAt: now } }),
         ]);
+        logAuthEvent(req, {
+          email: challenge.user.email,
+          name: challenge.user.name,
+          status: 200,
+          detail: `connexion réussie (code de secours, ${remaining.length} restant(s))`,
+        });
         return issueToken(res, challenge.user, remaining.length);
       }
     }
@@ -282,6 +330,12 @@ authRouter.post('/verify', verifyLimiter, async (req, res) => {
     data: { attempts: { increment: 1 } },
   });
   const left = Math.max(0, MAX_ATTEMPTS - updated.attempts);
+  logAuthEvent(req, {
+    email: challenge.user.email,
+    name: challenge.user.name,
+    status: 401,
+    detail: `code de vérification incorrect (${updated.attempts}/${MAX_ATTEMPTS})`,
+  });
   return res.status(401).json({
     error: left > 0 ? `Code incorrect. ${left} tentative(s) restante(s).` : 'Code incorrect. Reprenez la connexion.',
   });
@@ -471,5 +525,11 @@ authRouter.post('/set-password', verifyLimiter, async (req, res) => {
     },
   });
 
+  logAuthEvent(req, {
+    email: updated.email,
+    name: updated.name,
+    status: 200,
+    detail: 'mot de passe défini par lien à usage unique',
+  });
   return issueToken(res, updated, updated.backupCodes.length);
 });

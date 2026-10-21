@@ -215,7 +215,14 @@ model AuditLog {
   method    String
   path      String
   status    Int
+  // Adresse IP de l'appelant et nature de l'événement : indispensables pour exploiter
+  // le journal a posteriori (ANSSI R29). Nuls pour les entrées antérieures à leur ajout
+  // et pour les écritures ordinaires, dont le chemin dit déjà tout.
+  ip        String?
+  detail    String?
   createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 enum Role {

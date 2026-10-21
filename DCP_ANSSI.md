@@ -21,7 +21,8 @@ modification du tableau.
 
 Trois points d'attention subsistent néanmoins, détaillés ci-dessous : une **adresse de référence à
 corriger** (§ 2), **trois lignes non renseignées** et non une seule comme indiqué dans le plan (§ 3),
-et l'existence d'un **guide ANSSI plus récent et complémentaire** (§ 5).
+et l'existence d'un **guide ANSSI plus récent et complémentaire** (§ 5). Sur ces trois lignes, R11 et
+R29 reçoivent ici une réponse complète ; seule R5 demande un arbitrage de MA2E.
 
 ## 2. Adresse de référence à corriger dans la check-list
 
@@ -91,35 +92,42 @@ d'autres clients**. Nous recommandons de retirer ce mapping en production, ou de
 `127.0.0.1`. Correctif non appliqué à ce stade : il touche la configuration de déploiement et doit
 être validé puis vérifié sur le serveur.
 
-### 3.2 R29 — Politique de journalisation (proposition de réponse : **à finaliser**)
+### 3.2 R29 — Politique de journalisation (proposition de réponse : **OK**, durée à fixer)
 
-Les éléments techniques existent ; ce qui manque est la formalisation et, surtout, **les durées de
-conservation**, qui dépendent du retour R07 de MA2E.
+Les deux lacunes techniques relevées lors de la première rédaction de cette note — absence de trace
+des échecs d'authentification, absence d'adresse IP — **ont été corrigées le 21/10/2026**. Ce qui
+reste ouvert ne dépend plus du code : la **durée de conservation**, que MA2E doit fixer (demande
+R07), et l'**externalisation** des journaux, qui relève d'une décision d'hébergement.
 
-**Ce qui est journalisé aujourd'hui**
+Cette section vaut politique de journalisation : elle précise *quoi*, *où*, *combien de temps* et
+*qui analyse*.
 
-| Journal | Contenu | Emplacement | Conservation actuelle |
+**Ce qui est journalisé**
+
+| Journal | Contenu | Emplacement | Conservation |
 |---|---|---|---|
-| Journal d'audit applicatif | Toute écriture authentifiée et réussie : adresse électronique et nom de l'auteur, méthode HTTP, chemin, code de retour, horodatage | Table `AuditLog` en base, consultable dans le back-office (menu *Journal d'audit*) | **illimitée — aucune purge** |
+| Écritures de gestion | Toute écriture authentifiée et réussie : adresse électronique et nom de l'auteur, méthode HTTP, chemin, code de retour, **adresse IP**, horodatage | Table `AuditLog`, consultable dans le back-office (menu *Journal d'activité*) | durée paramétrable, purge quotidienne automatique — **mécanisme livré, durée à renseigner (R07)** |
+| **Événements d'authentification** | Connexion réussie (en précisant la voie : code reçu par courriel, code de secours, lien à usage unique), mot de passe incorrect avec le rang de l'échec, identifiant inconnu, compte en attente d'activation, verrouillage du compte après 5 échecs, tentative sur un compte verrouillé, code de vérification incorrect, abandon après trop de codes erronés — chacun avec l'adresse électronique visée et l'**adresse IP** de l'appelant | idem | idem |
 | Journaux techniques des conteneurs | Démarrages, erreurs applicatives, accès au proxy | `docker logs` sur le serveur OVH | selon la rotation Docker par défaut |
 
-**Lacunes identifiées, à combler pour clore R29**
+L'adresse IP enregistrée est celle du visiteur, et non celle du proxy : l'application ne fait
+confiance qu'à un seul intermédiaire déclaré, ce qui empêche un appelant de la falsifier.
 
-1. **Les échecs ne sont pas journalisés.** Le journal d'audit n'enregistre que les actions réussies
-   (les réponses en erreur sont ignorées) et uniquement celles d'un utilisateur authentifié. Les
-   **tentatives de connexion échouées ne figurent donc pas** dans le journal d'audit, alors qu'elles
-   constituent le principal signal d'une attaque par force brute. Le verrouillage de compte après
-   5 échecs fonctionne, mais l'événement n'est pas tracé de façon consultable.
-2. **Aucune adresse IP n'est enregistrée**, ce qui limite l'analyse a posteriori.
-3. **Aucune durée de conservation définie** ni purge automatique du journal d'audit.
-4. **Aucune externalisation** des journaux : ils résident sur le serveur concerné, et pourraient donc
-   être altérés par un attaquant ayant obtenu un accès — point explicitement soulevé par le guide ANSSI.
+**Qui analyse.** Le journal est lisible par les seuls comptes habilités à la gestion des
+utilisateurs, dans le back-office. Les échecs y portent leur code de retour (401, 423, 429) et leur
+libellé, de sorte qu'une série d'échecs suivie d'une connexion réussie depuis la même adresse — la
+signature d'une attaque par force brute aboutie — se lit sans outil d'analyse.
 
-**Proposition.** Nous pouvons livrer, dans le même lot que la purge des données (DEV-09) :
-journalisation des échecs d'authentification et des verrouillages de compte, enregistrement de
-l'adresse IP, et purge automatique du journal selon une durée que MA2E doit fixer (demande R07). La
-politique de journalisation elle-même — document court précisant quoi, où, combien de temps et qui
-l'analyse — sera rédigée sur cette base et soumise à SD_PDCP.
+**Ce qui reste ouvert**
+
+1. **Durée de conservation non fixée.** Le mécanisme de purge est en place et volontairement
+   **inerte** : sans durée renseignée, aucune purge n'a lieu. Il s'activera à réception de la
+   réponse R07. Tant que cette durée n'est pas fixée, la conservation du journal est de fait
+   illimitée.
+2. **Pas d'externalisation.** Les journaux résident sur le serveur qu'ils tracent et pourraient donc
+   être altérés par un attaquant ayant obtenu un accès — point explicitement soulevé par le guide
+   ANSSI. Y remédier suppose un service de collecte distinct (serveur de journalisation ou service
+   géré), à arbitrer avec MA2E : c'est un choix d'hébergement et de coût, pas un développement.
 
 ### 3.3 R5 — Accès à l'administration restreint aux postes autorisés (**décision MA2E requise**)
 
@@ -152,7 +160,7 @@ pentest applicatif GS2E d'août 2026 et la mise en conformité DCP des formulair
 | R16, R17, R21 | **NA** (3) | pas de redirection dynamique, pas d'inclusion de fichier par donnée externe, session par jeton et non par cookie |
 | **R5** | à décider | voir § 3.3 |
 | **R11** | **OK** proposé | matrice fournie au § 3.1 |
-| **R29** | à finaliser | voir § 3.2, dépend de R07 |
+| **R29** | **OK** proposé | voir § 3.2 ; échecs d'authentification et adresses IP journalisés, durée de conservation à fixer (R07) |
 
 ## 5. Un guide ANSSI plus récent existe — proposition d'arbitrage
 
