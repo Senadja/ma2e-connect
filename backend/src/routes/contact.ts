@@ -5,6 +5,7 @@ import { requireAuth, requirePermission } from '../middleware/auth';
 import { publicWriteLimiter } from '../lib/rateLimit';
 import { sendApplicationNotification } from '../lib/mailer';
 import { consentStamp } from '../lib/consent';
+import { requireFormOpen } from '../lib/formsPublic';
 
 export const contactRouter = Router();
 
@@ -23,7 +24,9 @@ const createSchema = z.object({
 });
 
 // POST public (rate-limité) — message de contact depuis le site.
-contactRouter.post('/', publicWriteLimiter, async (req, res) => {
+// Fermable au back-office (réglage « formsPublic ») : la page Contact et ses coordonnées
+// restent affichées, seul l'envoi du message est refusé.
+contactRouter.post('/', publicWriteLimiter, requireFormOpen('contact'), async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
   const d = parsed.data;

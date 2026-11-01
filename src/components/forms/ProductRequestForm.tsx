@@ -20,6 +20,7 @@ import { CheckCircle2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 import { DcpNotice, FreeTextHint, useFormsDcp } from "@/components/forms/DcpNotice";
+import { FormClosed, useFormsPublic } from "@/components/forms/FormClosed";
 
 const formSchema = z.object({
   fullName: z.string().min(3, "Nom complet requis"),
@@ -39,6 +40,7 @@ interface ProductRequestFormProps {
 export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestFormProps) => {
   const { t } = useTranslation();
   const { dcp, fill } = useFormsDcp();
+  const formsPublic = useFormsPublic();
   const [submitted, setSubmitted] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -79,6 +81,10 @@ export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestF
       setLoading(false);
     }
   }
+
+  // Formulaire fermé au back-office (déploiement en deux lots) : aucun champ n'est affiché.
+  // L'API refuse de son côté, la fermeture ne repose donc pas sur le navigateur.
+  if (!formsPublic.productRequest) return <FormClosed />;
 
   if (submitted) {
     return (

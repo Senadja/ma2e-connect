@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import request from 'supertest';
 import bcrypt from 'bcrypt';
 import { app } from '../app';
@@ -620,6 +620,86 @@ describe('Consentement DCP des formulaires publics', () => {
     expect(row?.consentAt).toBeInstanceOf(Date);
     expect(row?.consentVersion).toMatch(/^DCP /);
     if (row) await prisma.contactMessage.delete({ where: { id: row.id } });
+  });
+});
+
+// Ouverture des formulaires publics (réglage « formsPublic », piloté au back-office).
+// Le déploiement en deux lots demandé par MA2E suppose qu'un formulaire fermé le soit AUSSI
+// côté API : masquer le formulaire à l'écran laisserait la requête rejouable à la main.
+describe('Ouverture des formulaires publics', () => {
+  const setForms = (value: Record<string, boolean>) =>
+    prisma.setting.upsert({
+      where: { key: 'formsPublic' },
+      update: { value },
+      create: { key: 'formsPublic', value },
+    });
+
+  // Le réglage est GLOBAL : on le retire après chaque test, sinon les autres suites — qui
+  // soumettent des demandes et des messages — échoueraient sur un formulaire resté fermé.
+  afterEach(async () => {
+    await prisma.setting.delete({ where: { key: 'formsPublic' } }).catch(() => null);
+  });
+
+  it('réglage absent → tous les formulaires restent ouverts', async () => {
+    const res = await request(app)
+      .post('/api/applications')
+      .set('X-Forwarded-For', nextIp())
+      .send({ category: 'épargne', type: 'ouvert-par-defaut', name: 'Test Ouvert Defaut', phone: '0102030405', consent: true });
+    expect(res.status).toBe(201);
+  });
+
+  it("adhésion fermée → la demande est refusée (403) et le dépôt de pièce aussi", async () => {
+    await setForms({ adhesion: false });
+
+    const res = await request(app)
+      .post('/api/applications')
+      .set('X-Forwarded-For', nextIp())
+      .send({ category: 'adhésion', type: 'Adhésion (sociétaire)', name: 'Test Adhesion Fermee', phone: '0102030405', consent: true });
+    expect(res.status).toBe(403);
+
+    // Le dépôt des pièces d'identité appartient au formulaire d'adhésion : il se ferme avec
+    // lui, et le refus intervient AVANT que le fichier ne soit reçu puis écrit sur le disque.
+    const upload = await request(app)
+      .post('/api/applications/documents')
+      .set('X-Forwarded-For', nextIp())
+      .attach('file', Buffer.from('%PDF-1.4 piece refusee'), 'cni.pdf');
+    expect(upload.status).toBe(403);
+  });
+
+  it("adhésion fermée → les demandes de produit passent toujours", async () => {
+    await setForms({ adhesion: false });
+    const res = await request(app)
+      .post('/api/applications')
+      .set('X-Forwarded-For', nextIp())
+      .send({ category: 'crédit', type: 'ordinaire', name: 'Test Credit Ouvert', phone: '0102030405', consent: true });
+    expect(res.status).toBe(201);
+  });
+
+  it("demandes de produit fermées → 403, l'adhésion reste ouverte", async () => {
+    await setForms({ productRequest: false });
+
+    const refused = await request(app)
+      .post('/api/applications')
+      .set('X-Forwarded-For', nextIp())
+      .send({ category: 'épargne', type: 'expresse', name: 'Test Produit Ferme', phone: '0102030405', consent: true });
+    expect(refused.status).toBe(403);
+
+    const adhesion = await request(app)
+      .post('/api/applications')
+      .set('X-Forwarded-For', nextIp())
+      .send({ category: 'adhésion', type: 'Adhésion (sociétaire)', name: 'Test Adhesion Ouverte', phone: '0102030405', consent: true });
+    expect(adhesion.status).toBe(201);
+  });
+
+  it('contact fermé → le message est refusé (403) et rien n’est enregistré', async () => {
+    await setForms({ contact: false });
+    const email = `forms-closed-${Date.now()}@example.com`;
+    const res = await request(app)
+      .post('/api/contact')
+      .set('X-Forwarded-For', nextIp())
+      .send({ name: 'Test Contact Ferme', email, message: 'Message qui ne doit pas être enregistré.', consent: true });
+    expect(res.status).toBe(403);
+    expect(await prisma.contactMessage.findFirst({ where: { email } })).toBeNull();
   });
 });
 

@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DcpNotice, useFormsDcp } from "@/components/forms/DcpNotice";
+import { FormClosed, useFormsPublic } from "@/components/forms/FormClosed";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SignaturePad } from "@/components/SignaturePad";
 import { toast } from "sonner";
@@ -129,6 +130,8 @@ async function validateUploadFile(file: File): Promise<string | null> {
 const Adhesion = () => {
   const { t } = useTranslation();
   const { dcp } = useFormsDcp();
+  // Ouverture du formulaire, pilotée au back-office (déploiement en deux lots).
+  const formsPublic = useFormsPublic();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
@@ -285,6 +288,9 @@ const Adhesion = () => {
                   <h2 className="font-display text-2xl font-bold">{t("adhesion.fileTitle")}</h2>
                 </div>
 
+                {!formsPublic.adhesion ? (
+                  <FormClosed />
+                ) : (
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-8">
                     <DcpNotice />
@@ -541,6 +547,7 @@ const Adhesion = () => {
                     </Tabs>
                   </form>
                 </Form>
+                )}
               </div>
             </div>
           </div>

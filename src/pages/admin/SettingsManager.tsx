@@ -15,6 +15,7 @@ import { DEFAULT_ORG_TREE, DEFAULT_PERSONNEL, DEFAULT_ORG_UNITS, DEFAULT_SOCIETE
 import { SAVINGS_DETAILS, type SavingsDetail, type SavingsRateTable } from "@/data/savingsDetails";
 import { DEFAULT_LEGAL, type LegalContent, type LegalPage } from "@/data/legal";
 import { DEFAULT_FORMS_DCP, type FormsDcpContent } from "@/data/formsDcp";
+import { DEFAULT_FORMS_PUBLIC, type FormsPublicContent } from "@/data/formsPublic";
 import { OrgChartSvg } from "@/components/OrgChartSvg";
 import { FocalPointPicker } from "@/components/admin/FocalPointPicker";
 import { ImageUploadInput } from "@/components/admin/ImageUploadInput";
@@ -294,6 +295,12 @@ export const SettingsManager = () => {
   const patchFormsDcp = (patch: Partial<FormsDcpContent>) => setFormsDcp((f) => ({ ...f, ...patch }));
   const saveFormsDcp = () => save.mutate({ key: "formsDcp", value: formsDcp }, { onSuccess: refreshPublic });
 
+  // Ouverture des formulaires publics (déploiement en deux lots). Repli : DEFAULT_FORMS_PUBLIC,
+  // qui ouvre tout — un réglage jamais enregistré ne ferme rien.
+  const [formsPublic, setFormsPublic] = useState<FormsPublicContent>(DEFAULT_FORMS_PUBLIC);
+  const patchFormsPublic = (patch: Partial<FormsPublicContent>) => setFormsPublic((f) => ({ ...f, ...patch }));
+  const saveFormsPublic = () => save.mutate({ key: "formsPublic", value: formsPublic }, { onSuccess: refreshPublic });
+
   // Fiches détaillées épargne (« Voir plus ») — la liste est pilotée par les vrais produits d'épargne ;
   // le contenu vient du CMS (clé savingsDetails), avec repli sur SAVINGS_DETAILS pour les 5 produits d'origine.
   const { data: epargneProducts } = useProducts("epargne");
@@ -395,6 +402,7 @@ export const SettingsManager = () => {
     if (Array.isArray(data.languages) && data.languages.length) setLanguages(data.languages.map((l) => ({ code: l.code, label: l.label })));
     if (data.branding) setBranding((b) => ({ primary: data.branding!.primary || b.primary, logo: data.branding!.logo, qr: data.branding!.qr }));
     if (data.formsDcp) setFormsDcp((f) => ({ ...f, ...data.formsDcp }));
+    if (data.formsPublic) setFormsPublic((f) => ({ ...f, ...data.formsPublic }));
     if (data.legal) setLegal({
       mentions: data.legal.mentions ?? DEFAULT_LEGAL.mentions,
       cgu: data.legal.cgu ?? DEFAULT_LEGAL.cgu,
@@ -1184,6 +1192,46 @@ export const SettingsManager = () => {
 
         {/* ============================ INTERACTIONS ============================ */}
         <TabsContent value="interactions" className="space-y-6 mt-0">
+
+          {/* Ouverture des formulaires publics — permet le déploiement en deux lots demandé par
+              MA2E : le site institutionnel d'abord, les formulaires collectant des DCP ensuite. */}
+          <Card className="border-border/40 shadow-sm">
+            <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary" /> Formulaires publics</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-[11px] text-muted-foreground">
+                Ouvre ou ferme chaque formulaire du site <strong>sans redéploiement</strong>. Un formulaire fermé n'est plus
+                affiché, son entrée disparaît du menu, et <strong>l'API refuse les envois</strong> : la fermeture ne peut pas
+                être contournée. Les pages concernées restent en ligne et affichent le message ci-dessous.
+              </p>
+              <div className="space-y-4 rounded-xl border border-border/50 p-4">
+                <label className="flex items-start justify-between gap-4 text-sm font-semibold cursor-pointer">
+                  <span>Formulaire d'adhésion
+                    <span className="block text-[11px] font-normal text-muted-foreground">Inclut le dépôt des pièces d'identité (CNI, passeport, photo).</span>
+                  </span>
+                  <input type="checkbox" checked={formsPublic.adhesion} onChange={(e) => patchFormsPublic({ adhesion: e.target.checked })} className="mt-1 h-4 w-4 shrink-0 accent-primary" />
+                </label>
+                <label className="flex items-start justify-between gap-4 text-sm font-semibold cursor-pointer">
+                  <span>Demandes de produit ou de service
+                    <span className="block text-[11px] font-normal text-muted-foreground">Pages Épargne, Crédits et Immobilier.</span>
+                  </span>
+                  <input type="checkbox" checked={formsPublic.productRequest} onChange={(e) => patchFormsPublic({ productRequest: e.target.checked })} className="mt-1 h-4 w-4 shrink-0 accent-primary" />
+                </label>
+                <label className="flex items-start justify-between gap-4 text-sm font-semibold cursor-pointer">
+                  <span>Formulaire de contact
+                    <span className="block text-[11px] font-normal text-muted-foreground">L'adresse, le téléphone et la carte restent affichés.</span>
+                  </span>
+                  <input type="checkbox" checked={formsPublic.contact} onChange={(e) => patchFormsPublic({ contact: e.target.checked })} className="mt-1 h-4 w-4 shrink-0 accent-primary" />
+                </label>
+              </div>
+              <div className="grid gap-2"><label className={label}>Message affiché à la place d'un formulaire fermé</label>
+                <textarea value={formsPublic.closedNotice} onChange={(e) => patchFormsPublic({ closedNotice: e.target.value })} rows={4} className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/20" /></div>
+              <p className="text-[11px] text-muted-foreground">
+                Séparez les paragraphes par une <strong>ligne vide</strong>. Vous pouvez y indiquer une date d'ouverture, un
+                numéro de téléphone, ou renvoyer vers le formulaire papier de la médiathèque.
+              </p>
+              <div><Button onClick={saveFormsPublic} className="rounded-full gap-2"><Save className="h-4 w-4" /> Enregistrer les formulaires</Button></div>
+            </CardContent>
+          </Card>
 
           {/* Contact rapide & Assistant (widget flottant) */}
           <Card className="border-border/40 shadow-sm">

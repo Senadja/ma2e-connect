@@ -13,6 +13,7 @@ import { signDoc, verifyDoc } from '../lib/docSign';
 // mécanismes d'effacement et de purge (lib/dcp).
 import { APP_DOCS_DIR } from '../lib/appDocs';
 import { consentStamp } from '../lib/consent';
+import { FORM_CLOSED_MESSAGE, FORM_CLOSED_STATUS, isFormOpen, requireFormOpen } from '../lib/formsPublic';
 import { nextAppNumber } from '../lib/appRef';
 import { sendApplicationNotification, sendApplicationDecision } from '../lib/mailer';
 
@@ -58,7 +59,9 @@ const receiveDoc = (req: Request, res: Response, next: NextFunction) =>
   });
 
 // Public (rate-limité) : reçoit une pièce et renvoie une référence d'API (non résolvable sans signature).
-applicationsRouter.post('/documents', publicWriteLimiter, receiveDoc, (req, res) => {
+// Ce dépôt appartient au formulaire d'adhésion : il se ferme avec lui, sinon des pièces
+// d'identité continueraient d'arriver sur le serveur alors que le formulaire est fermé.
+applicationsRouter.post('/documents', publicWriteLimiter, requireFormOpen('adhesion'), receiveDoc, (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Fichier requis (PDF, image ou Word, 8 Mo max).' });
   const ext = path.extname(req.file.originalname).toLowerCase();
   // Validation AVANT toute écriture : un contenu non conforme n'atteint jamais le disque.
@@ -171,6 +174,12 @@ applicationsRouter.post('/', publicWriteLimiter, async (req, res) => {
     return res.status(400).json({ error: parsed.error.issues[0].message });
   }
   const d = parsed.data;
+  // Formulaire fermé au back-office → refus. L'adhésion et les demandes de produit/service
+  // se distinguent par la catégorie, comme pour la preuve de consentement ci-dessus.
+  const form = d.category.toLowerCase().startsWith('adh') ? 'adhesion' : 'productRequest';
+  if (!(await isFormOpen(form))) {
+    return res.status(FORM_CLOSED_STATUS).json({ error: FORM_CLOSED_MESSAGE });
+  }
   const application = await createApplication(d);
 
   // Notification e-mail (non bloquante). Désactivable via APPLICATION_NOTIFY_DISABLED

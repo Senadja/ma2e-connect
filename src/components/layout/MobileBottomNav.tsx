@@ -1,11 +1,14 @@
 import { NavLink } from "react-router-dom";
 import { Home, UserPlus, Briefcase, MessageSquare, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useFormsPublic } from "@/components/forms/FormClosed";
 
 export const MobileBottomNav = ({ onMenuClick }: { onMenuClick: () => void }) => {
+  // Même règle que le menu principal : l'entrée disparaît si le formulaire est fermé.
+  const { adhesion } = useFormsPublic();
   const items = [
     { icon: Home, label: "Accueil", to: "/" },
-    { icon: UserPlus, label: "Adhésion", to: "/adhesion" },
+    ...(adhesion ? [{ icon: UserPlus, label: "Adhésion", to: "/adhesion" }] : []),
     { icon: Briefcase, label: "Produits", to: "/produits" },
     { icon: MessageSquare, label: "Contact", to: "/contact" },
   ];

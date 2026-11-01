@@ -6,6 +6,7 @@ import { Logo } from "../Logo";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { NAV_LINKS, EBANKING_URL } from "@/data/site";
 import { useSettings } from "@/lib/content";
+import { useFormsPublic } from "@/components/forms/FormClosed";
 import { cn } from "@/lib/utils";
 
 // Correspondance href → clé de traduction (évite de modifier NAV_LINKS).
@@ -40,6 +41,11 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
   const { t } = useTranslation();
   const { data: settings } = useSettings();
   const ebanking = settings?.links?.ebanking || EBANKING_URL;
+  // Le lien « Adhésion » disparaît du menu quand le formulaire est fermé au back-office
+  // (déploiement en deux lots). La route reste servie — un lien déjà partagé affiche le
+  // message d'attente au lieu d'une page d'erreur.
+  const { adhesion: adhesionOpen } = useFormsPublic();
+  const navLinks = NAV_LINKS.filter((link) => link.href !== "/adhesion" || adhesionOpen);
   const navLabel = (href: string, fallback: string) => (NAV_KEY[href] ? t(`nav.${NAV_KEY[href]}`) : fallback);
   const childLabel = (href: string, fallback: string) => (CHILD_KEY[href] ? t(`nav.${CHILD_KEY[href].label}`) : fallback);
   const childDesc = (href: string, fallback?: string) => (CHILD_KEY[href] ? t(`nav.${CHILD_KEY[href].desc}`) : fallback);
@@ -85,7 +91,7 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
         <Logo />
 
         <nav className="hidden lg:flex items-center gap-2" aria-label="Navigation principale">
-          {NAV_LINKS.map((link) => {
+          {navLinks.map((link) => {
             const hasChildren = "children" in link && link.children;
             return (
               <div
@@ -174,7 +180,7 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
       )}>
         <div className="container h-full flex flex-col pt-24 pb-32 overflow-y-auto overscroll-contain">
           <nav className="flex-1 space-y-1" aria-label="Menu mobile immersif">
-            {NAV_LINKS.map((link, i) => (
+            {navLinks.map((link, i) => (
               <div 
                 key={link.href} 
                 className={cn("animate-in fade-in slide-in-from-bottom-4 duration-500", !isMobileOpen && "opacity-0")} 

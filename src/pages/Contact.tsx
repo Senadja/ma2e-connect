@@ -7,11 +7,13 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useSettings } from "@/lib/content";
 import { DcpNotice, FreeTextHint, useFormsDcp } from "@/components/forms/DcpNotice";
+import { FormClosed, useFormsPublic } from "@/components/forms/FormClosed";
 
 const Contact = () => {
   const { t } = useTranslation();
   const { data: settings } = useSettings();
   const { dcp, fill } = useFormsDcp();
+  const formsPublic = useFormsPublic();
   const c = settings?.contact;
   // Carte OpenStreetMap (gratuite, sans clé API) centrée sur la position éditable au CMS.
   const mapLat = parseFloat(String(c?.mapLat ?? "")) || 5.325;
@@ -121,6 +123,10 @@ const Contact = () => {
                   <div className="font-display text-xl font-bold text-primary">{t("contact.sentTitle")}</div>
                   <p className="text-sm text-muted-foreground mt-2">{t("contact.sentText")}</p>
                 </div>
+              ) : !formsPublic.contact ? (
+                // Formulaire fermé au back-office : les coordonnées et la carte ci-contre restent
+                // affichées, seul l'envoi du message est retiré.
+                <FormClosed className="mt-8" />
               ) : (
                 <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
                   <DcpNotice />

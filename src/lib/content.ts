@@ -8,6 +8,7 @@ import { MEDIA, FAQS, PARTNERS } from "@/data/institutional";
 import type { SavingsDetail } from "@/data/savingsDetails";
 import type { LegalContent } from "@/data/legal";
 import type { FormsDcpContent } from "@/data/formsDcp";
+import type { FormsPublicContent } from "@/data/formsPublic";
 
 export function slugify(input: string): string {
   return input
@@ -357,6 +358,7 @@ export interface SiteSettings {
   savingsDetails?: Record<string, SavingsDetail>; // fiches détaillées épargne (« Voir plus ») — repli : SAVINGS_DETAILS
   legal?: LegalContent; // pages légales éditables (Mentions / CGU / DCP) — repli : DEFAULT_LEGAL
   formsDcp?: Partial<FormsDcpContent>; // mentions DCP des formulaires — repli : DEFAULT_FORMS_DCP
+  formsPublic?: Partial<FormsPublicContent>; // ouverture des formulaires publics — repli : DEFAULT_FORMS_PUBLIC
 }
 
 const fallbackSettings: SiteSettings = {
