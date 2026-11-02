@@ -1200,13 +1200,14 @@ export const SettingsManager = () => {
             <CardContent className="space-y-4">
               <p className="text-[11px] text-muted-foreground">
                 Ouvre ou ferme chaque formulaire du site <strong>sans redéploiement</strong>. Un formulaire fermé n'est plus
-                affiché, son entrée disparaît du menu, et <strong>l'API refuse les envois</strong> : la fermeture ne peut pas
-                être contournée. Les pages concernées restent en ligne et affichent le message ci-dessous.
+                affiché et <strong>l'API refuse les envois</strong> : la fermeture ne peut pas être contournée. Les pages
+                concernées <strong>restent en ligne et dans le menu</strong>, et affichent le message ci-dessous à la place
+                du formulaire.
               </p>
               <div className="space-y-4 rounded-xl border border-border/50 p-4">
                 <label className="flex items-start justify-between gap-4 text-sm font-semibold cursor-pointer">
                   <span>Formulaire d'adhésion
-                    <span className="block text-[11px] font-normal text-muted-foreground">Inclut le dépôt des pièces d'identité (CNI, passeport, photo).</span>
+                    <span className="block text-[11px] font-normal text-muted-foreground">Fermé, la page devient un <strong>guide</strong> : fiche officielle à télécharger et informations à préparer. Inclut le dépôt des pièces d'identité (CNI, passeport, photo).</span>
                   </span>
                   <input type="checkbox" checked={formsPublic.adhesion} onChange={(e) => patchFormsPublic({ adhesion: e.target.checked })} className="mt-1 h-4 w-4 shrink-0 accent-primary" />
                 </label>

@@ -6,7 +6,6 @@ import { useReveal, useCounter } from "@/hooks/useReveal";
 import { cn } from "@/lib/utils";
 import { STATS as DEFAULT_STATS, MILESTONES } from "@/data/site";
 import { useArticles, useSettings, useProducts } from "@/lib/content";
-import { useFormsPublic } from "@/components/forms/FormClosed";
 import { useTranslation } from "react-i18next";
 
 // Icônes proposées aux familles « Nos solutions » (le CMS enregistre le nom, on résout le composant ici).
@@ -128,8 +127,6 @@ const Index = () => {
   const { t } = useTranslation();
   const tCat = (c: string) => t(`newsPage.categories.${c}`, { defaultValue: c });
   const { data: settings } = useSettings();
-  // Le bouton « Adhérer » du bandeau disparaît si le formulaire est fermé au back-office.
-  const formsPublic = useFormsPublic();
   // Chiffres clés : source unique éditable au CMS (réglage « stats »), partagée avec « À propos ».
   const stats = settings?.stats?.length ? settings.stats : DEFAULT_STATS;
   const why = settings?.whyUs;
@@ -205,14 +202,12 @@ const Index = () => {
               >
                 {hero?.ctaProducts || t("home.ctaProducts")} <ArrowRight className="h-4 w-4" />
               </Link>
-              {formsPublic.adhesion && (
-                <Link
-                  to="/adhesion"
-                  className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/40 px-8 py-4 font-bold text-white hover:bg-white hover:text-primary-dark active:scale-95 transition-all"
-                >
-                  {hero?.ctaJoin || t("home.ctaJoin")}
-                </Link>
-              )}
+              <Link
+                to="/adhesion"
+                className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/40 px-8 py-4 font-bold text-white hover:bg-white hover:text-primary-dark active:scale-95 transition-all"
+              >
+                {hero?.ctaJoin || t("home.ctaJoin")}
+              </Link>
             </div>
           </div>
 

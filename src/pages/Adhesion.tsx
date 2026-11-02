@@ -18,7 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DcpNotice, useFormsDcp } from "@/components/forms/DcpNotice";
-import { FormClosed, useFormsPublic } from "@/components/forms/FormClosed";
+import { useFormsPublic } from "@/components/forms/FormClosed";
+import { AdhesionGuide } from "@/components/forms/AdhesionGuide";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SignaturePad } from "@/components/SignaturePad";
 import { toast } from "sonner";
@@ -288,8 +289,10 @@ const Adhesion = () => {
                   <h2 className="font-display text-2xl font-bold">{t("adhesion.fileTitle")}</h2>
                 </div>
 
+                {/* Formulaire fermé au back-office : la page reste un guide (fiche à télécharger,
+                    informations à préparer, montants, dépôt du dossier) et aucune donnée n'est saisie. */}
                 {!formsPublic.adhesion ? (
-                  <FormClosed />
+                  <AdhesionGuide categories={categories} feeAdhesion={feeAdhesion} feePart={feePart} />
                 ) : (
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-8">

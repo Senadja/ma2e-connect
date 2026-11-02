@@ -13,7 +13,9 @@
 // l'API ouverte, donc la fermeture contournable.
 
 export interface FormsPublicContent {
-  /** Formulaire d'adhésion en ligne, y compris le dépôt des pièces d'identité. */
+  /** Formulaire d'adhésion en ligne, y compris le dépôt des pièces d'identité.
+   *  Fermé, la page /adhesion devient un guide (AdhesionGuide) : fiche officielle à
+   *  télécharger et informations à préparer, sans qu'aucune donnée ne soit saisie. */
   adhesion: boolean;
   /** Demandes de produit ou de service (pages Épargne, Crédits, Immobilier). */
   productRequest: boolean;
