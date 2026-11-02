@@ -2,7 +2,122 @@
 
 > Point de re-lecture unique pour reprendre le travail après un compactage de contexte
 > ou une nouvelle session. **À mettre à jour à la fin de chaque tâche significative.**
-> Dernière mise à jour : 2026-07-20.
+> Dernière mise à jour : 2026-11-01.
+
+## MAJ 2026-11-01 — Ouverture des formulaires publics pilotable au back-office
+**DÉPLOYÉE** (commits `a9c215f` + `b403565`, poussés sur `fix/audit-remediation`, `refonte-fullstack`
+et `main`). Backend OVH reconstruit puis `docker restart ma2e-connect-caddy-1` ; front Vercel déployé
+automatiquement (`dpl_Di8Y2uScSiSRASsBAvfUD7tHwRhx`, production, READY).
+
+**Pourquoi** : MA2E déploie le site en **deux lots** — version institutionnelle d'abord (après
+validation du CVATL et jalons T3), modules liés aux DCP ensuite (**fin novembre 2026** annoncé).
+Il fallait pouvoir ouvrir et fermer chaque formulaire **sans redéploiement**.
+
+- Réglage `formsPublic` → *Réglages > Interactions > « Formulaires publics »* : trois interrupteurs
+  (**adhésion**, **demandes de produit/service**, **contact**) et le message affiché à la place d'un
+  formulaire fermé (texte libre : date d'ouverture, téléphone, renvoi vers le formulaire papier…).
+- **Fermeture appliquée côté serveur**, pas seulement à l'écran : un formulaire fermé répond **403**
+  (`backend/src/lib/formsPublic.ts`). Masquer le formulaire dans le navigateur laisserait son API
+  ouverte, donc la requête rejouable à la main.
+- Le **dépôt des pièces justificatives** (`POST /applications/documents`) est un endpoint public
+  **distinct** du formulaire : il se ferme avec l'adhésion, et le refus intervient **avant** réception
+  du fichier — sinon des CNI continueraient d'arriver alors que le formulaire est officiellement fermé.
+- Effets d'une fermeture : le formulaire est remplacé par le message. **Les pages et le menu ne
+  changent pas** (un lien déjà partagé affiche le message, pas une page d'erreur). Sur Contact, seul
+  l'envoi disparaît : adresse, téléphone, horaires et carte restent affichés.
+- **Adhésion fermée ⇒ la page devient un guide** (`src/components/forms/AdhesionGuide.tsx`, 2026-11-02) :
+  fiche officielle à télécharger, informations à préparer, montants, dépôt du dossier. L'entrée reste
+  donc au menu — elle a plus de valeur fermée qu'absente. Aucune donnée saisie, donc aucune DCP
+  collectée pendant le lot 1.
+- **Ouvert par défaut** : réglage absent, clé inconnue ou lecture en échec ⇒ formulaire ouvert. La
+  fermeture est toujours un acte explicite du back-office, sinon un incident de base fermerait les
+  formulaires tout seuls. **Aucun effet visible tant qu'aucun interrupteur n'est basculé.**
+- **Vérifié** : 81 tests backend verts (5 nouveaux) ; `formsPublic` absent de `/api/settings` en prod
+  (⇒ tout ouvert) ; `POST /applications` sans consentement → 400 ; pages publiques et `/admin/login`
+  à 200, `/api/audit` à 401. Bundle servi contrôlé **par le contenu** (`formsPublic-DJio7wA3.js`,
+  `SettingsManager-C7vpa1C3.js`) : les empreintes de chunk ne sont pas reproductibles d'une machine
+  à l'autre, il ne faut donc jamais vérifier un déploiement front sur un nom de fichier local.
+
+⚠️ **Piège pour le lot 2** : `APPLICATION_NOTIFY_DISABLED=true` en production. Si les formulaires
+s'ouvrent sans toucher à ce drapeau, les demandes arriveront en base **sans notification e-mail**.
+
+## MAJ 2026-10-20 → 22 — Mise en conformité DCP (check-list de recette SD_PDCP)
+**DÉPLOYÉE le 21/10/2026** (commits `f47e08b`, `8a7dcdd`, `7e83f3a`, `6a648c3`).
+**10 tâches livrées sur 13.** Détail complet — ce qui était demandé, ce qui a été fait, **à quel
+endroit**, et le test qui le prouve — dans **`DCP_TRACABILITE.md`**.
+
+- Livrés : preuve de lecture des TCU, intitulé exact « Données Personnelles », mentions DCP en tête des
+  formulaires, mention des champs obligatoires, consentement + trace + retrait (exigé **côté serveur**),
+  cadrage des zones de texte libre, conservation et purge (**livrée inerte**), mécanismes d'exercice des
+  droits + registre horodaté, vérification des 29 règles ANSSI, journalisation des événements
+  d'authentification.
+- Livrables documentaires : `DCP_COOKIES.md` (aucun cookie de suivi, mesuré), `DCP_ANSSI.md`
+  (matrice des flux R11 + politique de journalisation), `CAHIER_RECETTE_DCP.md` (57 tests jouables au
+  navigateur par une personne non technique), `DCP_TRACABILITE.md`.
+- **Réserves assumées** : valeur de l'**adresse IP** journalisée (R29 « OK partiel » — mesuré le 22/10 :
+  par le chemin public l'adresse est interne et identique pour tous ; **depuis le réseau interne, un
+  appelant peut écrire l'adresse de son choix**) · **droit de limitation non outillé** (4 droits sur 5)
+  · journaux **non externalisés**.
+- **Hébergement hors CEDEAO** (relevé le 22/10) : site public sur **Vercel** (société américaine), API
+  et base de données sur serveur **OVH en France** (adresse publique enregistrée au RIPE comme OVH SAS,
+  France). Or la check-list v4 répond « Oui, Côte d'Ivoire » sur deux lignes **renseignées côté
+  MA2E/SD_PDCP** — à corriger, l'hébergement hors CEDEAO appelant l'information de l'ARTCI et une
+  demande d'autorisation de transfert.
+- **Bloqué par MA2E/SD_PDCP** : R02 (texte des mentions légales → DEV-02, et textes de formulaires
+  encore provisoires) · R04 (formulaire d'autorisation d'image → DEV-12 ; **prérequis du lot 1**, car
+  `/a-propos` publie noms, fonctions et photos du fondateur, des organes et du personnel) · R06
+  (formulaire de droits en ligne → DEV-11) · R07 (durées de conservation → **active la purge** ; sans
+  elles la conservation est de fait illimitée) · R5 (restriction d'accès à l'administration, 3 options
+  chiffrées dans `DCP_ANSSI.md` § 3.3) · arbitrage ANSSI-PA-009 v2.0.
+- Formulaire **sous-traitant DCP_035-01** (modèle GS2E, art. 20 de la loi n°2013-450) : rempli pour tout
+  ce qui est démontrable (8 lignes avec preuves), **10 réponses d'entreprise et le signataire manquent**
+  → `~\Downloads\DCP_035-01_FormulaireConformité-SousTraitants_EBENYX_SITE_WEB_v1v4_rempli-EBENYX.docx`.
+
+## MAJ 2026-09-08 — Politique de mot de passe locale (back-office)
+Commit `80a03e6`. Équivalent d'une GPO Active Directory, sans AD : complexité ≥ 12 caractères,
+expiration à 42 jours, historique des 5 derniers mots de passe, verrouillage après 5 échecs
+(déverrouillage réservé à l'admin), **création de compte par invitation** (lien à usage unique →
+`/admin/activation`, l'admin ne saisit plus de mot de passe).
+Reste : **aucun avertissement avant expiration** dans l'interface (~2 h de travail).
+
+## MAJ 2026-08-12 → 18 — Remédiation du pentest applicatif GS2E
+**DÉPLOYÉE** (`2e0bbcc`, puis `357997c`, `8ef76d6`, `d1d4688`). Les 6 findings sont corrigés — tableau
+détaillé dans **`CLAUDE.md`**. Points marquants : SSRF / relais SMTP fermé (aucune donnée de la requête
+utilisée, destinataire forcé au compte connecté), mot de passe SMTP plus jamais renvoyé, brouillons
+protégés (404 et non 403), **validation du contenu réel des fichiers (magic bytes) en mémoire, sans
+écriture préalable**, JSON malformé → 400, limiteur global 300/min. Pièces justificatives déplacées sur
+un **volume persistant dédié** (`ma2e_appdocs`).
+Le retest GS2E sur le finding #4 est un **faux négatif** : leur fichier de test commence par `%PDF-1.4`,
+c'est un vrai PDF, donc correctement accepté.
+
+## État de la production au 2026-11-01
+- **Commit déployé** : `b403565`, sur `main` (front Vercel) **et** `refonte-fullstack` (backend OVH).
+- **Conteneurs** : `ma2e-connect-db-1`, `ma2e-connect-backend-1`, `ma2e-connect-caddy-1`. La production
+  tourne avec **db + backend + caddy** — le service `web` (nginx) n'existe qu'en développement.
+- ⚠️ **Coupe-circuits de test encore actifs** : `RATE_LIMIT_DISABLED=true` (les 3 limiteurs sont
+  inactifs, dont la remédiation GS2E #6) et `APPLICATION_NOTIFY_DISABLED=true`.
+  **Ordre obligatoire pour réactiver le limiteur** : fermer le port 3000 → corriger la valeur de
+  l'adresse IP → **puis seulement** repasser à `false`. Sinon tous les visiteurs partagent un **seul
+  seau** (300 req/min pour l'ensemble du public, 10 connexions/15 min pour tous les admins) =
+  auto-déni de service.
+- ⚠️ **Le backend tourne depuis `docker-compose.yml`, et non `docker-compose.prod.yml`** : la commande
+  de déploiement de `CLAUDE.md` omet le `-f`. Conséquences : **port 3000 publié sur `0.0.0.0`** d'un
+  serveur **mutualisé** (⇒ journal d'audit falsifiable depuis le réseau interne), perte de
+  `connection_limit=15`, avertissement « orphan containers » sur caddy. Pré-vol déjà fait : volumes et
+  nom de projet identiques, `SEED_ON_START=false` ⇒ ni perte de données ni reseed.
+- `MFA_ENABLED=true`, `SEED_ON_START=false`.
+- **Ports réellement ouverts** (audit du 22/10) : **depuis Internet, seuls 80** (openresty, hors chemin
+  MA2E) **et 443**. Sur l'hôte : 22, 3000, 3182 et 5005 sur `0.0.0.0` ; 443, 8443 et 10000 réservés au
+  tailnet ; 3183 et 3190 (autres clients) limités à `127.0.0.1`. **Aucun port de base de données
+  publié.** Le serveur n'a pas d'adresse publique directe (VM Proxmox, `192.168.100.185`).
+  ⚠️ Les ports publiés par Docker **contournent firewalld** (DNAT en `nat/PREROUTING`, ACCEPT dans le
+  chemin `FORWARD`) : le 3000 est joignable bien qu'absent de la zone `public`.
+- **Intégration Git Vercel** : restée silencieuse pour `6a648c3` (production déclenchée à la main),
+  **fonctionnelle** pour `b403565`. À surveiller au prochain push.
+- Miroir **GitLab** désynchronisé (token expiré) — sans impact sur le déploiement : le serveur tire
+  depuis GitHub.
+- **~5 % de 502** résiduels sur l'ingress Tailscale Funnel. L'option durable (vrai domaine + TLS, ex.
+  `api.ma2e.ci`) corrigerait **aussi** la valeur de l'adresse IP journalisée.
 
 ## MAJ 2026-07-20 — Authentification à double facteur (back-office)
 **DÉPLOYÉE ET ACTIVE** (commits `5ac212b` + `2d7dbce`, poussés sur `refonte-fullstack` et `main`).
@@ -201,8 +316,11 @@ statuts intermédiaires « En examen » / « Rouvrir ». Tout est tracé (decide
   → réglage JSON `orgChart` ({level1Name, level2Name, departments[]}), carte « Organigramme » dans Paramètres.
   Les noms viennent du CMS (repli i18n) ; les libellés de rôle (« Organe délibérant »…) restent traduits FR/EN.
   La section « Gouvernance » (cartes de personnes) reste gérée par `TeamManager` / `TeamMember`.
-- Export CSV des demandes (bouton présent, non branché).
-- Upload réel des pièces jointes d'adhésion (actuellement simulé côté formulaire).
+- ~~Export CSV des demandes (bouton présent, non branché)~~ → **fait** (2026-06-11 : séparateur `;` +
+  BOM UTF-8), complété par l'export JSON/CSV des droits des personnes (2026-10-21).
+- ~~Upload réel des pièces jointes d'adhésion (simulé côté formulaire)~~ → **fait** (endpoint public
+  `POST /applications/documents`, puis validation du contenu réel en mémoire et volume persistant
+  dédié en 08/2026).
 - Simulation de crédit (évoquée, mise de côté).
 
 ## Conventions / contraintes à respecter
