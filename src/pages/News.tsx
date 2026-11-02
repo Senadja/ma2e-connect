@@ -4,7 +4,7 @@ import { Layout } from "@/components/layout/Layout";
 import { PageHero } from "@/components/PageHero";
 import { useArticles } from "@/lib/content";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, ArrowLeft, Search, X, Rss } from "lucide-react";
+import { ArrowRight, ArrowLeft, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -99,14 +99,6 @@ const News = () => {
                   </button>
                 )}
               </div>
-              <a
-                href="/rss.xml"
-                aria-label={t("common.rssFeed")}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-accent hover:border-accent transition-smooth"
-                title={t("common.rssFeed")}
-              >
-                <Rss className="h-4 w-4" />
-              </a>
             </div>
           </div>
 

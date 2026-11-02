@@ -42,7 +42,6 @@ export const resources = {
         shareOn: "Partager sur",
         copyLink: "Copier le lien",
         download: "Télécharger",
-        rssFeed: "Flux RSS",
         filterByCategory: "Filtrer par catégorie",
       },
       footer: {
@@ -387,7 +386,6 @@ export const resources = {
         shareOn: "Share on",
         copyLink: "Copy link",
         download: "Download",
-        rssFeed: "RSS feed",
         filterByCategory: "Filter by category",
       },
       footer: {
