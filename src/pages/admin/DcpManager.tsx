@@ -457,6 +457,28 @@ export const DcpManager = () => {
             </div>
           )}
 
+          <div className="rounded-lg border border-border/60 bg-secondary/20 p-3 text-[11px] leading-relaxed text-muted-foreground space-y-1.5">
+            <p className="font-semibold text-foreground">Durées communiquées par SD_PDCP (prérequis P1, novembre 2026)</p>
+            <ul className="list-disc space-y-1 pl-4">
+              <li>
+                <strong>Adhésion</strong> : «&nbsp;durée de la relation contractuelle augmentée de 10 ans&nbsp;».
+                Le site <strong>ne peut pas calculer cette durée</strong> : il ne détient qu'une demande, jamais la fin
+                du contrat, et la purge compte en mois depuis l'enregistrement de la demande. Une durée ferme doit être
+                fixée par MA2E pour la copie conservée par le site, sans quoi la purge des demandes reste inactive.
+              </li>
+              <li>
+                <strong>Contact et demande de renseignement</strong> : 12&nbsp;mois «&nbsp;après le traitement de la
+                demande&nbsp;». Le site compte depuis la <strong>réception</strong>, faute de date de traitement
+                enregistrée : saisir 12 revient donc à purger un peu plus tôt que la règle — écart à assumer
+                explicitement, ou à corriger en datant le traitement.
+              </li>
+              <li>
+                <strong>Journal d'activité</strong> : durée <strong>non encore communiquée</strong> (prérequis P7, en
+                attente avec les profils d'accès et le niveau de détail attendu).
+              </li>
+            </ul>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Demandes (mois)</Label>
@@ -467,7 +489,9 @@ export const DcpManager = () => {
                 onChange={(e) => setForm({ ...current, applications: e.target.value })}
                 placeholder="non définie"
               />
-              <p className="text-[11px] text-muted-foreground">Anonymisation (la ligne reste pour les statistiques)</p>
+              <p className="text-[11px] text-muted-foreground">
+                Anonymisation (la ligne reste pour les statistiques). <strong>Durée MA2E à fixer</strong> — voir ci-dessus.
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Messages de contact (mois)</Label>
@@ -478,7 +502,9 @@ export const DcpManager = () => {
                 onChange={(e) => setForm({ ...current, contact: e.target.value })}
                 placeholder="non définie"
               />
-              <p className="text-[11px] text-muted-foreground">Suppression définitive</p>
+              <p className="text-[11px] text-muted-foreground">
+                Suppression définitive. <strong>SD_PDCP : 12 mois.</strong>
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Journal d'activité (mois)</Label>
@@ -489,7 +515,9 @@ export const DcpManager = () => {
                 onChange={(e) => setForm({ ...current, audit: e.target.value })}
                 placeholder="non définie"
               />
-              <p className="text-[11px] text-muted-foreground">Suppression définitive</p>
+              <p className="text-[11px] text-muted-foreground">
+                Suppression définitive. <strong>Durée non communiquée</strong> (P7).
+              </p>
             </div>
           </div>
 

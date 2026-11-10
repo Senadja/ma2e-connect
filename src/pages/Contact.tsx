@@ -9,6 +9,24 @@ import { useSettings } from "@/lib/content";
 import { DcpNotice, FreeTextHint, useFormsDcp } from "@/components/forms/DcpNotice";
 import { FormClosed, useFormsPublic } from "@/components/forms/FormClosed";
 
+// Prerequis P8 (retour SD_PDCP, novembre 2026) : permettre d'exercer ses droits DEPUIS le site.
+// L'option ci-dessous est ajoutee au champ « Objet » ; sa selection fait apparaitre un second
+// menu listant les droits exercables. Le libelle est celui ecrit par SD_PDCP, en capitales.
+const EXERCICE_DES_DROITS = "EXERCICE DES DROITS";
+
+// Droits proposes : ordre et libelles EXACTS demandes par SD_PDCP (prerequis P8) — ne pas reformuler.
+// ⚠️ Le droit a la LIMITATION du traitement ne figure pas dans cette liste : c'est la liste
+// livree par SD_PDCP. Ce droit n'est pas outille cote site (reserve deja signalee a MA2E) ; une
+// demande de limitation passe par l'option « Autre » et le traitement manuel du correspondant DCP.
+const DCP_RIGHTS = [
+  "Accès à mes données personnelles",
+  "Rectification / mise à jour de mes données personnelles",
+  "Effacement de mes données personnelles",
+  "Portabilité de mes données personnelles",
+  "Retrait de mon Consentement au traitement de mes données personnelles",
+  "Opposition au traitement de mes données personnelles",
+];
+
 const Contact = () => {
   const { t } = useTranslation();
   const { data: settings } = useSettings();
@@ -25,12 +43,19 @@ const Contact = () => {
   const [consent, setConsent] = useState(false);
   const [subject, setSubject] = useState("Adhésion");
   const [otherSubject, setOtherSubject] = useState("");
+  const [rightKind, setRightKind] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    // Si « Autre » est choisi, l'objet réel est le texte saisi par l'utilisateur.
-    const finalSubject = subject === "Autre" ? otherSubject.trim() || "Autre" : subject;
+    // « Autre » : l'objet réel est le texte saisi. « EXERCICE DES DROITS » : l'objet porte le
+    // droit choisi, afin que la demande soit identifiable et routable dès la réception (P8).
+    const finalSubject =
+      subject === "Autre"
+        ? otherSubject.trim() || "Autre"
+        : subject === EXERCICE_DES_DROITS
+          ? `${EXERCICE_DES_DROITS} — ${rightKind}`
+          : subject;
     setLoading(true);
     try {
       await api("/contact", {
@@ -129,7 +154,7 @@ const Contact = () => {
                 <FormClosed className="mt-8" />
               ) : (
                 <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
-                  <DcpNotice />
+                  <DcpNotice form="contact" />
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium mb-1.5" htmlFor="nom">{t("contact.fullName")} *</label>
@@ -152,10 +177,35 @@ const Contact = () => {
                         <option>Épargne</option>
                         <option>Crédit</option>
                         <option>Immobilier</option>
+                        <option>{EXERCICE_DES_DROITS}</option>
                         <option>Autre</option>
                       </select>
                     </div>
                   </div>
+                  {subject === EXERCICE_DES_DROITS && (
+                    <div className="animate-in fade-in slide-in-from-top-1">
+                      <label className="block text-sm font-medium mb-1.5" htmlFor="droit">
+                        Droit que vous souhaitez exercer *
+                      </label>
+                      <select
+                        id="droit"
+                        value={rightKind}
+                        onChange={(e) => setRightKind(e.target.value)}
+                        required
+                        className="w-full rounded-lg border border-input bg-background px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="">Sélectionnez le droit à exercer…</option>
+                        {DCP_RIGHTS.map((right) => (
+                          <option key={right} value={right}>{right}</option>
+                        ))}
+                      </select>
+                      <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+                        Votre demande sera transmise au correspondant à la protection des données de la MA2E
+                        ({c?.dcpEmail || "privacyMA2E@ma2e.ci"}). Indiquez dans le message ci-dessous tout
+                        élément utile à son traitement.
+                      </p>
+                    </div>
+                  )}
                   {subject === "Autre" && (
                     <div className="animate-in fade-in slide-in-from-top-1">
                       <label className="block text-sm font-medium mb-1.5" htmlFor="objet-autre">{t("contact.otherSubject")} *</label>

@@ -2,25 +2,46 @@ import { ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/lib/content";
-import { DEFAULT_FORMS_DCP } from "@/data/formsDcp";
+import { DEFAULT_FORMS_DCP, type DcpForm, type FormsDcpContent } from "@/data/formsDcp";
 
 const DCP_EMAIL_FALLBACK = "privacyMA2E@ma2e.ci";
 
 // Textes DCP des formulaires : réglage CMS « formsDcp », repli sur src/data/formsDcp.ts.
 // `fill()` remplace le gabarit {dcpEmail} par l'adresse DCP éditée au back-office,
 // pour que les mentions et la politique DCP ne puissent pas diverger.
+//
+// La fusion est faite champ par champ sur les deux sous-objets (`bodies`, `freeTextHint`) :
+// un réglage partiel ou corrompu en base ne doit JAMAIS faire disparaître une mention
+// d'information — à défaut, on retombe sur le texte SD_PDCP livré avec le code.
 export function useFormsDcp() {
   const { data: settings } = useSettings();
-  const dcp = { ...DEFAULT_FORMS_DCP, ...(settings?.formsDcp ?? {}) };
+  const stored = settings?.formsDcp ?? {};
+  const storedBullets = stored.freeTextHint?.bullets;
+  const dcp: FormsDcpContent = {
+    ...DEFAULT_FORMS_DCP,
+    ...stored,
+    bodies: { ...DEFAULT_FORMS_DCP.bodies, ...(stored.bodies ?? {}) },
+    freeTextHint: {
+      intro: stored.freeTextHint?.intro ?? DEFAULT_FORMS_DCP.freeTextHint.intro,
+      bullets:
+        Array.isArray(storedBullets) && storedBullets.length > 0
+          ? storedBullets
+          : DEFAULT_FORMS_DCP.freeTextHint.bullets,
+    },
+  };
   const dcpEmail = settings?.contact?.dcpEmail || DCP_EMAIL_FALLBACK;
   return { dcp, fill: (text: string) => text.replace(/\{dcpEmail\}/g, dcpEmail) };
 }
 
 // Mention d'information DCP + rappel des champs obligatoires. À placer EN TÊTE de chaque
 // formulaire collectant des données personnelles (exigence SD_PDCP : visible, pas repliée).
-export const DcpNotice = ({ className }: { className?: string }) => {
+//
+// `form` sélectionne la mention : SD_PDCP en a livré UNE PAR FORMULAIRE (prérequis R02), les
+// catégories de données, les destinataires et les durées de conservation étant différents.
+// Ne pas réutiliser la mention d'un formulaire pour un autre.
+export const DcpNotice = ({ form, className }: { form: DcpForm; className?: string }) => {
   const { dcp, fill } = useFormsDcp();
-  const paragraphs = fill(dcp.body).split(/\n\s*\n/).filter((p) => p.trim());
+  const paragraphs = fill(dcp.bodies[form]).split(/\n\s*\n/).filter((p) => p.trim());
 
   return (
     <div className={cn("rounded-xl border border-border/60 bg-secondary/30 p-4", className)}>
@@ -41,14 +62,23 @@ export const DcpNotice = ({ className }: { className?: string }) => {
   );
 };
 
-// Consigne de cadrage affichée au-dessus d'une zone de commentaire libre
-// (minimisation + interdiction des données sensibles — 6 principes RGPD rappelés par SD_PDCP).
+// Consignes de cadrage affichées au-dessus d'une zone de commentaire libre.
+// Texte et puces livrés par SD_PDCP (R02) : ne pas mentionner de nom, éviter les détails
+// identifiants, éviter les données sensibles.
 export const FreeTextHint = ({ className }: { className?: string }) => {
   const { dcp, fill } = useFormsDcp();
-  if (!dcp.freeTextHint?.trim()) return null;
+  const { intro, bullets } = dcp.freeTextHint;
+  if (!intro?.trim() && bullets.length === 0) return null;
   return (
-    <p className={cn("text-[11px] leading-relaxed text-muted-foreground", className)}>
-      {fill(dcp.freeTextHint)}
-    </p>
+    <div className={cn("space-y-1 text-[11px] leading-relaxed text-muted-foreground", className)}>
+      {intro?.trim() && <p>{fill(intro)}</p>}
+      {bullets.length > 0 && (
+        <ul className="list-disc space-y-0.5 pl-4">
+          {bullets.map((b, i) => (
+            <li key={i}>{fill(b)}</li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 };

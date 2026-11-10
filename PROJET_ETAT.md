@@ -2,7 +2,76 @@
 
 > Point de re-lecture unique pour reprendre le travail après un compactage de contexte
 > ou une nouvelle session. **À mettre à jour à la fin de chaque tâche significative.**
-> Dernière mise à jour : 2026-11-01.
+> Dernière mise à jour : 2026-11-10.
+
+## MAJ 2026-11-10 — Retour MA2E/SD_PDCP sur les prérequis DCP : mentions R02 et droits P8
+**NON DÉPLOYÉ** (en attente d'accord). Deux documents reçus de MA2E : le texte des mentions
+(`DCP_Mention_dInformation_Formulaire_SiteInternetMA2E.docx`) et le retour SD_PDCP sur les 14
+prérequis (`Préréquis_ConformitéDCP_RetourSDPDCP.xlsx`).
+
+**Ce qui a été implémenté**
+- **Trois mentions d'information, une par formulaire** (prérequis R02) au lieu du texte générique
+  unique. Les catégories de données, les destinataires et les durées diffèrent : l'adhésion annonce
+  une communication possible à la **BCEAO, au BIC et à la CENTIF-CI** et une conservation « durée de
+  la relation contractuelle + 10 ans » ; contact et demande de renseignement, 12 mois. Textes
+  **transcrits littéralement** (`src/data/formsDcp.ts`, `bodies`), seule l'adresse DCP est remplacée
+  par le gabarit `{dcpEmail}`. `DcpNotice` prend désormais une prop `form` obligatoire.
+- **Consignes de texte libre enrichies** : SD_PDCP a livré une phrase d'introduction et **trois
+  puces** (ne citer personne, éviter les détails identifiants, éviter les données sensibles) à la
+  place de notre phrase unique. C'est aussi leur réponse de fond au prérequis P2 : de la
+  **pédagogie**, pas de la censure automatique de mots.
+- **Exercice des droits depuis le site** (prérequis P8) : l'objet du formulaire de contact propose
+  l'option **« EXERCICE DES DROITS »**, dont la sélection fait apparaître un second menu avec les
+  **six droits** demandés, aux libellés exacts de SD_PDCP. L'objet transmis devient
+  « EXERCICE DES DROITS — <droit> », donc la demande est identifiable dès la réception.
+- **Version du texte DCP portée à `2026-11-10`**, **des deux côtés** : `src/data/formsDcp.ts` et le
+  repli de `backend/src/lib/consent.ts`. Le réglage `formsDcp` n'existe pas en base, donc c'est ce
+  repli qui horodate les consentements : un écart ferait signer une version différente de celle
+  affichée. Les TCU restent en `2026-10-20` (SD_PDCP les maintient, prérequis R01).
+- **Back-office** : les trois mentions s'éditent séparément, avec rappel de leurs durées respectives ;
+  les puces s'éditent une par ligne et se rétablissent seules si le champ est vidé. Les durées
+  communiquées par SD_PDCP sont rappelées dans *Conformité DCP > Conservation et purge*.
+
+**⚠️ Condition de mise en service — transfert hors CEDEAO**
+Les mentions adhésion et contact affirment « Elles ne font pas l'objet de transfert hors espace
+CEDEAO. » C'est vrai de l'**architecture cible** — MA2E hébergera elle-même la version définitive —
+et faux de la **plateforme de démonstration actuelle** (Vercel aux USA, OVH en France). Ces mentions
+ne sont rendues qu'à l'intérieur d'un formulaire **ouvert** : les trois étant fermés depuis le
+2026-11-02, rien n'est affiché et rien n'est collecté. **Ne pas rouvrir les formulaires sur
+l'hébergement de démonstration tant que la migration n'est pas faite.**
+
+Même après migration, la phrase ne sera exacte que si deux autres points sont tranchés, car le
+navigateur du visiteur contacte lui-même des services hors CEDEAO (inventaire : `DCP_COOKIES.md` § 5,
+flux 8-9 de `DCP_ANSSI.md`) : le **widget Google Traduction**, chargé sur chaque page même en
+français — c'est le multilingue du site, donc un arbitrage SD_PDCP, la piste étant de ne le charger
+qu'au choix effectif d'une langue étrangère — et la **carte OpenStreetMap** de la page Contact plus
+les images `placehold.co`, remplaçables à faible coût. Point de vigilance : l'identifiant **Google
+Analytics** toujours en attente côté client rouvrirait la question bien plus largement.
+
+**Ce qui reste à trancher côté MA2E**
+- **Durée de conservation des demandes d'adhésion** : « relation contractuelle + 10 ans » n'est pas
+  calculable par le site, qui ne détient qu'une demande et compte en mois depuis son enregistrement.
+  Sans durée ferme, la purge des demandes reste inactive.
+- Les 12 mois courent « après le traitement » alors que le site compte depuis la **réception** :
+  écart faible, à assumer explicitement ou à corriger en datant le traitement.
+- **Journal d'activité** : ni durée, ni niveau de détail, ni profils arrêtés (prérequis P7, répondu
+  par deux noms suivis de « ??? »).
+- **Droit à la limitation absent** de la liste P8 — c'est justement celui qui n'est pas outillé. Une
+  demande de limitation passe par l'option « Autre ».
+- Incohérences mineures relevées dans les textes livrés, à corriger par SD_PDCP et non par nous :
+  R02 parle de « 4 formulaires » alors que le document en contient **3** (le site a exactement 3
+  formulaires collectant des données) ; les mentions n'annoncent que les droits d'**accès et de
+  rectification** alors que P8 en demande six ; `privacyma2e@ma2e.ci` contre `privacyMA2E@ma2e.ci`.
+
+**En attente d'EBENYX** : P4 (questionnaire DCP_035-01 — 10 réponses d'entreprise et signataire) et
+R05 (tableau ANSSI). ⚠️ SD_PDCP écrit attendre le tableau d'EBENYX alors que nous avions noté
+attendre leur arbitrage : à clarifier avant d'aller plus loin.
+
+**Vérifié** : `tsc` front et back sans erreur, `vite build` OK, **81 tests backend verts**, aucune
+nouvelle erreur eslint (les 9 `no-explicit-any` sont préexistantes). Rendu contrôlé en local, les
+formulaires étant ouverts par défaut hors API : bonne mention sur chacune des trois pages, aucune
+mention croisée, six droits proposés, champ du droit **obligatoire**, trois puces affichées, aucun
+gabarit `{dcpEmail}` résiduel, aucune erreur JS.
 
 ## MAJ 2026-11-01 — Ouverture des formulaires publics pilotable au back-office
 **DÉPLOYÉE** (commits `a9c215f` + `b403565`, poussés sur `fix/audit-remediation`, `refonte-fullstack`

@@ -7,7 +7,7 @@ import { NEWS, SAVINGS, CREDITS, type NewsArticle } from "@/data/site";
 import { MEDIA, FAQS, PARTNERS } from "@/data/institutional";
 import type { SavingsDetail } from "@/data/savingsDetails";
 import type { LegalContent } from "@/data/legal";
-import type { FormsDcpContent } from "@/data/formsDcp";
+import type { DcpForm, FormsDcpContent, FormsDcpFreeText } from "@/data/formsDcp";
 import type { FormsPublicContent } from "@/data/formsPublic";
 
 export function slugify(input: string): string {
@@ -357,7 +357,13 @@ export interface SiteSettings {
   branding?: { primary?: string; logo?: string; qr?: string };
   savingsDetails?: Record<string, SavingsDetail>; // fiches détaillées épargne (« Voir plus ») — repli : SAVINGS_DETAILS
   legal?: LegalContent; // pages légales éditables (Mentions / CGU / DCP) — repli : DEFAULT_LEGAL
-  formsDcp?: Partial<FormsDcpContent>; // mentions DCP des formulaires — repli : DEFAULT_FORMS_DCP
+  // Mentions DCP des formulaires — repli : DEFAULT_FORMS_DCP. Partiel EN PROFONDEUR : le
+  // back-office peut n'enregistrer qu'une seule des trois mentions ou qu'une partie des
+  // consignes de texte libre, le reste retombant sur le texte SD_PDCP livré avec le code.
+  formsDcp?: Partial<Omit<FormsDcpContent, "bodies" | "freeTextHint">> & {
+    bodies?: Partial<Record<DcpForm, string>>;
+    freeTextHint?: Partial<FormsDcpFreeText>;
+  };
   formsPublic?: Partial<FormsPublicContent>; // ouverture des formulaires publics — repli : DEFAULT_FORMS_PUBLIC
 }
 

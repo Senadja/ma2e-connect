@@ -111,7 +111,7 @@ export const ProductRequestForm = ({ defaultProduct, category }: ProductRequestF
   return (
     <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
       <h3 className="font-display text-xl font-bold mb-4">{t("form.title")}</h3>
-      <DcpNotice className="mb-6" />
+      <DcpNotice form="productRequest" className="mb-6" />
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField

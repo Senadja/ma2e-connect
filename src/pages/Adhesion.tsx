@@ -296,7 +296,7 @@ const Adhesion = () => {
                 ) : (
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-8">
-                    <DcpNotice />
+                    <DcpNotice form="adhesion" />
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                       <TabsList className="grid w-full grid-cols-4 mb-10">
                         <TabsTrigger value="personal" className="flex items-center gap-2"><User className="h-4 w-4" /><span className="hidden sm:inline">Personnel</span></TabsTrigger>

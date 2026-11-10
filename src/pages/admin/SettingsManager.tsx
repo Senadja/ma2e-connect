@@ -14,7 +14,7 @@ import { MILESTONES } from "@/data/site";
 import { DEFAULT_ORG_TREE, DEFAULT_PERSONNEL, DEFAULT_ORG_UNITS, DEFAULT_SOCIETES, useProducts, type OrgNode, type OrgUnit, type SolutionFamily } from "@/lib/content";
 import { SAVINGS_DETAILS, type SavingsDetail, type SavingsRateTable } from "@/data/savingsDetails";
 import { DEFAULT_LEGAL, type LegalContent, type LegalPage } from "@/data/legal";
-import { DEFAULT_FORMS_DCP, type FormsDcpContent } from "@/data/formsDcp";
+import { DEFAULT_FORMS_DCP, type DcpForm, type FormsDcpContent, type FormsDcpFreeText } from "@/data/formsDcp";
 import { DEFAULT_FORMS_PUBLIC, type FormsPublicContent } from "@/data/formsPublic";
 import { OrgChartSvg } from "@/components/OrgChartSvg";
 import { FocalPointPicker } from "@/components/admin/FocalPointPicker";
@@ -293,6 +293,11 @@ export const SettingsManager = () => {
   // zones de commentaire libre, consentement et son retrait). Repli : DEFAULT_FORMS_DCP.
   const [formsDcp, setFormsDcp] = useState<FormsDcpContent>(DEFAULT_FORMS_DCP);
   const patchFormsDcp = (patch: Partial<FormsDcpContent>) => setFormsDcp((f) => ({ ...f, ...patch }));
+  // SD_PDCP a livré UNE mention par formulaire (R02) : les sous-objets se patchent champ par champ.
+  const patchDcpBody = (form: DcpForm, text: string) =>
+    setFormsDcp((f) => ({ ...f, bodies: { ...f.bodies, [form]: text } }));
+  const patchDcpFreeText = (patch: Partial<FormsDcpFreeText>) =>
+    setFormsDcp((f) => ({ ...f, freeTextHint: { ...f.freeTextHint, ...patch } }));
   const saveFormsDcp = () => save.mutate({ key: "formsDcp", value: formsDcp }, { onSuccess: refreshPublic });
 
   // Ouverture des formulaires publics (déploiement en deux lots). Repli : DEFAULT_FORMS_PUBLIC,
@@ -401,7 +406,13 @@ export const SettingsManager = () => {
     if (Array.isArray(data.milestones) && data.milestones.length) setMilestones(data.milestones.map((m) => ({ year: m.year || "", title: m.title || "", desc: m.desc || "" })));
     if (Array.isArray(data.languages) && data.languages.length) setLanguages(data.languages.map((l) => ({ code: l.code, label: l.label })));
     if (data.branding) setBranding((b) => ({ primary: data.branding!.primary || b.primary, logo: data.branding!.logo, qr: data.branding!.qr }));
-    if (data.formsDcp) setFormsDcp((f) => ({ ...f, ...data.formsDcp }));
+    if (data.formsDcp)
+      setFormsDcp((f) => ({
+        ...f,
+        ...data.formsDcp,
+        bodies: { ...f.bodies, ...(data.formsDcp?.bodies ?? {}) },
+        freeTextHint: { ...f.freeTextHint, ...(data.formsDcp?.freeTextHint ?? {}) },
+      }));
     if (data.formsPublic) setFormsPublic((f) => ({ ...f, ...data.formsPublic }));
     if (data.legal) setLegal({
       mentions: data.legal.mentions ?? DEFAULT_LEGAL.mentions,
@@ -1314,8 +1325,11 @@ export const SettingsManager = () => {
             <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2"><Scale className="h-5 w-5 text-primary" /> Mentions DCP des formulaires</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <p className="text-[11px] text-muted-foreground">
-                Textes affichés <strong>en tête</strong> des formulaires publics (Adhésion, Contact, Demande de renseignements).
-                Dès que SD_PDCP transmettra la mention d'information définitive, il suffit de la coller ici : <strong>aucun redéploiement du site n'est nécessaire</strong>.
+                Textes affichés <strong>en tête</strong> des formulaires publics. Les trois mentions ci-dessous sont
+                celles <strong>livrées par SD_PDCP</strong> (prérequis R02, novembre 2026) : catégories de données,
+                destinataires et durées de conservation <strong>diffèrent d'un formulaire à l'autre</strong> — ne recopiez
+                pas l'une à la place d'une autre. Toute correction de ces textes relève de SD_PDCP.
+                Les modifier ici suffit : <strong>aucun redéploiement du site n'est nécessaire</strong>.
                 Le gabarit <code>{"{dcpEmail}"}</code> est remplacé par l'adresse DCP de l'onglet «&nbsp;Contact&nbsp;».
               </p>
               <div className="grid sm:grid-cols-2 gap-4">
@@ -1328,12 +1342,39 @@ export const SettingsManager = () => {
                 La <strong>version</strong> est enregistrée avec chaque consentement comme preuve de ce que la personne a accepté.
                 <strong> Modifiez-la à chaque changement de texte</strong> (les consentements déjà enregistrés conservent leur ancienne version).
               </div>
-              <div className="grid gap-2"><label className={label}>Mention d'information DCP</label>
-                <textarea value={formsDcp.body} onChange={(e) => patchFormsDcp({ body: e.target.value })} rows={8} className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/20" /></div>
+              {([
+                ["adhesion", "Mention — formulaire d'adhésion", "Destinataires : BCEAO, BIC, CENTIF-CI. Conservation : durée de la relation contractuelle + 10 ans."],
+                ["contact", "Mention — formulaire de contact", "Conservation : 12 mois après traitement de la demande."],
+                ["productRequest", "Mention — demande de renseignement", "Conservation : 12 mois après traitement de la demande."],
+              ] as [DcpForm, string, string][]).map(([form, labelText, hint]) => (
+                <div key={form} className="grid gap-2">
+                  <label className={label}>{labelText}</label>
+                  <textarea
+                    value={formsDcp.bodies[form]}
+                    onChange={(e) => patchDcpBody(form, e.target.value)}
+                    rows={7}
+                    className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  <p className="text-[11px] text-muted-foreground">{hint}</p>
+                </div>
+              ))}
               <div className="grid gap-2"><label className={label}>Rappel des champs obligatoires</label>
                 <Input value={formsDcp.requiredNote} onChange={(e) => patchFormsDcp({ requiredNote: e.target.value })} /></div>
-              <div className="grid gap-2"><label className={label}>Consigne au-dessus des zones de commentaire libre</label>
-                <textarea value={formsDcp.freeTextHint} onChange={(e) => patchFormsDcp({ freeTextHint: e.target.value })} rows={3} className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/20" /></div>
+              <div className="h-px bg-border/60" />
+              <div className="grid gap-2"><label className={label}>Zones de commentaire libre — phrase d'introduction</label>
+                <textarea value={formsDcp.freeTextHint.intro} onChange={(e) => patchDcpFreeText({ intro: e.target.value })} rows={2} className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/20" /></div>
+              <div className="grid gap-2"><label className={label}>Zones de commentaire libre — consignes (une par ligne)</label>
+                <textarea
+                  value={formsDcp.freeTextHint.bullets.join("\n")}
+                  onChange={(e) => patchDcpFreeText({ bullets: e.target.value.split("\n").map((b) => b.trim()).filter(Boolean) })}
+                  rows={7}
+                  className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Affichées en puces au-dessus de chaque zone de texte libre (Contact et Demande de renseignement).
+                  Vidées entièrement, les consignes livrées par SD_PDCP sont rétablies automatiquement.
+                </p>
+              </div>
               <div className="h-px bg-border/60" />
               <div className="grid gap-2"><label className={label}>Libellé de la case de consentement (Contact, Demande de renseignements)</label>
                 <textarea value={formsDcp.consentLabel} onChange={(e) => patchFormsDcp({ consentLabel: e.target.value })} rows={2} className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/20" /></div>

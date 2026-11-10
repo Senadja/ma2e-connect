@@ -6,7 +6,13 @@ import { prisma } from './prisma';
 // La version est lue CÔTÉ SERVEUR dans le réglage « formsDcp » (éditable au back-office,
 // cf. src/data/formsDcp.ts pour les valeurs de repli du front) : le client ne peut donc pas
 // forger une version, et la preuve correspond bien à ce que le site servait à cet instant.
-const FALLBACK = { version: '2026-10-20', tcuVersion: '2026-10-20' } as const;
+// ⚠️ Ces valeurs doivent rester ALIGNÉES sur DEFAULT_FORMS_DCP (src/data/formsDcp.ts) :
+// le réglage « formsDcp » n'existe pas en base tant que le back-office ne l'a pas enregistré,
+// donc c'est ce repli qui horodate les consentements. Un écart ferait signer aux personnes une
+// version de texte différente de celle réellement affichée.
+// version    : mentions d'information DCP livrées par SD_PDCP (R02), intégrées le 2026-11-10.
+// tcuVersion : inchangée — SD_PDCP maintient les TCU en ligne (R01).
+const FALLBACK = { version: '2026-11-10', tcuVersion: '2026-10-20' } as const;
 
 export type ConsentKind = 'dcp' | 'tcu';
 
