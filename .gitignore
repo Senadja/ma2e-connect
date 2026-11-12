@@ -52,3 +52,6 @@ e2e/*.png
 /LOGO PARTENAIRE/
 /GALERIE (1)/
 /livrables-recette/
+# Pièces justificatives déposées via le formulaire d'adhésion (noms en UUID) :
+# copie locale des téléversements, mêmes données que ci-dessus.
+/public/documents/app-docs/
