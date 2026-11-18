@@ -1,5 +1,31 @@
 import rateLimit from 'express-rate-limit';
+import type { Request } from 'express';
 import { env } from './env';
+
+// Vrai quand req.ip ne désigne PAS un client distinct : adresse privée, loopback, lien-local,
+// ou absente. C'est l'état actuel de la production — Caddy ajoute la passerelle du bridge
+// Docker (172.18.0.1) en bout de X-Forwarded-For et TRUST_PROXY n'est pas encore calibré sur
+// la chaîne réelle, donc TOUS les clients produisent la même clé.
+//
+// Conséquence : un limiteur d'authentification actif dans cet état ne protège personne et
+// offre à n'importe qui un verrouillage GLOBAL du back-office (10 tentatives / 15 min pour le
+// monde entier). On s'en sert donc pour neutraliser ces seuls limiteurs tant que la clé est
+// inexploitable ; ils se réactivent d'eux-mêmes dès que TRUST_PROXY est juste, sans nouveau
+// déploiement. Le brute-force ciblé reste couvert par ailleurs : verrouillage de compte
+// (`lockedAt`, routes/auth) et compteur d'essais porté par le challenge 2FA.
+export function clientIpUnusable(req: Request): boolean {
+  const ip = req.ip?.replace(/^::ffff:/, '').trim();
+  if (!ip) return true;
+  if (ip === '::1' || ip === '127.0.0.1') return true;
+  if (/^127\./.test(ip)) return true; // loopback
+  if (/^10\./.test(ip)) return true; // privé /8
+  if (/^192\.168\./.test(ip)) return true; // privé /16
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return true; // privé /12 (dont les bridges Docker)
+  if (/^169\.254\./.test(ip)) return true; // lien-local
+  if (/^(f[cd])/i.test(ip)) return true; // IPv6 unique-local fc00::/7
+  if (/^fe80:/i.test(ip)) return true; // IPv6 lien-local
+  return false;
+}
 
 // Limiteur pour les endpoints PUBLICS en écriture (soumission de demande, upload de pièce,
 // message de contact). Empêche le spam d'e-mails, le remplissage de la BDD et la saturation

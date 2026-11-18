@@ -8,6 +8,7 @@ import { env } from '../lib/env';
 import { sendLoginCode } from '../lib/mailer';
 import { signToken, requireAuth, AuthUser } from '../middleware/auth';
 import { logAuthEvent } from '../lib/audit';
+import { clientIpUnusable } from '../lib/rateLimit';
 import {
   PASSWORD_POLICY,
   validatePasswordComplexity,
@@ -27,12 +28,16 @@ const MAX_RESENDS = 3; // « Renvoyer le code » par tentative de connexion
 const RESEND_COOLDOWN_MS = 60 * 1000; // délai minimal entre deux envois
 const BACKUP_CODE_COUNT = 8;
 
-// Limite les tentatives de connexion (anti brute-force).
-// `skip` le coupe via RATE_LIMIT_DISABLED, le temps d'une campagne de test (voir lib/env).
+// Limite les tentatives de connexion par IP (anti brute-force distribué / énumération).
+// `skip` le coupe via RATE_LIMIT_DISABLED, le temps d'une campagne de test (voir lib/env), et
+// AUSSI tant que req.ip n'identifie pas un client distinct : sans cela, les 10 tentatives
+// seraient partagées par le monde entier et le premier attaquant verrouillerait tout le
+// back-office (voir clientIpUnusable). Le brute-force ciblé reste couvert par le verrouillage
+// de compte `lockedAt` ci-dessous, qui ne dépend pas de l'IP.
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  skip: () => env.rateLimitDisabled,
+  skip: (req) => env.rateLimitDisabled || clientIpUnusable(req),
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Trop de tentatives. Réessayez dans quelques minutes.' },
@@ -40,10 +45,12 @@ const loginLimiter = rateLimit({
 
 // Étape 2 : plafond par IP, en complément du compteur de tentatives porté par le challenge
 // lui-même. Plus permissif que le login car une saisie de code se rate facilement.
+// Même réserve que loginLimiter : neutralisé tant que la clé IP est commune à tous les
+// clients, le compteur du challenge (MAX_ATTEMPTS) restant la protection effective.
 const verifyLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
-  skip: () => env.rateLimitDisabled,
+  skip: (req) => env.rateLimitDisabled || clientIpUnusable(req),
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Trop de tentatives. Réessayez dans quelques minutes.' },

@@ -16,10 +16,13 @@ const ADMIN_EMAIL = 'admin@ma2e.ci';
 const ADMIN_PASSWORD = 'admin123';
 
 // Chaque appel se présente avec une IP distincte. Le rate-limiter est keyé sur req.ip
-// (l'app fait `set('trust proxy', 1)`, donc X-Forwarded-For fait foi) : les tests ne se
-// gênent donc pas entre eux, et le limiteur reste pleinement actif en production.
+// (l'app fait `set('trust proxy', env.trustProxy)`, défaut 1, donc X-Forwarded-For fait foi) :
+// les tests ne se gênent donc pas entre eux, et le limiteur reste pleinement actif en production.
+// Plage 203.0.113.0/24 (TEST-NET-3, RFC 5737) et NON une plage privée : les limiteurs
+// d'authentification s'effacent devant une IP privée (voir clientIpUnusable), donc des IP en
+// 10.x feraient passer les tests sans jamais exercer le chemin de production.
 let ipSeed = 0;
-const nextIp = () => `10.1.0.${(ipSeed++ % 250) + 1}`;
+const nextIp = () => `203.0.113.${(ipSeed++ % 250) + 1}`;
 
 function startLogin(email: string, password: string) {
   return request(app).post('/api/auth/login').set('X-Forwarded-For', nextIp()).send({ email, password });
@@ -1380,6 +1383,45 @@ describe('Upload back-office — validation du contenu réel (audit 5.1)', () =>
     for (const url of ['/api/uploads', '/api/media']) {
       const res = await request(app).post(url).set('X-Forwarded-For', nextIp()).attach('file', REAL_PDF, 'x.pdf');
       expect(res.status, `${url} sans jeton`).toBe(401);
+    }
+  });
+});
+
+// Réactivation des limiteurs de débit (audit manuel 2026-11-13, constat 5.2).
+// Le limiteur de connexion existait mais n'était jamais exercé par les tests, et sa clé — req.ip
+// — vaut la même valeur pour tous les clients tant que TRUST_PROXY n'est pas calibré sur la
+// chaîne de proxys réelle. On vérifie donc les DEUX moitiés du contrat : il bloque pour une IP
+// qui identifie un client, et il s'efface quand la clé est commune à tout le monde (sinon le
+// premier attaquant verrouillerait le back-office entier).
+describe('Limiteur de connexion — clé IP (audit 5.2)', () => {
+  const UNKNOWN = 'inconnu-limiteur@example.invalid'; // aucun compte : rien à verrouiller
+
+  it('bloque la 11e tentative venant d\'une IP qui identifie un client', async () => {
+    const ip = '198.51.100.77'; // TEST-NET-2, dédiée à ce test pour ne pas partager le compteur
+    for (let i = 0; i < 10; i++) {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .set('X-Forwarded-For', ip)
+        .send({ email: UNKNOWN, password: 'mauvais-mot-de-passe' });
+      expect(res.status, `tentative ${i + 1} doit encore passer`).toBe(401);
+    }
+    const blocked = await request(app)
+      .post('/api/auth/login')
+      .set('X-Forwarded-For', ip)
+      .send({ email: UNKNOWN, password: 'mauvais-mot-de-passe' });
+    expect(blocked.status).toBe(429);
+  });
+
+  it('ne bloque pas quand req.ip est une adresse privée (clé commune à tous les clients)', async () => {
+    // 172.18.0.1 est la valeur réellement observée en production : la passerelle du bridge
+    // Docker ajoutée par Caddy. Si le limiteur s'appliquait, 10 tentatives suffiraient à
+    // interdire la connexion à toute l'équipe MA2E.
+    for (let i = 0; i < 12; i++) {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .set('X-Forwarded-For', '172.18.0.1')
+        .send({ email: UNKNOWN, password: 'mauvais-mot-de-passe' });
+      expect(res.status, `tentative ${i + 1} ne doit jamais être limitée`).toBe(401);
     }
   });
 });
