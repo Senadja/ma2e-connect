@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { requireAuth, requirePermission } from '../middleware/auth';
+import { fileContentMatchesExt, discardUpload } from '../lib/uploadGuard';
 
 // Upload générique de fichier (images de produits, visuels d'articles…).
 // Contrairement à /media, ne crée PAS d'entrée dans la médiathèque :
@@ -31,5 +32,14 @@ const upload = multer({
 // Écriture réservée aux profils habilités à gérer les médias (même droit que /media).
 uploadsRouter.post('/', requireAuth, requirePermission('media:write'), upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Fichier requis' });
+
+  // Audit manuel 2026-11-13 : l'extension ne suffit pas. Le fichier est déjà écrit sur disque
+  // (diskStorage) — on valide son en-tête et on le supprime s'il ne correspond pas.
+  const ext = path.extname(req.file.filename).toLowerCase();
+  if (!fileContentMatchesExt(req.file.path, ext)) {
+    discardUpload(req.file.path);
+    return res.status(400).json({ error: `Le contenu du fichier ne correspond pas à son extension (${ext}).` });
+  }
+
   res.status(201).json({ path: `/documents/uploads/${req.file.filename}` });
 });

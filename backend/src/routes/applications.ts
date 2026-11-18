@@ -12,6 +12,8 @@ import { signDoc, verifyDoc } from '../lib/docSign';
 // Dossier privé des pièces justificatives : résolu dans lib/appDocs, partagé avec les
 // mécanismes d'effacement et de purge (lib/dcp).
 import { APP_DOCS_DIR } from '../lib/appDocs';
+// Signatures de fichiers, partagées avec /api/media et /api/uploads (audit 2026-11-13).
+import { contentMatchesExt } from '../lib/uploadGuard';
 import { consentStamp } from '../lib/consent';
 import { FORM_CLOSED_MESSAGE, FORM_CLOSED_STATUS, isFormOpen, requireFormOpen } from '../lib/formsPublic';
 import { nextAppNumber } from '../lib/appRef';
@@ -31,20 +33,7 @@ const docUpload = multer({
 
 // Sécurité (audit GS2E #4) : valide le CONTENU réel du fichier (magic bytes), pas seulement son
 // extension. Un exécutable renommé « .pdf » ne présente pas la signature attendue → rejeté.
-const MAGIC: Record<string, (b: Buffer) => boolean> = {
-  '.pdf': (b) => b.slice(0, 5).toString('latin1') === '%PDF-',
-  '.png': (b) => b.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
-  '.jpg': (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
-  '.jpeg': (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
-  '.docx': (b) => b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04, // conteneur ZIP
-  '.doc': (b) => b.slice(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])), // OLE
-};
-
-function contentMatchesExt(buf: Buffer, ext: string): boolean {
-  const check = MAGIC[ext];
-  if (!check) return false;
-  return check(buf.subarray(0, 8));
-}
+// Les signatures vivent désormais dans lib/uploadGuard, partagées avec /api/media et /api/uploads.
 
 // Enrobe multer pour transformer ses erreurs en réponse JSON exploitable au lieu d'un 500 HTML
 // opaque : fichier trop volumineux (413) ou multipart invalide (500 + log de la cause réelle).

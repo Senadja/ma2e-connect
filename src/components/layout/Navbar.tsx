@@ -141,12 +141,9 @@ export const Navbar = ({ mobileOpenExtern, setMobileOpenExtern }: NavbarProps) =
 
         <div className="hidden lg:flex items-center gap-4">
           <LanguageSwitcher dark={!scrolled} />
-          <Link
-            to="/admin/login"
-            className={cn("text-sm font-bold transition-colors", scrolled ? "text-muted-foreground hover:text-primary" : "text-white/70 hover:text-white")}
-          >
-            {t("common.accessAdmin")}
-          </Link>
+          {/* Lien « Accès Admin » retiré (audit manuel 2026-11-13, constat 5.6) : il annonçait
+              à tout visiteur l'emplacement exact du back-office. L'équipe MA2E accède à
+              /admin/login directement par l'URL. */}
           <a
             href={ebanking}
             target="_blank"

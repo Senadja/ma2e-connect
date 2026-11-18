@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { requireAuth, requirePermission } from '../middleware/auth';
+import { fileContentMatchesExt, discardUpload } from '../lib/uploadGuard';
 
 export const mediaRouter = Router();
 
@@ -53,8 +54,20 @@ const metaSchema = z.object({
 
 mediaRouter.post('/', upload.single('file'), async (req, res) => {
   const parsed = metaSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+  if (!parsed.success) {
+    // Le fichier est déjà sur disque à ce stade : sans ce ménage, des métadonnées invalides
+    // laissaient un orphelin (source de fichiers orphelins relevée par l'audit 2026-11-13).
+    if (req.file) discardUpload(req.file.path);
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
   if (!req.file) return res.status(400).json({ error: 'Fichier requis' });
+
+  // Audit manuel 2026-11-13 : valider le CONTENU réel, pas seulement l'extension.
+  const ext = path.extname(req.file.filename).toLowerCase();
+  if (!fileContentMatchesExt(req.file.path, ext)) {
+    discardUpload(req.file.path);
+    return res.status(400).json({ error: `Le contenu du fichier ne correspond pas à son extension (${ext}).` });
+  }
 
   const sizeKo = `${Math.round(req.file.size / 1024)} Ko`;
   const media = await prisma.mediaFile.create({

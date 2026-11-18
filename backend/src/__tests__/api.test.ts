@@ -1278,3 +1278,108 @@ describe("Journalisation des événements d'authentification (ANSSI R29)", () =>
     expect(res.status).toBe(401);
   });
 });
+
+// Audit manuel 2026-11-13, constat 5.1 : les deux points d'upload du back-office
+// (/api/media et /api/uploads) n'acceptaient que sur la foi de l'extension déclarée.
+// Ces fichiers alimentent la médiathèque PUBLIQUE, d'où l'importance du contrôle.
+describe('Upload back-office — validation du contenu réel (audit 5.1)', () => {
+  const UPLOAD_DIR = process.env.UPLOAD_DIR
+    ? path.resolve(process.env.UPLOAD_DIR)
+    : path.resolve(__dirname, '../../../public/documents/uploads');
+
+  const created: { ids: string[]; files: string[] } = { ids: [], files: [] };
+  const trackFile = (publicPath: string) => {
+    created.files.push(path.join(UPLOAD_DIR, path.basename(publicPath)));
+    return publicPath;
+  };
+
+  const FAKE_PDF = Buffer.from("ceci n'est pas un vrai PDF, seulement du texte");
+  const REAL_PDF = Buffer.from('%PDF-1.4 contenu minimal de test');
+
+  afterAll(async () => {
+    for (const id of created.ids) {
+      await prisma.mediaFile.delete({ where: { id } }).catch(() => undefined);
+    }
+    for (const f of created.files) {
+      try {
+        fs.unlinkSync(f);
+      } catch {
+        /* déjà supprimé par le rejet, ou jamais écrit */
+      }
+    }
+  });
+
+  it('POST /api/uploads refuse un faux PDF → 400 et ne laisse rien sur disque', async () => {
+    const token = await adminToken();
+    const before = fs.readdirSync(UPLOAD_DIR).length;
+    const res = await request(app)
+      .post('/api/uploads')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Forwarded-For', nextIp())
+      .attach('file', FAKE_PDF, 'poc_bypass.pdf');
+    expect(res.status).toBe(400);
+    // Le fichier écrit par multer doit avoir été supprimé : pas d'orphelin après un rejet.
+    expect(fs.readdirSync(UPLOAD_DIR).length).toBe(before);
+  });
+
+  it('POST /api/uploads accepte un vrai PDF → 201', async () => {
+    const token = await adminToken();
+    const res = await request(app)
+      .post('/api/uploads')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Forwarded-For', nextIp())
+      .attach('file', REAL_PDF, 'vrai.pdf');
+    expect(res.status).toBe(201);
+    expect(trackFile(res.body.path)).toMatch(/\/documents\/uploads\/[a-f0-9-]+\.pdf$/);
+  });
+
+  it('POST /api/media refuse un faux PDF → 400, sans créer d\'entrée en médiathèque', async () => {
+    const token = await adminToken();
+    const before = await prisma.mediaFile.count();
+    const res = await request(app)
+      .post('/api/media')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Forwarded-For', nextIp())
+      .field('title', 'Mock audit')
+      .field('category', 'Brochures')
+      .attach('file', FAKE_PDF, 'mock1.pdf');
+    expect(res.status).toBe(400);
+    expect(await prisma.mediaFile.count()).toBe(before);
+  });
+
+  it('POST /api/media accepte un vrai PDF → 201, masqué par défaut', async () => {
+    const token = await adminToken();
+    const res = await request(app)
+      .post('/api/media')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Forwarded-For', nextIp())
+      .field('title', 'Vrai PDF de test')
+      .field('category', 'Brochures')
+      .attach('file', REAL_PDF, 'vrai.pdf');
+    expect(res.status).toBe(201);
+    created.ids.push(res.body.id);
+    trackFile(res.body.path);
+    // Non publié à la création : un dépôt ne devient pas public tout seul.
+    expect(res.body.published).toBe(false);
+  });
+
+  it('des métadonnées invalides ne laissent pas de fichier orphelin', async () => {
+    const token = await adminToken();
+    const before = fs.readdirSync(UPLOAD_DIR).length;
+    const res = await request(app)
+      .post('/api/media')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Forwarded-For', nextIp())
+      .field('category', 'Brochures') // titre manquant
+      .attach('file', REAL_PDF, 'orphelin.pdf');
+    expect(res.status).toBe(400);
+    expect(fs.readdirSync(UPLOAD_DIR).length).toBe(before);
+  });
+
+  it('les deux endpoints restent fermés sans authentification → 401', async () => {
+    for (const url of ['/api/uploads', '/api/media']) {
+      const res = await request(app).post(url).set('X-Forwarded-For', nextIp()).attach('file', REAL_PDF, 'x.pdf');
+      expect(res.status, `${url} sans jeton`).toBe(401);
+    }
+  });
+});
