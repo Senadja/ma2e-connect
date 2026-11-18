@@ -23,10 +23,11 @@ import { apiLimiter } from './lib/rateLimit';
 
 export const app = express();
 
-// Derrière le reverse proxy (Caddy/OVH, Vercel), fait confiance à 1 hop pour que req.ip
-// reflète la vraie IP client (sinon le rate-limit login partage un unique bucket → DoS/lockout).
-// Nombre exact de proxys, PAS `true` (sinon X-Forwarded-For serait usurpable).
-app.set('trust proxy', 1);
+// Derrière le reverse proxy (Vercel → ingress → Caddy), fait confiance à un nombre EXACT de
+// sauts pour que req.ip reflète la vraie IP client (sinon le rate-limit partage un unique
+// bucket → verrouillage global du back-office). Réglable par TRUST_PROXY sans reconstruire
+// l'image : voir parseTrustProxy() dans lib/env, qui détaille les deux erreurs possibles.
+app.set('trust proxy', env.trustProxy);
 
 // API JSON : jamais rendue ni intégrée dans une frame. On verrouille explicitement les
 // directives CSP qui n'héritent pas de default-src (frame-ancestors / form-action / base-uri) —

@@ -24,10 +24,36 @@ function requireJwtSecret(): string {
   return secret;
 }
 
+// Nombre EXACT de reverse proxies de confiance entre Internet et l'API
+// (aujourd'hui : Vercel → ingress → Caddy). Express compte les sauts depuis la DROITE de
+// X-Forwarded-For, d'où deux façons de se tromper :
+//  - valeur trop BASSE  → req.ip retombe sur l'adresse ajoutée par le dernier proxy, soit la
+//    passerelle Docker (172.18.0.1), IDENTIQUE pour tous les clients. Tous partagent alors un
+//    seul compteur de rate-limit → le back-office se verrouille mondialement dès les premiers
+//    échecs, et le journal d'audit n'enregistre plus que cette passerelle.
+//  - valeur trop HAUTE  → Express remonte au-delà du premier proxy de confiance et retient une
+//    valeur fournie par le client : X-Forwarded-For devient usurpable, donc la clé de
+//    rate-limit est forgeable.
+// Jamais `true` (confiance aveugle). Réglable sans reconstruire l'image, car la longueur de la
+// chaîne change avec l'ingress (bascule du funnel Tailscale vers la passerelle openresty).
+export function parseTrustProxy(raw: string | undefined): number {
+  if (raw === undefined || raw.trim() === '') return 1;
+  // Décimal uniquement : `Number()` accepterait "0x2" ou "1e1", qui n'ont aucun sens ici et
+  // masqueraient une faute de frappe dans .env.prod derrière une valeur plausible.
+  const txt = raw.trim();
+  if (!/^\d+$/.test(txt)) {
+    throw new Error(
+      `TRUST_PROXY invalide : "${raw}". Attendu : un entier >= 0 en décimal (nombre de proxys de confiance devant l'API).`,
+    );
+  }
+  return Number(txt);
+}
+
 export const env = {
   port: Number(process.env.PORT ?? 3000),
   nodeEnv,
   jwtSecret: requireJwtSecret(),
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '8h',
   // URL publique du site (lien de connexion glissé dans les e-mails de bienvenue).
   // Configurable pour la bascule vers le domaine définitif de la MA2E.
